@@ -25,7 +25,16 @@
     font-weight: bold;
 }
 
+/* Couleur du nom selon le niveau */
+.worker-name.level-tier-0 { color: #9e9e9e; }   
+.worker-name.level-tier-1 { color: #f1f1f1; }   
+.worker-name.level-tier-2 { color: #81c784; }  
+.worker-name.level-tier-3 { color: #64b5f6; }  
+.worker-name.level-tier-4 { color: #ba68c8; }  
+.worker-name.level-tier-5 { color: #ffb74d; }  
+
 .worker-level {
     font-size: 10px;
     color: #b1b1b1;
 }
+

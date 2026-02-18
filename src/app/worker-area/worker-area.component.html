@@ -1,6 +1,6 @@
 <div id="worker-area" *ngIf="workerSelected">
     <div class="left-part-worker-area">
-        <div class="worker-name">{{ workerSelected.name }}</div>
+        <div class="worker-name" [ngClass]="getLevelNameClass()">{{ workerSelected.name }}</div>
         <div class="worker-level">Level : {{ workerSelected.level }}</div>
     </div>
     <div class="worker-productivity" *ngIf="!isClickWorker">{{ clicksPerSecond }}/s</div>

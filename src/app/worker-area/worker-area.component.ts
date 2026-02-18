@@ -32,6 +32,19 @@ export class WorkerAreaComponent {
     return this.workerSelected?.workerType === 'click';
   }
 
+  /** Classe CSS pour la couleur du nom selon le niveau (pour ngClass). */
+  getLevelNameClass(): string {
+    const level = this.workerSelected?.level ?? 0;
+    if (level >= 500) return 'level-tier-5';
+    if (level >= 200) return 'level-tier-5';
+    if (level >= 100) return 'level-tier-5';
+    if (level >= 50) return 'level-tier-4';
+    if (level >= 25) return 'level-tier-3';
+    if (level >= 10) return 'level-tier-2';
+    if (level >= 1) return 'level-tier-1';
+    return 'level-tier-0';
+  }
+
   upgradeWorker(): void {
     this.gameState.upgradeWorker(this.workerIndex);
     this.upgraded.emit();

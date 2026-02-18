@@ -88,7 +88,7 @@ export function getCanBuyWorker(w: WorkerAutoData, clicks: number): boolean {
 /** Production par seconde (workers auto uniquement). */
 export function calculateClicksPerSecondForWorker(w: WorkerAutoData): number {
   if (w.workerType === 'click') return 0;
-  return getProductionOrClickBonus(w);
+  return getProductionOrClickBonus(w) * Math.pow(2, w.level < 10 ? 0 : w.level < 25 ? 1 : 2 + Math.floor((w.level - 25) / 25));
 }
 
 /** Bonus dégâts par clic (workers click uniquement). */

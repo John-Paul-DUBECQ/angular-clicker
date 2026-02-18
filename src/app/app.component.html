@@ -1,0 +1,25 @@
+<div class="app-layout">
+  <div class="column column-left"></div>
+
+  <div class="column column-center">
+    <div class="score-area">
+      <p class="value-click">{{ game.clicks | number:'1.0-0' }}</p>
+      <p class="value-auto-per-second">{{ game.valueAutoPerSecond | number:'1.0-0' }}/s</p>
+    </div>
+    <div id="click-area" (click)="click()">
+     
+    </div>
+  </div>
+
+  <div class="column column-right">
+    <div class="workers-list">
+      <ng-container *ngFor="let worker of workersAvailable; let i = index; trackBy: trackByIndex">
+        <app-worker-area
+          *ngIf="worker.doesAppearInGame"
+          [workerSelected]="worker"
+          [workerIndex]="i">
+        </app-worker-area>
+      </ng-container>
+    </div>
+  </div>
+</div>

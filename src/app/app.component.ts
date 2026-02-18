@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { GameStateService } from './models/game/game-state.service';
 import { Game } from './models/game/game';
+import { ShopItem } from './models/shop-item';
 import { WorkerAuto } from './models/worker-auto-model';
 
 @Component({
@@ -12,7 +13,7 @@ export class AppComponent implements OnInit, OnDestroy {
   title = 'Clicker Game';
   private refreshInterval: ReturnType<typeof setInterval> | null = null;
 
-  game: Game = { clicks: 0, workers: [], workersAvailable: [], clickValue: 1, valueAutoPerSecond: 0 };
+  game: Game = { clicks: 0, workers: [], workersAvailable: [], clickValue: 1, valueAutoPerSecond: 0, shopItems: [] };
   workers: WorkerAuto[] = [];
   workersAvailable: WorkerAuto[] = [];
   importError = false;
@@ -53,6 +54,10 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   trackByIndex(index: number, _worker: WorkerAuto): number {
+    return index;
+  }
+
+  trackByShopIndex(index: number, _item: ShopItem): number {
     return index;
   }
 /*

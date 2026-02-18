@@ -9,11 +9,14 @@ import { HttpClientModule } from "@angular/common/http";
 import { WorkerAreaComponent } from './worker-area/worker-area.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { MatIconModule } from '@angular/material/icon';
+import {MatTooltipModule} from '@angular/material/tooltip';
+import { ShopItemAreaComponent } from './shop-item-area/shop-item-area.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     WorkerAreaComponent,
+    ShopItemAreaComponent,
   ],
   imports: [
     BrowserModule,
@@ -21,7 +24,8 @@ import { MatIconModule } from '@angular/material/icon';
     AppRoutingModule,
     HttpClientModule,
     BrowserAnimationsModule,
-    MatIconModule
+    MatIconModule,
+    MatTooltipModule,
   ],
   providers: [GameService],
   bootstrap: [AppComponent]

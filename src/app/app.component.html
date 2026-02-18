@@ -1,10 +1,20 @@
 <div class="app-layout">
-  <div class="column column-left"></div>
+  <div class="column column-left">
+    <div class="shop-items-list">
+      <ng-container *ngFor="let shopItem of game.shopItems; let i = index; trackBy: trackByShopIndex">
+        <app-shop-item-area
+          *ngIf="shopItem.doesAppearInGame && shopItem.bought == false"
+          [shopItemSelected]="shopItem"
+          [itemIndex]="i">
+        </app-shop-item-area>
+      </ng-container>
+    </div>
+  </div>
 
   <div class="column column-center">
     <div class="score-area">
-      <p class="value-click">{{ game.clicks | number:'1.0-0' }}</p>
-      <p class="value-auto-per-second">{{ game.valueAutoPerSecond | number:'1.0-0' }}/s</p>
+      <p class="value-click">{{ game.clicks | number:'1.2-2' }}</p>
+      <p class="value-auto-per-second">{{ game.valueAutoPerSecond | number:'1.2-2' }}/s</p>
     </div>
     <div id="click-area" (click)="click()">
      

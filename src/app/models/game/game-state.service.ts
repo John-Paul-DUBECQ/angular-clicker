@@ -2,7 +2,6 @@ import { Injectable } from '@angular/core';
 import {
   WorkerAuto,
   WorkerAutoData,
-  WorkerType,
   createAutoWorker,
   createClickWorker,
   getPrice,
@@ -11,6 +10,8 @@ import {
   calculateClicksPerSecondForWorker,
   getClickBonus,
 } from '../worker-auto-model';
+import { ShopItem } from '../shop-item';
+import { listShopItem } from '../list-shop-item';
 import { Game } from './game';
 
 const TICKS_PER_SECOND = 10;
@@ -28,6 +29,7 @@ export class GameStateService {
   private clickValue = 1;
   private workersAvailable: WorkerAutoData[] = [];
   private workers: WorkerAutoData[] = [];
+  private shopItems: Array<ShopItem> = listShopItem;
   private tickIntervalId: ReturnType<typeof setInterval> | null = null;
   /** Évite uniquement le double envoi du même clic (ms), pas deux clics rapides volontaires. */
   private lastUpgradedIndex = -1;
@@ -43,16 +45,14 @@ export class GameStateService {
   private initWorkers(): void {
     this.workersAvailable = [
       createClickWorker('Épée', 1, 1.2, 10, 1.25),
-      createAutoWorker('Worker 1', 1, 1.3, 50, 1.25),
-      createAutoWorker('Worker 2', 2, 1.4, 150, 1.35),
-      createAutoWorker('Worker 3', 3, 1.5, 500, 1.45),
-      createAutoWorker('Worker 4', 4, 1.6, 2000, 1.55),
-      createAutoWorker('Worker 5', 5, 1.7, 5000, 1.65),
-      createAutoWorker('Worker 6', 6, 1.8, 20000, 1.75),
-      createAutoWorker('Worker 7', 7, 1.9, 75000, 1.85),
-      createAutoWorker('Worker 8', 8, 2.0, 150000, 1.95),
-      createAutoWorker('Worker 9', 9, 2.1, 300000, 2.05),
-      createAutoWorker('Worker 10', 10, 2.2, 600000, 2.15),
+      createAutoWorker('Fermier', 2, 1.3, 50, 1.50),
+      createAutoWorker('Mineur', 4, 1.4, 150, 1.50),
+      createAutoWorker('Forgeron', 12, 1.5, 500, 1.50),
+      createAutoWorker('Astrologue', 32, 1.6, 2000, 1.50),
+      createAutoWorker('Magicien', 64, 1.7, 5000, 1.50),
+      createAutoWorker('Alchimiste', 128, 1.8, 20000, 1.50),
+      createAutoWorker('Géomètre', 256, 1.9, 75000, 1.50),
+      createAutoWorker('Architecte', 512, 2.0, 150000, 1.50),
     ];
     this.workers = [];
   }
@@ -72,39 +72,73 @@ export class GameStateService {
     }
   }
 
+  /** Multiplicateur total des items shop achetés pour un worker (index dans workersAvailable). */
+  private getShopMultiplierForWorker(workerIndex: number): number {
+    return this.shopItems
+      .filter((i) => i.bought && i.workerIndex === workerIndex)
+      .reduce((p, i) => p * i.value, 1);
+  }
+
+  private getEffectiveProductionForWorker(w: WorkerAutoData): number {
+    const base = calculateClicksPerSecondForWorker(w);
+    const workerIndex = this.workersAvailable.indexOf(w);
+    if (workerIndex === -1) return base;
+    return base * this.getShopMultiplierForWorker(workerIndex);
+  }
+
+  private getEffectiveClickBonusForWorker(w: WorkerAutoData): number {
+    const base = getClickBonus(w);
+    const workerIndex = this.workersAvailable.indexOf(w);
+    if (workerIndex === -1) return base;
+    return base * this.getShopMultiplierForWorker(workerIndex);
+  }
+
   private calculateClicksPerSecond(): number {
     return this.workers.reduce(
-      (sum, w) => sum + calculateClicksPerSecondForWorker(w),
+      (sum, w) => sum + this.getEffectiveProductionForWorker(w),
       0
     );
   }
 
   getState(): Game {
     const valueAutoPerSecond = this.calculateClicksPerSecond();
-    this.clickValue = 1 + this.workers.reduce((sum, w) => sum + getClickBonus(w), 0);
+    this.clickValue = 1 + this.workers.reduce((sum, w) => sum + this.getEffectiveClickBonusForWorker(w), 0);
     const workersAvailableView: WorkerAuto[] = this.workersAvailable.map((w) => ({
       ...w,
       price: getPrice(w),
       canBuyWorker: getCanBuyWorker(w, this.clicks),
       doesAppearInGame: getDoesAppearInGame(w, this.clicks),
+      effectiveProductionPerSecond: this.getEffectiveProductionForWorker(w),
+      effectiveClickBonus: this.getEffectiveClickBonusForWorker(w),
     }));
-    const workersView: WorkerAuto[] = this.workers.map((w) => ({
-      ...w,
-      price: getPrice(w),
-      canBuyWorker: getCanBuyWorker(w, this.clicks),
-      doesAppearInGame: getDoesAppearInGame(w, this.clicks),
+    const shopItemsView: ShopItem[] = this.shopItems.map((item) => ({
+      ...item,
+      doesAppearInGame: item.doesAppearInGame,
+      bought: item.bought,
     }));
+    const workersView: WorkerAuto[] = this.workers.map((w) => {
+      return {
+        ...w,
+        price: getPrice(w),
+        canBuyWorker: getCanBuyWorker(w, this.clicks),
+        doesAppearInGame: getDoesAppearInGame(w, this.clicks),
+        effectiveProductionPerSecond: this.getEffectiveProductionForWorker(w),
+        effectiveClickBonus: this.getEffectiveClickBonusForWorker(w),
+      };
+    });
     return {
       clicks: this.clicks,
       workers: workersView,
       workersAvailable: workersAvailableView,
       clickValue: this.clickValue,
       valueAutoPerSecond,
+      shopItems: shopItemsView,
     };
   }
 
   click(): void {
     this.clicks += this.clickValue;
+    console.log('clicks', this.clicks);
   }
 
   upgradeWorker(workerIndex: number): void {
@@ -128,6 +162,19 @@ export class GameStateService {
     this.lastUpgradedIndex = workerIndex;
     this.lastUpgradedTime = now;
   }
+
+  canBuyShopItem(price: number): boolean {
+    return this.clicks >= price;
+  }
+
+  buyShopItem(shopItemIndex: number): void {
+    if (shopItemIndex < 0 || shopItemIndex >= this.shopItems.length) return;
+    const shopItem = this.shopItems[shopItemIndex];
+    if (shopItem.bought || !this.canBuyShopItem(shopItem.price)) return;
+    this.clicks = Math.max(0, this.clicks - shopItem.price);
+    shopItem.bought = true;
+  }
+
 /*
   exportSave(): string {
     const workerIndicesOwned = this.workers.map((w) =>

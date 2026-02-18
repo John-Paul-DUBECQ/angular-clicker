@@ -14,10 +14,14 @@ export interface WorkerAutoData {
   bought: boolean;
 }
 
-/** Worker avec champs calculés pour la vue (price, canBuyWorker, doesAppearInGame à jour). */
+/** Worker avec champs calculés pour la vue (price, canBuyWorker, valeurs effectives après bonus shop). */
 export interface WorkerAuto extends WorkerAutoData {
   price: number;
   canBuyWorker: boolean;
+  /** Production /s effective (auto) après multiplicateurs shop. Renseigné par le game state. */
+  effectiveProductionPerSecond?: number;
+  /** Bonus dégâts/clic effectif (click) après multiplicateurs shop. Renseigné par le game state. */
+  effectiveClickBonus?: number;
 }
 
 /** Crée un worker de production automatique (/s). Courbe dégâts ≠ courbe prix. */
@@ -71,7 +75,7 @@ export function getPrice(w: WorkerAutoData): number {
 export function getProductionOrClickBonus(w: WorkerAutoData): number {
   const base = w.baseProduction ?? (w as { productivity?: number }).productivity ?? 0;
   const curve = w.curveProduction ?? 1.1;
-  return Number((base * Math.pow(curve, w.level)).toFixed(2));
+  return base * Math.pow(curve, w.level);
 }
 
 export function getDoesAppearInGame(w: WorkerAutoData, clicks: number): boolean {

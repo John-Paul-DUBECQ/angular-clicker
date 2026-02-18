@@ -1,3 +1,4 @@
+import { ShopItem } from "../shop-item";
 import { WorkerAuto } from "../worker-auto-model";
 /**
  * Game class
@@ -8,6 +9,7 @@ import { WorkerAuto } from "../worker-auto-model";
  * @property workersAvailable - array of all workers
  * @property clickValue - value of each click
  * @property valueAutoPerSecond - value of auto per second
+ * @property shopItems - array of shop items
  */
 export class Game {
     clicks!: number;
@@ -15,4 +17,5 @@ export class Game {
     workersAvailable!: WorkerAuto[];
     clickValue!: number;
     valueAutoPerSecond!: number;
+    shopItems!: ShopItem[];
 }

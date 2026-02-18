@@ -1,0 +1,44 @@
+<div class="shop-item-area" *ngIf="shopItemSelected">
+  <!-- Carré visible : uniquement l’image -->
+  <div
+    #slotRef
+    class="shop-item-slot"
+    [class.shop-item-slot--bought]="shopItemSelected.bought"
+    [class.shop-item-slot--can-buy]="canBuy"
+    (click)="canBuy && buyShopItem()"
+    (mouseenter)="onSlotMouseEnter()"
+    (mouseleave)="onSlotMouseLeave()"
+  >
+    <img
+      *ngIf="shopItemSelected.imageUrl"
+      [src]="shopItemSelected.imageUrl"
+      [alt]="shopItemSelected.name"
+      class="shop-item-slot__img"
+    />
+    <span *ngIf="!shopItemSelected.imageUrl" class="shop-item-slot__placeholder">{{ shopItemSelected.name.charAt(0) }}</span>
+  </div>
+
+  <!-- Popup style Cookie Clicker au survol (position: fixed pour sortir du overflow parent) -->
+  <div
+    *ngIf="popupVisible && popupStyle"
+    class="shop-item-popup shop-item-popup--fixed"
+    [ngStyle]="popupStyle"
+  >
+    <div class="shop-item-popup__header">
+      <img
+        *ngIf="shopItemSelected.imageUrl"
+        [src]="shopItemSelected.imageUrl"
+        [alt]=""
+        class="shop-item-popup__icon"
+      />
+      <span *ngIf="!shopItemSelected.imageUrl" class="shop-item-popup__icon-placeholder">{{ shopItemSelected.name.charAt(0) }}</span>
+      <div class="shop-item-popup__title-block">
+        <span class="shop-item-popup__name">{{ shopItemSelected.name }}</span>
+        <span class="shop-item-popup__tag">Amélioration</span>
+      </div>
+      <span class="shop-item-popup__price">{{ shopItemSelected.price | number:'1.0-0' }}</span>
+    </div>
+    <p class="shop-item-popup__description" [innerHTML]="shopItemSelected.description"></p>
+    <p class="shop-item-popup__cta">Clique pour acheter.</p>
+  </div>
+</div>

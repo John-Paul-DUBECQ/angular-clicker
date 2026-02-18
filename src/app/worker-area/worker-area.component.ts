@@ -18,14 +18,16 @@ export class WorkerAreaComponent {
 
   constructor(private gameState: GameStateService) {}
 
-  /** Production /s (workers auto) ou 0. */
+  /** Production /s effective (workers auto), avec bonus shop. */
   get clicksPerSecond(): number {
-    return this.workerSelected ? calculateClicksPerSecondForWorker(this.workerSelected) : 0;
+    if (!this.workerSelected) return 0;
+    return this.workerSelected.effectiveProductionPerSecond ?? calculateClicksPerSecondForWorker(this.workerSelected);
   }
 
-  /** Bonus dégâts par clic (workers click) ou 0. */
+  /** Bonus dégâts par clic effectif (workers click), avec bonus shop. */
   get clickBonus(): number {
-    return this.workerSelected ? getClickBonus(this.workerSelected) : 0;
+    if (!this.workerSelected) return 0;
+    return this.workerSelected.effectiveClickBonus ?? getClickBonus(this.workerSelected);
   }
 
   get isClickWorker(): boolean {

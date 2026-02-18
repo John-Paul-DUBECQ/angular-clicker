@@ -1,10 +1,15 @@
-/** Données persistées d’un worker (sauvegarde / chargement). */
+export type WorkerType = 'auto' | 'click';
+
 export interface WorkerAutoData {
   name: string;
-  productivity: number;
+  /** @deprecated Conservé pour compatibilité sauvegarde; utiliser baseProduction. */
+  productivity?: number;
   level: number;
   basePrice: number;
   curvePrice: number;
+  workerType: WorkerType;
+  baseProduction: number;
+  curveProduction: number;
   doesAppearInGame: boolean;
   bought: boolean;
 }
@@ -15,25 +20,58 @@ export interface WorkerAuto extends WorkerAutoData {
   canBuyWorker: boolean;
 }
 
-export function createWorker(
+/** Crée un worker de production automatique (/s). Courbe dégâts ≠ courbe prix. */
+export function createAutoWorker(
   name: string,
-  productivity: number,
+  baseProduction: number,
+  curveProduction: number,
   basePrice: number,
   curvePrice: number
 ): WorkerAutoData {
   return {
     name,
-    productivity,
     level: 0,
     basePrice: Math.floor(basePrice),
     curvePrice,
+    workerType: 'auto',
+    baseProduction,
+    curveProduction,
     doesAppearInGame: false,
     bought: false,
   };
 }
 
+/** Crée le worker unique qui augmente les dégâts par clic. */
+export function createClickWorker(
+  name: string,
+  baseClickBonus: number,
+  curveClickBonus: number,
+  basePrice: number,
+  curvePrice: number
+): WorkerAutoData {
+  return {
+    name,
+    level: 0,
+    basePrice: Math.floor(basePrice),
+    curvePrice,
+    workerType: 'click',
+    baseProduction: baseClickBonus,
+    curveProduction: curveClickBonus,
+    doesAppearInGame: false,
+    bought: false,
+  };
+}
+
+/** Prix du prochain niveau (courbe prix). */
 export function getPrice(w: WorkerAutoData): number {
   return Math.floor(w.basePrice * Math.pow(w.curvePrice, w.level));
+}
+
+/** Valeur du worker (courbe dégâts, distincte du prix) : production/s pour auto, bonus clic pour click. */
+export function getProductionOrClickBonus(w: WorkerAutoData): number {
+  const base = w.baseProduction ?? (w as { productivity?: number }).productivity ?? 0;
+  const curve = w.curveProduction ?? 1.1;
+  return Number((base * Math.pow(curve, w.level)).toFixed(2));
 }
 
 export function getDoesAppearInGame(w: WorkerAutoData, clicks: number): boolean {
@@ -47,6 +85,14 @@ export function getCanBuyWorker(w: WorkerAutoData, clicks: number): boolean {
   return clicks >= getPrice(w);
 }
 
+/** Production par seconde (workers auto uniquement). */
 export function calculateClicksPerSecondForWorker(w: WorkerAutoData): number {
-  return Number((w.productivity * w.level * (1 + (w.level - 1) * 0.1)).toFixed(2));
+  if (w.workerType === 'click') return 0;
+  return getProductionOrClickBonus(w);
+}
+
+/** Bonus dégâts par clic (workers click uniquement). */
+export function getClickBonus(w: WorkerAutoData): number {
+  if (w.workerType !== 'click') return 0;
+  return getProductionOrClickBonus(w);
 }

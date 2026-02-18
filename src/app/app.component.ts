@@ -47,13 +47,17 @@ export class AppComponent implements OnInit, OnDestroy {
     this.refreshGameState();
   }
 
-  exportSave(): void {
-    this.gameState.downloadSave();
+  /** Appelé par worker-area après un upgrade pour mettre à jour l’affichage immédiatement. */
+  onWorkerUpgraded(): void {
+    this.refreshGameState();
   }
 
-  /** Garde les mêmes lignes DOM au refresh → le clic n’est pas perdu quand l’affichage s’actualise. */
   trackByIndex(index: number, _worker: WorkerAuto): number {
     return index;
+  }
+/*
+  exportSave(): void {
+    this.gameState.downloadSave();
   }
 
   importSave(event: Event): void {
@@ -72,4 +76,5 @@ export class AppComponent implements OnInit, OnDestroy {
     };
     reader.readAsText(file);
   }
+  */
 }

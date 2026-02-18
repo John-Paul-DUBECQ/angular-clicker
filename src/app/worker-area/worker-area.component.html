@@ -3,7 +3,8 @@
         <div class="worker-name">{{ workerSelected.name }}</div>
         <div class="worker-level">Level : {{ workerSelected.level }}</div>
     </div>
-    <div class="worker-productivity">{{ clicksPerSecond }}/s</div>
+    <div class="worker-productivity" *ngIf="!isClickWorker">{{ clicksPerSecond }}/s</div>
+    <div class="worker-productivity" *ngIf="isClickWorker">+{{ clickBonus }} dégâts/clic</div>
     <div class="worker-buy-button">
         <button class="btn btn-primary" *ngIf="workerSelected.canBuyWorker" (click)="upgradeWorker()">Upgrade : {{ workerSelected.price }}</button>
         <button class="btn btn-primary disabled" *ngIf="!workerSelected.canBuyWorker" disabled>Upgrade : {{ workerSelected.price }}</button>

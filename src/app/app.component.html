@@ -17,7 +17,8 @@
         <app-worker-area
           *ngIf="worker.doesAppearInGame"
           [workerSelected]="worker"
-          [workerIndex]="i">
+          [workerIndex]="i"
+          (upgraded)="onWorkerUpgraded()">
         </app-worker-area>
       </ng-container>
     </div>

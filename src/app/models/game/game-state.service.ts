@@ -2,11 +2,14 @@ import { Injectable } from '@angular/core';
 import {
   WorkerAuto,
   WorkerAutoData,
-  createWorker,
+  WorkerType,
+  createAutoWorker,
+  createClickWorker,
   getPrice,
   getDoesAppearInGame,
   getCanBuyWorker,
   calculateClicksPerSecondForWorker,
+  getClickBonus,
 } from '../worker-auto-model';
 import { Game } from './game';
 
@@ -39,16 +42,17 @@ export class GameStateService {
 
   private initWorkers(): void {
     this.workersAvailable = [
-      createWorker('Worker 1', 1, 10, 1.0),
-      createWorker('Worker 2', 2, 20, 1.1),
-      createWorker('Worker 3', 3, 300, 1.2),
-      createWorker('Worker 4', 4, 400, 1.3),
-      createWorker('Worker 5', 5, 500, 1.4),
-      createWorker('Worker 6', 6, 600, 1.5),
-      createWorker('Worker 7', 7, 700, 1.6),
-      createWorker('Worker 8', 8, 800, 1.7),
-      createWorker('Worker 9', 9, 900, 1.8),
-      createWorker('Worker 10', 10, 1000, 1.9),
+      createClickWorker('Épée', 1, 1.2, 10, 1.25),
+      createAutoWorker('Worker 1', 1, 1.3, 50, 1.25),
+      createAutoWorker('Worker 2', 2, 1.4, 150, 1.35),
+      createAutoWorker('Worker 3', 3, 1.5, 500, 1.45),
+      createAutoWorker('Worker 4', 4, 1.6, 2000, 1.55),
+      createAutoWorker('Worker 5', 5, 1.7, 5000, 1.65),
+      createAutoWorker('Worker 6', 6, 1.8, 20000, 1.75),
+      createAutoWorker('Worker 7', 7, 1.9, 75000, 1.85),
+      createAutoWorker('Worker 8', 8, 2.0, 150000, 1.95),
+      createAutoWorker('Worker 9', 9, 2.1, 300000, 2.05),
+      createAutoWorker('Worker 10', 10, 2.2, 600000, 2.15),
     ];
     this.workers = [];
   }
@@ -77,6 +81,7 @@ export class GameStateService {
 
   getState(): Game {
     const valueAutoPerSecond = this.calculateClicksPerSecond();
+    this.clickValue = 1 + this.workers.reduce((sum, w) => sum + getClickBonus(w), 0);
     const workersAvailableView: WorkerAuto[] = this.workersAvailable.map((w) => ({
       ...w,
       price: getPrice(w),
@@ -123,7 +128,7 @@ export class GameStateService {
     this.lastUpgradedIndex = workerIndex;
     this.lastUpgradedTime = now;
   }
-
+/*
   exportSave(): string {
     const workerIndicesOwned = this.workers.map((w) =>
       this.workersAvailable.indexOf(w)
@@ -144,7 +149,10 @@ export class GameStateService {
         return false;
       }
       this.clicks = data.clicks;
-      this.workersAvailable = data.workersAvailable;
+      this.workersAvailable = data.workersAvailable.map((w) => this.migrateWorkerData(w));
+      if (!this.workersAvailable.some((w) => w.workerType === 'click')) {
+        this.workersAvailable.push(createClickWorker('Épée', 1, 1.2, 50, 1.25));
+      }
       this.workers = (data.workerIndicesOwned || [])
         .filter((i) => i >= 0 && i < this.workersAvailable.length)
         .map((i) => this.workersAvailable[i]);
@@ -152,6 +160,21 @@ export class GameStateService {
     } catch {
       return false;
     }
+  }
+
+  private migrateWorkerData(w: Partial<WorkerAutoData> & { name: string; level: number; basePrice: number; curvePrice: number }): WorkerAutoData {
+    if (w.workerType != null && w.baseProduction != null && w.curveProduction != null) {
+      return w as WorkerAutoData;
+    }
+    const prod = (w as { productivity?: number }).productivity ?? 1;
+    return {
+      ...w,
+      workerType: (w as { workerType?: WorkerType }).workerType ?? 'auto',
+      baseProduction: (w as { baseProduction?: number }).baseProduction ?? prod,
+      curveProduction: (w as { curveProduction?: number }).curveProduction ?? 1.08,
+      doesAppearInGame: w.doesAppearInGame ?? false,
+      bought: w.bought ?? false,
+    } as WorkerAutoData;
   }
 
   downloadSave(): void {
@@ -164,4 +187,5 @@ export class GameStateService {
     a.click();
     URL.revokeObjectURL(url);
   }
+  */
 }

@@ -12,3 +12,9 @@ export interface ShopItem {
 }
 
 
+export function getDoesAppearInShop(item: ShopItem, clicks: number): boolean {
+  if (item.doesAppearInGame) return true;
+  const should = item.bought || clicks >= Math.floor(item.price / 2);
+  if (should) item.doesAppearInGame = true;
+  return should;
+}

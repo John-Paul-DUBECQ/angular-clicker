@@ -10,7 +10,7 @@ import {
   calculateClicksPerSecondForWorker,
   getClickBonus,
 } from '../worker-auto-model';
-import { ShopItem } from '../shop-item';
+import { ShopItem, getDoesAppearInShop } from '../shop-item';
 import { listShopItem } from '../list-shop-item';
 import { Game } from './game';
 
@@ -113,7 +113,7 @@ export class GameStateService {
     }));
     const shopItemsView: ShopItem[] = this.shopItems.map((item) => ({
       ...item,
-      doesAppearInGame: item.doesAppearInGame,
+      doesAppearInGame: getDoesAppearInShop(item, this.clicks),
       bought: item.bought,
     }));
     const workersView: WorkerAuto[] = this.workers.map((w) => {

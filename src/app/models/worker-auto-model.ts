@@ -97,14 +97,19 @@ export function getCanBuyWorker(w: WorkerAutoData, clicks: number): boolean {
   return clicks >= getPrice(w);
 }
 
+/** Exposant du multiplicateur x2 par palier (niveau 10, 25, puis tous les 25). */
+function getTierExponent(level: number): number {
+  return level < 10 ? 0 : level < 25 ? 1 : 2 + Math.floor((level - 25) / 25);
+}
+
 /** Production par seconde (workers auto uniquement). */
 export function calculateClicksPerSecondForWorker(w: WorkerAutoData): number {
   if (w.workerType === 'click') return 0;
-  return getProductionOrClickBonus(w) * Math.pow(2, w.level < 10 ? 0 : w.level < 25 ? 1 : 2 + Math.floor((w.level - 25) / 25));
+  return getProductionOrClickBonus(w) * Math.pow(2, getTierExponent(w.level));
 }
 
-/** Bonus dégâts par clic (workers click uniquement). */
+/** Bonus dégâts par clic (workers click uniquement), avec le même palier tous les 25 que la prod auto. */
 export function getClickBonus(w: WorkerAutoData): number {
   if (w.workerType !== 'click') return 0;
-  return getProductionOrClickBonus(w);
+  return getProductionOrClickBonus(w) * Math.pow(2, getTierExponent(w.level))*0.75;
 }

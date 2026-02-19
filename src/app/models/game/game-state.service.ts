@@ -18,7 +18,13 @@ import {
   SUN_CLICK_MULTIPLIER,
   sunUnlockDefinition,
 } from '../unlocks/sun-unlock';
-import { criticalHitUnlockDefinition, isCriticalHitUnlocked } from '../unlocks/critical-hit';
+import {
+  criticalHitUnlockDefinition,
+  CRITICAL_HIT_UPGRADES,
+  getCriticalHitStats,
+  isCriticalHitUnlocked,
+  MINER_WORKER_INDEX,
+} from '../unlocks/critical-hit';
 
 const TICKS_PER_SECOND = 10;
 
@@ -50,15 +56,18 @@ export class GameStateService {
 
   private initWorkers(): void {
     this.workersAvailable = [
-      createClickWorker('Épée', 1, 1.1, 10, 1.25),
+      createClickWorker('Épée', 1, 1.05, 10, 1.25),
       createAutoWorker('Fermier', 2, 1.3, 50, 1.50),
-      createAutoWorker('Mineur', 4, 1.4, 150, 1.50, [criticalHitUnlockDefinition]),
-      createAutoWorker('Forgeron', 12, 1.5, 500, 1.50),
-      createAutoWorker('Astrologue', 32, 1.6, 2000, 1.50, [sunUnlockDefinition]),
-      createAutoWorker('Magicien', 64, 1.7, 5000, 1.50),
-      createAutoWorker('Alchimiste', 128, 1.8, 20000, 1.50),
-      createAutoWorker('Géomètre', 256, 1.9, 75000, 1.50),
-      createAutoWorker('Architecte', 512, 2.0, 150000, 1.50),
+      createAutoWorker('Mineur', 4, 1.4, 150, 1.50, [
+        criticalHitUnlockDefinition,
+        ...CRITICAL_HIT_UPGRADES,
+      ]),
+      createAutoWorker('Forgeron', 12, 1.5, 500, 1.75),
+      createAutoWorker('Astrologue', 32, 1.6, 2000, 1.85, [sunUnlockDefinition]),
+      createAutoWorker('Magicien', 64, 1.7, 5000, 1.95),
+      createAutoWorker('Alchimiste', 128, 1.8, 20000, 2.5),
+      createAutoWorker('Géomètre', 256, 1.9, 75000, 3),
+      createAutoWorker('Architecte', 512, 2.0, 150000, 4),
     ];
     this.workers = [];
   }
@@ -151,9 +160,14 @@ export class GameStateService {
 
   click(valueMultiplier: number = 1, clientX?: number, clientY?: number): void {
     let value = this.getCurrentClickValue();
-    if (isCriticalHitUnlocked(this.workers, this.workersAvailable) && Math.random() < criticalHitUnlockDefinition.criticalChance) {
-      value *= criticalHitUnlockDefinition.damageMultiplier;
-      this.showCriticalHit(clientX, clientY);
+    if (isCriticalHitUnlocked(this.workers, this.workersAvailable)) {
+      const miner = this.workersAvailable[MINER_WORKER_INDEX];
+      const minerLevel = miner?.level ?? 0;
+      const { totalChance, totalMultiplier } = getCriticalHitStats(minerLevel);
+      if (Math.random() < totalChance) {
+        value *= totalMultiplier;
+        this.showCriticalHit(value * valueMultiplier, clientX, clientY);
+      }
     }
     this.clicks += value * valueMultiplier;
   }
@@ -163,12 +177,12 @@ export class GameStateService {
     this.click(SUN_CLICK_MULTIPLIER, event?.clientX, event?.clientY);
   }
 
-  showCriticalHit(clientX?: number, clientY?: number): void {
+  showCriticalHit(value: number, clientX?: number, clientY?: number): void {
     const x = clientX ?? window.innerWidth / 2;
     const y = clientY ?? window.innerHeight / 2;
     const criticalHitPopup = document.createElement('div');
     criticalHitPopup.className = 'critical-hit-popup';
-    criticalHitPopup.innerHTML = 'Critical Hit !';
+    criticalHitPopup.innerHTML = value.toFixed(2).toString();
     criticalHitPopup.style.left = `${x}px`;
     criticalHitPopup.style.top = `${y}px`;
     document.body.appendChild(criticalHitPopup);

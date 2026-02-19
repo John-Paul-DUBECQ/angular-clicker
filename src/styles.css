@@ -6,3 +6,29 @@ body {
   font-family: Roboto, "Helvetica Neue", sans-serif;
   background-color: #121212;
 }
+
+/* Popup coup critique : à la position du clic, ne bloque pas les clics, monte légèrement */
+.critical-hit-popup {
+  position: fixed;
+  transform: translate(-50%, -50%);
+  padding: 0.25rem 0.5rem;
+  color: #fff;
+  font-weight: bold;
+  font-size: 0.9rem;
+  border-radius: 4px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 9999;
+  animation: critical-hit-float 1s ease-out forwards;
+}
+
+@keyframes critical-hit-float {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% - 28px));
+  }
+}

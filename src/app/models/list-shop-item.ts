@@ -15,14 +15,24 @@ Recap des workers :
 export const listShopItem: Array<ShopItem> = [
   {
     name: 'Epée d\'entrainement',
-    description: 'Aussi piquant qu\'un cure-dent, multiplie les dégats de l\'épée définitivement par 2',
+    description: 'Aussi piquant qu\'un cure-dent, multiplie les dégats de l\'épée définitivement par 1.5',
     imageUrl: 'assets/imgUpgrades/swords/Sword1.png',
-    price: 10,
+    price: 200,
     doesAppearInGame: false,
     bought: false,
-    value: 2,
+    value: 1.5,
     workerIndex: 0,
-  },{
+  },{ 
+    name: 'Epée en bois trempé',
+    description: 'Avec de l\'acier trempé, ça aurait été plus efficace, multiplie les dégats de l\'épée définitivement par 1.5',
+    imageUrl: 'assets/imgUpgrades/swords/Sword2.png',
+    price: 2000,
+    doesAppearInGame: false,
+    bought: false,
+    value: 1.5,
+    workerIndex: 0,
+  },
+  {
     name: 'FourcheLangue',
     description: 'Fourche légendaire datant d\'un temps oublié, dommage qu\'elle soit cassée. Multiplie les dégâts du fermier définitivement par 2',
     imageUrl: 'assets/imgUpgrades/Farmer/Farmer1.png',

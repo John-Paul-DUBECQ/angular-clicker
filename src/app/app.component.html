@@ -17,7 +17,7 @@
       <p class="value-auto-per-second">{{ game.valueAutoPerSecond | number:'1.2-2' }}/s</p>
     </div>
     <div class="center-zone-wrapper">
-      <div id="click-area" (click)="click()"></div>
+      <div id="click-area" (click)="click($event)"></div>
       <app-sun-area
         [sunUnlocked]="game.sunUnlocked || false"
         (clicked)="onSunClicked()">

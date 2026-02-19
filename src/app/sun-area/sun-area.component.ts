@@ -19,9 +19,9 @@ export class SunAreaComponent {
 
 
 
-  clickSun($event: Event): void {
+  clickSun($event: MouseEvent): void {
     $event.stopPropagation();
-    this.gameState.clickSun();
+    this.gameState.clickSun($event);
     this.clicked.emit();
   }
 

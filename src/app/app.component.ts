@@ -38,8 +38,8 @@ export class AppComponent implements OnInit, OnDestroy {
     this.workersAvailable = state.workersAvailable;
   }
 
-  click(): void {
-    this.gameState.click();
+  click($event: MouseEvent): void {
+    this.gameState.click(1, $event?.clientX, $event?.clientY);
     this.refreshGameState();
   }
 

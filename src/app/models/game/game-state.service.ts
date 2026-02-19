@@ -18,6 +18,7 @@ import {
   SUN_CLICK_MULTIPLIER,
   sunUnlockDefinition,
 } from '../unlocks/sun-unlock';
+import { criticalHitUnlockDefinition, isCriticalHitUnlocked } from '../unlocks/critical-hit';
 
 const TICKS_PER_SECOND = 10;
 
@@ -49,9 +50,9 @@ export class GameStateService {
 
   private initWorkers(): void {
     this.workersAvailable = [
-      createClickWorker('Épée', 1, 1.2, 10, 1.25),
+      createClickWorker('Épée', 1, 1.1, 10, 1.25),
       createAutoWorker('Fermier', 2, 1.3, 50, 1.50),
-      createAutoWorker('Mineur', 4, 1.4, 150, 1.50),
+      createAutoWorker('Mineur', 4, 1.4, 150, 1.50, [criticalHitUnlockDefinition]),
       createAutoWorker('Forgeron', 12, 1.5, 500, 1.50),
       createAutoWorker('Astrologue', 32, 1.6, 2000, 1.50, [sunUnlockDefinition]),
       createAutoWorker('Magicien', 64, 1.7, 5000, 1.50),
@@ -144,17 +145,36 @@ export class GameStateService {
       valueAutoPerSecond,
       shopItems: shopItemsView,
       sunUnlocked: isSunUnlocked(this.workers, this.workersAvailable),
+      criticalHitUnlocked: isCriticalHitUnlocked(this.workers, this.workersAvailable),
     };
   }
 
-  click(): void {
-    this.clicks += this.clickValue;
-    console.log('clicks', this.clicks);
+  click(valueMultiplier: number = 1, clientX?: number, clientY?: number): void {
+    let value = this.getCurrentClickValue();
+    if (isCriticalHitUnlocked(this.workers, this.workersAvailable) && Math.random() < criticalHitUnlockDefinition.criticalChance) {
+      value *= criticalHitUnlockDefinition.damageMultiplier;
+      this.showCriticalHit(clientX, clientY);
+    }
+    this.clicks += value * valueMultiplier;
   }
 
-  clickSun(): void {
+  clickSun(event?: MouseEvent): void {
     if (!isSunUnlocked(this.workers, this.workersAvailable)) return;
-    this.clicks += SUN_CLICK_MULTIPLIER * this.getCurrentClickValue();
+    this.click(SUN_CLICK_MULTIPLIER, event?.clientX, event?.clientY);
+  }
+
+  showCriticalHit(clientX?: number, clientY?: number): void {
+    const x = clientX ?? window.innerWidth / 2;
+    const y = clientY ?? window.innerHeight / 2;
+    const criticalHitPopup = document.createElement('div');
+    criticalHitPopup.className = 'critical-hit-popup';
+    criticalHitPopup.innerHTML = 'Critical Hit !';
+    criticalHitPopup.style.left = `${x}px`;
+    criticalHitPopup.style.top = `${y}px`;
+    document.body.appendChild(criticalHitPopup);
+    setTimeout(() => {
+      criticalHitPopup.remove();
+    }, 1000);
   }
 
   upgradeWorker(workerIndex: number): void {

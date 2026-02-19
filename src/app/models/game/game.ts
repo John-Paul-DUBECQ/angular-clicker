@@ -10,6 +10,8 @@ import { WorkerAuto } from "../worker-auto-model";
  * @property clickValue - value of each click
  * @property valueAutoPerSecond - value of auto per second
  * @property shopItems - array of shop items
+ * @property sunUnlocked - if the sun is unlocked
+ * @property criticalHitUnlocked - if the critical hit is unlocked
  */
 export class Game {
     clicks!: number;
@@ -19,4 +21,5 @@ export class Game {
     valueAutoPerSecond!: number;
     shopItems!: ShopItem[];
     sunUnlocked?: boolean;
+    criticalHitUnlocked?: boolean;
 }

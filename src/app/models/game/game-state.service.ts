@@ -13,6 +13,11 @@ import {
 import { ShopItem, getDoesAppearInShop } from '../shop-item';
 import { listShopItem } from '../list-shop-item';
 import { Game } from './game';
+import {
+  isSunUnlocked,
+  SUN_CLICK_MULTIPLIER,
+  sunUnlockDefinition,
+} from '../unlocks/sun-unlock';
 
 const TICKS_PER_SECOND = 10;
 
@@ -48,7 +53,7 @@ export class GameStateService {
       createAutoWorker('Fermier', 2, 1.3, 50, 1.50),
       createAutoWorker('Mineur', 4, 1.4, 150, 1.50),
       createAutoWorker('Forgeron', 12, 1.5, 500, 1.50),
-      createAutoWorker('Astrologue', 32, 1.6, 2000, 1.50),
+      createAutoWorker('Astrologue', 32, 1.6, 2000, 1.50, [sunUnlockDefinition]),
       createAutoWorker('Magicien', 64, 1.7, 5000, 1.50),
       createAutoWorker('Alchimiste', 128, 1.8, 20000, 1.50),
       createAutoWorker('Géomètre', 256, 1.9, 75000, 1.50),
@@ -100,9 +105,14 @@ export class GameStateService {
     );
   }
 
+  /** Valeur d'un clic actuelle (1 + somme des bonus clic des workers). */
+  private getCurrentClickValue(): number {
+    return 1 + this.workers.reduce((sum, w) => sum + this.getEffectiveClickBonusForWorker(w), 0);
+  }
+
   getState(): Game {
     const valueAutoPerSecond = this.calculateClicksPerSecond();
-    this.clickValue = 1 + this.workers.reduce((sum, w) => sum + this.getEffectiveClickBonusForWorker(w), 0);
+    this.clickValue = this.getCurrentClickValue();
     const workersAvailableView: WorkerAuto[] = this.workersAvailable.map((w) => ({
       ...w,
       price: getPrice(w),
@@ -133,12 +143,18 @@ export class GameStateService {
       clickValue: this.clickValue,
       valueAutoPerSecond,
       shopItems: shopItemsView,
+      sunUnlocked: isSunUnlocked(this.workers, this.workersAvailable),
     };
   }
 
   click(): void {
     this.clicks += this.clickValue;
     console.log('clicks', this.clicks);
+  }
+
+  clickSun(): void {
+    if (!isSunUnlocked(this.workers, this.workersAvailable)) return;
+    this.clicks += SUN_CLICK_MULTIPLIER * this.getCurrentClickValue();
   }
 
   upgradeWorker(workerIndex: number): void {

@@ -38,3 +38,117 @@
     color: #b1b1b1;
 }
 
+/* Zone cliquable "Prochain palier" au survol de laquelle s’affiche le popup */
+.next-worker-unlock {
+    cursor: help;
+    padding: 4px 8px;
+    margin-top: 6px;
+    font-size: 12px;
+    color: #9c9a94;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.next-worker-unlock:hover {
+    color: #b0aea8;
+}
+
+/* Popup style Cookie Clicker (position: fixed pour échapper au overflow parent) */
+.worker-unlock-popup {
+    min-width: 280px;
+    max-width: 320px;
+    padding: 12px 14px;
+    background: rgba(45, 42, 38, 0.98);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    color: #ffffff;
+    font-size: 14px;
+    line-height: 1.4;
+    pointer-events: none;
+}
+
+.worker-unlock-popup--fixed {
+    position: fixed;
+    z-index: 1000;
+    transform: translateY(-50%) translateX(-100%);
+}
+
+.worker-unlock-popup__header {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.worker-unlock-popup__icon,
+.worker-unlock-popup__icon-placeholder {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.3);
+    object-fit: contain;
+    padding: 2px;
+}
+
+.worker-unlock-popup__icon-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #ffffff;
+}
+
+.worker-unlock-popup__title-block {
+    flex: 1;
+    min-width: 0;
+}
+
+.worker-unlock-popup__name {
+    display: block;
+    font-weight: bold;
+    color: #fff;
+    margin-bottom: 4px;
+}
+
+.worker-unlock-popup__tag {
+    display: inline-block;
+    padding: 2px 8px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 4px;
+    font-size: 11px;
+    color: #b0aea8;
+}
+
+.worker-unlock-popup__description {
+    margin: 0 0 8px 0;
+    color: #d4d2ce;
+    font-size: 13px;
+}
+
+.worker-unlock-popup__description ::ng-deep strong {
+    font-weight: bold;
+    color: #fff;
+}
+
+.worker-unlock-popup__level {
+    margin: 0 0 8px 0;
+    font-size: 12px;
+    color: #b0aea8;
+}
+
+.worker-unlock-popup__cta {
+    margin: 0;
+    text-align: center;
+    font-size: 12px;
+    color: #9c9a94;
+}
+
+.center-part-worker-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}

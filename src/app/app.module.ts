@@ -11,12 +11,14 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { MatIconModule } from '@angular/material/icon';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import { ShopItemAreaComponent } from './shop-item-area/shop-item-area.component';
+import { SunAreaComponent } from './sun-area/sun-area.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     WorkerAreaComponent,
     ShopItemAreaComponent,
+    SunAreaComponent,
   ],
   imports: [
     BrowserModule,

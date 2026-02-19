@@ -15,7 +15,7 @@ Recap des workers :
 export const listShopItem: Array<ShopItem> = [
   {
     name: 'Epée d\'entrainement',
-    description: 'Aussi piquant qu\'un cure-dent, multiplie les dégats des clics définitivement par 2',
+    description: 'Aussi piquant qu\'un cure-dent, multiplie les dégats de l\'épée définitivement par 2',
     imageUrl: 'assets/imgUpgrades/swords/Sword1.png',
     price: 10,
     doesAppearInGame: false,

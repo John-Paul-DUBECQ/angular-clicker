@@ -18,4 +18,5 @@ export class Game {
     clickValue!: number;
     valueAutoPerSecond!: number;
     shopItems!: ShopItem[];
+    sunUnlocked?: boolean;
 }

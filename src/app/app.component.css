@@ -36,6 +36,15 @@
   flex-direction: column;
 }
 
+.center-zone-wrapper {
+  position: relative;
+  width: 220px;
+  height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 #click-area {
   cursor: pointer;
   width: 100px;

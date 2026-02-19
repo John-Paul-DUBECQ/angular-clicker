@@ -13,7 +13,7 @@ export class AppComponent implements OnInit, OnDestroy {
   title = 'Clicker Game';
   private refreshInterval: ReturnType<typeof setInterval> | null = null;
 
-  game: Game = { clicks: 0, workers: [], workersAvailable: [], clickValue: 1, valueAutoPerSecond: 0, shopItems: [] };
+  game: Game = { clicks: 0, workers: [], workersAvailable: [], clickValue: 1, valueAutoPerSecond: 0, shopItems: [], sunUnlocked: false };
   workers: WorkerAuto[] = [];
   workersAvailable: WorkerAuto[] = [];
   importError = false;
@@ -50,6 +50,10 @@ export class AppComponent implements OnInit, OnDestroy {
 
   /** Appelé par worker-area après un upgrade pour mettre à jour l’affichage immédiatement. */
   onWorkerUpgraded(): void {
+    this.refreshGameState();
+  }
+
+  onSunClicked(): void {
     this.refreshGameState();
   }
 

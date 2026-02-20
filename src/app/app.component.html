@@ -1,8 +1,9 @@
-<div class="app-layout">
-  <div class="column column-left">
-    <div class="shop-items-list">
-      <ng-container *ngFor="let shopItem of game.shopItems; let i = index; trackBy: trackByShopIndex">
-        <app-shop-item-area
+<div class="app-wrapper">
+  <div class="app-layout">
+    <div class="column column-left">
+      <div class="shop-items-list">
+        <ng-container *ngFor="let shopItem of game.shopItems; let i = index; trackBy: trackByShopIndex">
+          <app-shop-item-area
           *ngIf="shopItem.doesAppearInGame && shopItem.bought == false"
           [shopItemSelected]="shopItem"
           [itemIndex]="i">
@@ -10,18 +11,30 @@
       </ng-container>
     </div>
   </div>
-
+  
   <div class="column column-center">
-    <div class="score-area">
-      <p class="value-click">{{ game.clicks | number:'1.2-2' }}</p>
-      <p class="value-auto-per-second">{{ game.valueAutoPerSecond | number:'1.2-2' }}/s</p>
+    <div class="streak-bar" *ngIf="game.streakUnlocked">
+      <div class="streak-bar__label">{{ game.streakActive && game.streakDamageMultiplier ? '×' + game.streakDamageMultiplier : '' }}</div>
+      <div class="streak-bar__track">
+        <div
+          class="streak-bar__fill"
+          [class.streak-bar__fill--active]="game.streakActive"
+          [style.width.%]="streakBarPercent">
+        </div>
+      </div>
     </div>
-    <div class="center-zone-wrapper">
-      <div id="click-area" (click)="click($event)"></div>
-      <app-sun-area
-        [sunUnlocked]="game.sunUnlocked || false"
-        (clicked)="onSunClicked()">
-      </app-sun-area>
+    <div class="column-center__main">
+      <div class="score-area">
+        <p class="value-click">{{ game.clicks | number:'1.2-2' }}</p>
+        <p class="value-auto-per-second">{{ game.valueAutoPerSecond | number:'1.2-2' }}/s</p>
+      </div>
+      <div class="center-zone-wrapper">
+        <div id="click-area" (click)="click($event)"></div>
+        <app-sun-area
+          [sunUnlocked]="game.sunUnlocked || false"
+          (clicked)="onSunClicked()">
+        </app-sun-area>
+      </div>
     </div>
   </div>
 
@@ -36,5 +49,6 @@
         </app-worker-area>
       </ng-container>
     </div>
+  </div>
   </div>
 </div>

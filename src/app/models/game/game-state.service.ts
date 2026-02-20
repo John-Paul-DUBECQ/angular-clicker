@@ -25,6 +25,8 @@ import {
   isCriticalHitUnlocked,
   MINER_WORKER_INDEX,
 } from '../unlocks/critical-hit';
+import { STREAK_UPGRADES, streakUnlockDefinition } from '../unlocks/streak';
+import { StreakStateService } from '../unlocks/streak-state.service';
 
 const TICKS_PER_SECOND = 10;
 
@@ -49,7 +51,7 @@ export class GameStateService {
   private static readonly UPGRADE_COOLDOWN_MS = 80;
   private static readonly CLICKS_EPSILON = 0.001;
 
-  constructor() {
+  constructor(private streakState: StreakStateService) {
     this.initWorkers();
     this.startTickLoop();
   }
@@ -62,7 +64,7 @@ export class GameStateService {
         criticalHitUnlockDefinition,
         ...CRITICAL_HIT_UPGRADES,
       ]),
-      createAutoWorker('Forgeron', 12, 1.5, 500, 1.75),
+      createAutoWorker('Forgeron', 16, 1.5, 500, 1.60, [streakUnlockDefinition, ...STREAK_UPGRADES]),
       createAutoWorker('Astrologue', 32, 1.6, 2000, 1.85, [sunUnlockDefinition]),
       createAutoWorker('Magicien', 64, 1.7, 5000, 1.95),
       createAutoWorker('Alchimiste', 128, 1.8, 20000, 2.5),
@@ -77,7 +79,12 @@ export class GameStateService {
     this.tickIntervalId = setInterval(() => {
       const autoPerTick = this.calculateClicksPerSecond() / TICKS_PER_SECOND;
       this.clicks += autoPerTick;
+      this.tickStreakBar();
     }, 1000 / TICKS_PER_SECOND);
+  }
+
+  private tickStreakBar(): void {
+    this.streakState.tick(TICKS_PER_SECOND, this.workers, this.workersAvailable);
   }
 
   private stopTickLoop(): void {
@@ -109,10 +116,11 @@ export class GameStateService {
   }
 
   private calculateClicksPerSecond(): number {
-    return this.workers.reduce(
+    const base = this.workers.reduce(
       (sum, w) => sum + this.getEffectiveProductionForWorker(w),
       0
     );
+    return base * this.streakState.getMultiplier(this.workers, this.workersAvailable);
   }
 
   /** Valeur d'un clic actuelle (1 + somme des bonus clic des workers). */
@@ -131,9 +139,21 @@ export class GameStateService {
       effectiveProductionPerSecond: this.getEffectiveProductionForWorker(w),
       effectiveClickBonus: this.getEffectiveClickBonusForWorker(w),
     }));
+    const shopContext = {
+      clicks: this.clicks,
+      getWorkerLevel: (index: number) => {
+        if (index < 0 || index >= this.workersAvailable.length) return null;
+        const w = this.workersAvailable[index];
+        return this.workers.includes(w) ? w.level : null;
+      },
+      getShopItemBought: (ref: string | number) =>
+        typeof ref === 'number'
+          ? (this.shopItems[ref]?.bought ?? false)
+          : (this.shopItems.find((i) => i.id === ref)?.bought ?? false),
+    };
     const shopItemsView: ShopItem[] = this.shopItems.map((item) => ({
       ...item,
-      doesAppearInGame: getDoesAppearInShop(item, this.clicks),
+      doesAppearInGame: getDoesAppearInShop(item, shopContext),
       bought: item.bought,
     }));
     const workersView: WorkerAuto[] = this.workers.map((w) => {
@@ -146,6 +166,7 @@ export class GameStateService {
         effectiveClickBonus: this.getEffectiveClickBonusForWorker(w),
       };
     });
+    const streakView = this.streakState.getView(this.workers, this.workersAvailable);
     return {
       clicks: this.clicks,
       workers: workersView,
@@ -155,6 +176,7 @@ export class GameStateService {
       shopItems: shopItemsView,
       sunUnlocked: isSunUnlocked(this.workers, this.workersAvailable),
       criticalHitUnlocked: isCriticalHitUnlocked(this.workers, this.workersAvailable),
+      ...streakView,
     };
   }
 
@@ -169,6 +191,8 @@ export class GameStateService {
         this.showCriticalHit(value * valueMultiplier, clientX, clientY);
       }
     }
+    this.streakState.onClick(this.workers, this.workersAvailable);
+    value *= this.streakState.getMultiplier(this.workers, this.workersAvailable);
     this.clicks += value * valueMultiplier;
   }
 

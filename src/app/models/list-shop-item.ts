@@ -1,4 +1,4 @@
-import { ShopItem } from "./shop-item";
+import { requireBought, requirePower, ShopItem } from "./shop-item";
 /*
 Recap des workers :
 - Épée : 0
@@ -17,7 +17,7 @@ export const listShopItem: Array<ShopItem> = [
     name: 'Epée d\'entrainement',
     description: 'Aussi piquant qu\'un cure-dent, multiplie les dégats de l\'épée définitivement par 1.5',
     imageUrl: 'assets/imgUpgrades/swords/Sword1.png',
-    price: 200,
+    price: 10,
     doesAppearInGame: false,
     bought: false,
     value: 1.5,
@@ -31,12 +31,13 @@ export const listShopItem: Array<ShopItem> = [
     bought: false,
     value: 1.5,
     workerIndex: 0,
+    unlockCondition: requireBought(0), // épée d'entrainement
   },
   {
     name: 'FourcheLangue',
     description: 'Fourche légendaire datant d\'un temps oublié, dommage qu\'elle soit cassée. Multiplie les dégâts du fermier définitivement par 2',
     imageUrl: 'assets/imgUpgrades/Farmer/Farmer1.png',
-    price: 100,
+    price: 10,
     doesAppearInGame: false,
     bought: false,
     value: 2,

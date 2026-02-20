@@ -12,6 +12,11 @@ import { WorkerAuto } from "../worker-auto-model";
  * @property shopItems - array of shop items
  * @property sunUnlocked - if the sun is unlocked
  * @property criticalHitUnlocked - if the critical hit is unlocked
+ * @property streakUnlocked - if the streak bar is unlocked
+ * @property streakBarCurrent - current fill of the streak bar (0..streakBarMax)
+ * @property streakBarMax - clicks required to fill the bar
+ * @property streakActive - true when bar is in "bonus" phase (descending)
+ * @property streakDamageMultiplier - damage multiplier when streak is active (e.g. 3)
  */
 export class Game {
     clicks!: number;
@@ -22,4 +27,9 @@ export class Game {
     shopItems!: ShopItem[];
     sunUnlocked?: boolean;
     criticalHitUnlocked?: boolean;
+    streakUnlocked?: boolean;
+    streakBarCurrent?: number;
+    streakBarMax?: number;
+    streakActive?: boolean;
+    streakDamageMultiplier?: number;
 }

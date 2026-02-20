@@ -64,6 +64,13 @@ export class AppComponent implements OnInit, OnDestroy {
   trackByShopIndex(index: number, _item: ShopItem): number {
     return index;
   }
+
+  get streakBarPercent(): number {
+    const max = this.game.streakBarMax ?? 0;
+    if (max <= 0) return 0;
+    const current = this.game.streakBarCurrent ?? 0;
+    return Math.min(100, (100 * current) / max);
+  }
 /*
   exportSave(): void {
     this.gameState.downloadSave();

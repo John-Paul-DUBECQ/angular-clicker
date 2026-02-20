@@ -35,8 +35,8 @@ export const upgradeCriticalHitRate1: CriticalHitUpgrade = {
   criticalChance: 0.02,
 };
 
-export const upgradeCriticalHitRate2: CriticalHitUpgrade = {
-  id: 'upgrade-critical-hit-rate-2',
+export const upgradeCriticalHitDamage1: CriticalHitUpgrade = {
+  id: 'upgrade-critical-hit-damage-1',
   name: 'Amélioration du coup critique',
   description: 'Augmente les dégâts des coups critiques.',
   imageUrl: '',
@@ -44,8 +44,8 @@ export const upgradeCriticalHitRate2: CriticalHitUpgrade = {
   damageMultiplier: 1.5,
 };
 
-export const upgradeCriticalHitRate3: CriticalHitUpgrade = {
-  id: 'upgrade-critical-hit-rate-3',
+export const upgradeCriticalHitRate2: CriticalHitUpgrade = {
+  id: 'upgrade-critical-hit-rate-2',
   name: 'Amélioration du coup critique',
   description: 'Augmente les chances de coups critiques.',
   imageUrl: '',
@@ -53,8 +53,8 @@ export const upgradeCriticalHitRate3: CriticalHitUpgrade = {
   criticalChance: 0.02,
 };
 
-export const upgradeCriticalHitRate4: CriticalHitUpgrade = {
-  id: 'upgrade-critical-hit-rate-4',
+export const upgradeCriticalHitDamage2: CriticalHitUpgrade = {
+  id: 'upgrade-critical-hit-damage-2',
   name: 'Amélioration du coup critique',
   description: 'Augmente les dégâts des coups critiques.',
   imageUrl: '',
@@ -64,10 +64,10 @@ export const upgradeCriticalHitRate4: CriticalHitUpgrade = {
 
 /** Toutes les améliorations coup critique (ordre par levelRequired). */
 export const CRITICAL_HIT_UPGRADES: CriticalHitUpgrade[] = [
+  upgradeCriticalHitDamage1,
+  upgradeCriticalHitDamage2,
   upgradeCriticalHitRate1,
   upgradeCriticalHitRate2,
-  upgradeCriticalHitRate3,
-  upgradeCriticalHitRate4,
 ];
 
 export interface CriticalHitStats {

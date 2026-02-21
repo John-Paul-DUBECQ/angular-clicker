@@ -12,6 +12,7 @@ import { MatIconModule } from '@angular/material/icon';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import { ShopItemAreaComponent } from './shop-item-area/shop-item-area.component';
 import { SunAreaComponent } from './sun-area/sun-area.component';
+import { PowerAreaComponent } from './power-area/power-area.component';
 
 @NgModule({
   declarations: [
@@ -19,6 +20,7 @@ import { SunAreaComponent } from './sun-area/sun-area.component';
     WorkerAreaComponent,
     ShopItemAreaComponent,
     SunAreaComponent,
+    PowerAreaComponent,
   ],
   imports: [
     BrowserModule,

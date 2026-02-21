@@ -64,10 +64,10 @@ export const upgradeCriticalHitDamage2: CriticalHitUpgrade = {
 
 /** Toutes les améliorations coup critique (ordre par levelRequired). */
 export const CRITICAL_HIT_UPGRADES: CriticalHitUpgrade[] = [
-  upgradeCriticalHitDamage1,
-  upgradeCriticalHitDamage2,
-  upgradeCriticalHitRate1,
-  upgradeCriticalHitRate2,
+  upgradeCriticalHitRate1,//10
+  upgradeCriticalHitDamage1,//25
+  upgradeCriticalHitRate2,//50
+  upgradeCriticalHitDamage2,//100
 ];
 
 export interface CriticalHitStats {

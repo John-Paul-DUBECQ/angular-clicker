@@ -1,0 +1,55 @@
+<div class="power-area" *ngIf="powerSelected">
+    <!-- Carré visible : uniquement l’image -->
+    <div
+      #slotRef
+      class="power-slot-outer"
+      [class.power-slot-outer--effect]="effectRemainingPercent != null"
+      [class.power-slot-outer--can-cast]="canCast"
+      [style.--effect-pct]="effectRemainingPercent != null ? effectRemainingPercent : 0"
+    >
+      <div
+        class="power-slot"
+        [class.power-slot--bought]="powerSelected.bought"
+        [class.power-slot--can-cast]="canCast"
+        [class.power-slot--cooldown]="powerSelected.isOnCooldown"
+        (click)="onSlotClick($event)"
+        (mouseenter)="onSlotMouseEnter()"
+        (mouseleave)="onSlotMouseLeave()"
+      >
+      <img
+        *ngIf="powerSelected.imageUrl"
+        [src]="powerSelected.imageUrl"
+        [alt]="powerSelected.name"
+        class="power-slot__img"
+      />
+      <span *ngIf="!powerSelected.imageUrl" class="power-slot__placeholder">{{ powerSelected.name.charAt(0) }}</span>
+      </div>
+    </div>
+
+    <div
+      *ngIf="popupVisible && popupStyle"
+      class="power-popup power-popup--fixed"
+      [ngStyle]="popupStyle"
+    >
+      <div class="power-popup__header">
+        <img
+          *ngIf="powerSelected.imageUrl"
+          [src]="powerSelected.imageUrl"
+          [alt]=""
+          class="power-popup__icon"
+        />
+        <span *ngIf="!powerSelected.imageUrl" class="power-popup__icon-placeholder">{{ powerSelected.name.charAt(0) }}</span>
+        <div class="power-popup__title-block">
+          <span class="power-popup__name">{{ powerSelected.name }}</span>
+          <span class="power-popup__tag">Amélioration</span>
+        </div>
+        <span class="power-popup__mana" *ngIf="manaCost != null">{{ manaCost | number:'1.0-0' }} mana</span>
+      </div>
+      <p class="power-popup__description" [innerHTML]="powerSelected.description"></p>
+      <p class="power-popup__cooldown" *ngIf="powerSelected.isOnCooldown && powerSelected.cooldownRemainingSeconds != null">
+        Recharge : {{ powerSelected.cooldownRemainingSeconds }}s
+      </p>
+      <p class="power-popup__cta">{{ powerSelected.isOnCooldown ? 'En cooldown.' : 'Clique pour lancer le sort.' }}</p>
+    </div>
+  </div>
+  

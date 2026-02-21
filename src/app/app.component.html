@@ -2,53 +2,81 @@
   <div class="app-layout">
     <div class="column column-left">
       <div class="shop-items-list">
-        <ng-container *ngFor="let shopItem of game.shopItems; let i = index; trackBy: trackByShopIndex">
+        <ng-container *ngFor="let entry of sortedShopItemsWithIndex; trackBy: trackByShopEntry">
           <app-shop-item-area
-          *ngIf="shopItem.doesAppearInGame && shopItem.bought == false"
-          [shopItemSelected]="shopItem"
-          [itemIndex]="i">
-        </app-shop-item-area>
-      </ng-container>
-    </div>
-  </div>
-  
-  <div class="column column-center">
-    <div class="streak-bar" *ngIf="game.streakUnlocked">
-      <div class="streak-bar__label">{{ game.streakActive && game.streakDamageMultiplier ? '×' + game.streakDamageMultiplier : '' }}</div>
-      <div class="streak-bar__track">
-        <div
-          class="streak-bar__fill"
-          [class.streak-bar__fill--active]="game.streakActive"
-          [style.width.%]="streakBarPercent">
+            [shopItemSelected]="entry.item"
+            [itemIndex]="entry.index"
+            (bought)="onShopItemBought()">
+          </app-shop-item-area>
+        </ng-container>
+      </div>
+      <div class="power-area" *ngIf="game.powerUnlocked">
+        <div class="mana-bar">
+          <div class="mana-bar__track">
+            <div
+              class="mana-bar__fill"
+              [style.width.%]="manaBarPercent">
+            </div>
+            <span class="mana-bar__hover-label">{{ game.mana | number:'1.0-0' }}/{{ game.maxMana | number:'1.0-0' }}</span>
+          </div>
+        </div>
+        <div class="power-list">
+          <ng-container *ngFor="let entry of sortedPowersWithIndex; trackBy: trackByPowerEntry">
+            <app-power-area
+                [powerSelected]="entry.power"
+                [powerIndex]="entry.index"
+                [manaCost]="getPowerManaCost(entry.index)"
+                [canCast]="getCanCastPower(entry.index)"
+                [effectRemainingPercent]="getEffectRemainingPercent(entry.power.id)"
+                (bought)="onPowerBought()"
+                (cast)="onPowerCast(entry.index)">
+              </app-power-area>
+          </ng-container>
         </div>
       </div>
     </div>
-    <div class="column-center__main">
-      <div class="score-area">
-        <p class="value-click">{{ game.clicks | number:'1.2-2' }}</p>
-        <p class="value-auto-per-second">{{ game.valueAutoPerSecond | number:'1.2-2' }}/s</p>
+    
+    <div class="column column-center">
+      <div class="streak-bar" *ngIf="game.streakUnlocked">
+        <div class="streak-bar__label">{{ game.streakActive && game.streakDamageMultiplier ? '×' + game.streakDamageMultiplier : '' }}</div>
+        <div class="streak-bar__track">
+          <div
+            class="streak-bar__fill"
+            [class.streak-bar__fill--active]="game.streakActive && !game.weaknessBuffActive"
+            [class.streak-bar__fill--active-weakness]="game.streakActive && game.weaknessBuffActive"
+            [style.width.%]="streakBarPercent">
+          </div>
+        </div>
       </div>
-      <div class="center-zone-wrapper">
-        <div id="click-area" (click)="click($event)"></div>
-        <app-sun-area
-          [sunUnlocked]="game.sunUnlocked || false"
-          (clicked)="onSunClicked()">
-        </app-sun-area>
+      <div class="column-center__main">
+        <div class="score-area">
+          <p class="value-click">{{ game.clicks | number:'1.2-2' }}</p>
+          <p
+            class="value-auto-per-second"
+            [class.value-auto-per-second--buff]="game.damageBuffActive"
+          >{{ game.valueAutoPerSecond | number:'1.2-2' }}/s</p>
+        </div>
+        <div class="center-zone-wrapper">
+          <div id="click-area" (click)="click($event)"></div>
+          <app-sun-area
+            [sunUnlocked]="game.sunUnlocked || false"
+            (clicked)="onSunClicked()">
+          </app-sun-area>
+        </div>
       </div>
     </div>
-  </div>
 
-  <div class="column column-right">
-    <div class="workers-list">
-      <ng-container *ngFor="let worker of workersAvailable; let i = index; trackBy: trackByIndex">
-        <app-worker-area
-          *ngIf="worker.doesAppearInGame"
-          [workerSelected]="worker"
-          [workerIndex]="i"
-          (upgraded)="onWorkerUpgraded()">
-        </app-worker-area>
-      </ng-container>
+    <div class="column column-right">
+      <div class="workers-list">
+        <ng-container *ngFor="let worker of workersAvailable; let i = index; trackBy: trackByIndex">
+          <app-worker-area
+            *ngIf="worker.doesAppearInGame"
+            [workerSelected]="worker"
+            [workerIndex]="i"
+            (upgraded)="onWorkerUpgraded()">
+          </app-worker-area>
+        </ng-container>
+      </div>
     </div>
-  </div>
   </div>
 </div>

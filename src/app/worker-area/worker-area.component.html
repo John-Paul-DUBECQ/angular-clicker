@@ -9,7 +9,7 @@
         <div
             #unlockRef
             class="next-worker-unlock"
-            *ngIf="nextWorkerUnlock"
+            *ngIf="nextWorkerUnlocks.length"
             (mouseenter)="onUnlockMouseEnter()"
             (mouseleave)="onUnlockMouseLeave()"
         >
@@ -24,26 +24,26 @@
 
 <!-- Popup style Cookie Clicker au survol (position: fixed pour sortir du overflow parent) -->
 <div
-    *ngIf="unlockPopupVisible && unlockPopupStyle && nextWorkerUnlock"
+    *ngIf="unlockPopupVisible && unlockPopupStyle && nextWorkerUnlocks.length"
     class="worker-unlock-popup worker-unlock-popup--fixed"
     [ngStyle]="unlockPopupStyle"
 >
-    <div class="worker-unlock-popup__header">
-        <img
-            *ngIf="nextWorkerUnlock.imageUrl"
-            [src]="nextWorkerUnlock.imageUrl"
-            [alt]=""
-            class="worker-unlock-popup__icon"
-        />
-        <span *ngIf="!nextWorkerUnlock.imageUrl" class="worker-unlock-popup__icon-placeholder">{{ nextWorkerUnlock.name.charAt(0) }}</span>
-        <div class="worker-unlock-popup__title-block">
-            <span class="worker-unlock-popup__name">{{ nextWorkerUnlock.name }}</span>
-            <span class="worker-unlock-popup__tag">Prochain palier</span>
-        </div>
-    </div>
-    <p class="worker-unlock-popup__description" [innerHTML]="nextWorkerUnlock.description"></p>
-    <p class="worker-unlock-popup__level" *ngIf="nextWorkerUnlock.levelRequired != null">
-        Niveau requis : {{ nextWorkerUnlock.levelRequired }}
-    </p>
+    <span class="worker-unlock-popup__tag">Prochains paliers (par niveau)</span>
+    <ul class="worker-unlock-popup__list">
+        <li *ngFor="let u of nextWorkerUnlocks" class="worker-unlock-popup__item">
+            <div class="worker-unlock-popup__item-header">
+                <img
+                    *ngIf="u.imageUrl"
+                    [src]="u.imageUrl"
+                    [alt]=""
+                    class="worker-unlock-popup__icon"
+                />
+                <span *ngIf="!u.imageUrl" class="worker-unlock-popup__icon-placeholder">{{ u.name?.charAt(0) || '?' }}</span>
+                <span class="worker-unlock-popup__name">{{ u.name }}</span>
+                <span class="worker-unlock-popup__level" *ngIf="u.levelRequired != null">Niv. {{ u.levelRequired }}</span>
+            </div>
+            <p class="worker-unlock-popup__description" [innerHTML]="u.description"></p>
+        </li>
+    </ul>
     <p class="worker-unlock-popup__cta">Monte en niveau pour débloquer.</p>
 </div>

@@ -80,7 +80,7 @@ export const upgradeStreakSpeed1: StreakUpgrade = {
     name: 'Amélioration du streak',
     description: 'Réduit la vitesse de décrémentation de la barre.',
     imageUrl: '',
-    levelRequired: 40,
+    levelRequired: 35,
     speedOfDecreaseOfBar: -5,
 };
 
@@ -107,7 +107,7 @@ export const upgradeStreakClicks2: StreakUpgrade = {
     name: 'Amélioration du streak',
     description: 'Réduit le nombre de clicks requis pour remplir la barre.',
     imageUrl: '',
-    levelRequired: 40,
+    levelRequired: 45,
     numberOfClicksRequiredForBar: -100,
 };
 
@@ -122,19 +122,25 @@ export const upgradeStreakClicks3: StreakUpgrade = {
 
 /** Toutes les améliorations streak (ordre par levelRequired). */
 export const STREAK_UPGRADES: StreakUpgrade[] = [
-  upgradeStreakDamage1,
-  upgradeStreakDamage2,
-  upgradeStreakSpeed1,
-  upgradeStreakSpeed2,
-  upgradeStreakClicks1,
-  upgradeStreakClicks2,
-  upgradeStreakClicks3,
+    upgradeStreakClicks1,//20
+    upgradeStreakDamage1,//25
+    upgradeStreakSpeed1,//35
+    upgradeStreakClicks2,//45
+    upgradeStreakDamage2,//50
+    upgradeStreakSpeed2,//60
+    upgradeStreakClicks3,//100
 ];
 
 export interface StreakStats {
   damageMultiplier: number;
   speedOfDecreaseOfBar: number;
   numberOfClicksRequiredForBar: number;
+}
+
+/** Modificateurs temporaires (ex. sort weakness) : combo = moins de clics pour activer, speed = barre descend moins vite. */
+export interface StreakWeaknessModifiers {
+  comboMultiplier: number;
+  speedMultiplier: number;
 }
 
 /** Niveau du Forgeron (Smith) ou 0 si absent. */
@@ -150,8 +156,12 @@ export function getSmithLevel(
 
 /**
  * Stats effectives du streak selon le niveau du Forgeron (base + améliorations débloquées).
+ * Si weakness est fourni (ex. sort 약점), numberOfClicksRequiredForBar et speedOfDecreaseOfBar sont multipliés.
  */
-export function getStreakStats(smithLevel: number): StreakStats {
+export function getStreakStats(
+  smithLevel: number,
+  weakness?: StreakWeaknessModifiers
+): StreakStats {
   let damageMultiplier = DAMAGE_MULTIPLIER;
   let speedOfDecreaseOfBar = SPEED_OF_DECREASE_OF_BAR;
   let numberOfClicksRequiredForBar = NUMBER_OF_CLICKS_REQUIRED_FOR_BAR;
@@ -163,10 +173,13 @@ export function getStreakStats(smithLevel: number): StreakStats {
     if (upgrade.numberOfClicksRequiredForBar != null) numberOfClicksRequiredForBar += upgrade.numberOfClicksRequiredForBar;
   }
 
+  const comboMult = weakness?.comboMultiplier ?? 1;
+  const speedMult = weakness?.speedMultiplier ?? 1;
+
   return {
     damageMultiplier,
-    speedOfDecreaseOfBar: Math.max(0, speedOfDecreaseOfBar),
-    numberOfClicksRequiredForBar: Math.max(1, numberOfClicksRequiredForBar),
+    speedOfDecreaseOfBar: Math.max(0, Math.floor(speedOfDecreaseOfBar * speedMult)),
+    numberOfClicksRequiredForBar: Math.max(1, Math.floor(numberOfClicksRequiredForBar * comboMult)),
   };
 }
 
@@ -194,12 +207,12 @@ export function tickStreak(
   barCurrent: number,
   phase: StreakPhase,
   ticksPerSecond: number,
-  smithLevel: number
+  smithLevel: number,
+  weakness?: StreakWeaknessModifiers
 ): StreakTickResult {
   if (phase !== 'active') return { barCurrent, phase };
-  const stats = getStreakStats(smithLevel);
+  const stats = getStreakStats(smithLevel, weakness);
   const decreasePerTick = stats.speedOfDecreaseOfBar / ticksPerSecond;
-  console.log('decreasePerTick', decreasePerTick);
   const newCurrent = Math.max(0, barCurrent - decreasePerTick);
   const newPhase: StreakPhase = newCurrent <= 0 ? 'filling' : 'active';
   return { barCurrent: newCurrent, phase: newPhase };
@@ -209,9 +222,10 @@ export function tickStreak(
 export function processStreakOnClick(
   barCurrent: number,
   phase: StreakPhase,
-  smithLevel: number
+  smithLevel: number,
+  weakness?: StreakWeaknessModifiers
 ): StreakClickResult {
-  const stats = getStreakStats(smithLevel);
+  const stats = getStreakStats(smithLevel, weakness);
   const max = stats.numberOfClicksRequiredForBar;
   const newCurrent = Math.min(max, barCurrent + 1);
   const newPhase: StreakPhase = newCurrent >= max ? 'active' : phase;
@@ -223,10 +237,11 @@ export function getStreakView(
   workers: WorkerAutoData[],
   workersAvailable: WorkerAutoData[],
   barCurrent: number,
-  phase: StreakPhase
+  phase: StreakPhase,
+  weakness?: StreakWeaknessModifiers
 ): StreakView {
   const streakUnlocked = isStreakUnlocked(workers, workersAvailable);
-  const stats = getStreakStats(getSmithLevel(workers, workersAvailable));
+  const stats = getStreakStats(getSmithLevel(workers, workersAvailable), weakness);
   return {
     streakUnlocked,
     streakBarCurrent: streakUnlocked ? barCurrent : 0,

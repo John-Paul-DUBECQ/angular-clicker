@@ -2,6 +2,7 @@ import { Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@
 import { WorkerAuto, calculateClicksPerSecondForWorker, getClickBonus } from '../models/worker-auto-model';
 import { GameStateService } from '../models/game/game-state.service';
 import { WorkerUnlock } from '../models/unlocks/worker-unlock.model';
+import { getUpcomingPowerUnlockTiers, POWER_WORKER_INDEX } from '../models/unlocks/power-unlock';
 
 const POPUP_OFFSET = 12;
 
@@ -24,6 +25,9 @@ export class WorkerAreaComponent {
   unlockPopupVisible = false;
   unlockPopupStyle: { left: string; top: string } | null = null;
 
+  private readonly POPUP_VIEWPORT_MARGIN = 12;
+  private readonly POPUP_SELECTOR = '.worker-unlock-popup--fixed';
+
   constructor(private gameState: GameStateService) {}
 
   /** Production /s effective (workers auto), avec bonus shop. */
@@ -42,12 +46,21 @@ export class WorkerAreaComponent {
     return this.workerSelected?.workerType === 'click';
   }
 
-  get nextWorkerUnlock(): WorkerUnlock | null {
+  /** Prochains paliers (unlocks worker + déblocage sorts pour Magicien), triés par niveau, limité à 3 pour ne pas flood. */
+  private readonly NEXT_UNLOCKS_MAX = 3;
+
+  get nextWorkerUnlocks(): WorkerUnlock[] {
     const w = this.workerSelected;
-    if (!w?.unlocks?.length) return null;
-    const level = w.level;
-    const next = w.unlocks.find((u) => level < (u.levelRequired ?? 1));
-    return next ?? null;
+    const level = w?.level ?? 0;
+    const fromUnlocks: WorkerUnlock[] = (w?.unlocks ?? []).filter(
+      (u) => level < (u.levelRequired ?? 1)
+    );
+    const fromPowerTiers =
+      this.workerIndex === POWER_WORKER_INDEX ? getUpcomingPowerUnlockTiers(level) : [];
+    const merged = [...fromUnlocks, ...fromPowerTiers].sort(
+      (a, b) => (a.levelRequired ?? 0) - (b.levelRequired ?? 0)
+    );
+    return merged.slice(0, this.NEXT_UNLOCKS_MAX);
   }
 
   /** Classe CSS pour la couleur du nom selon le niveau (pour ngClass). */
@@ -72,11 +85,26 @@ export class WorkerAreaComponent {
     const el = this.unlockRef?.nativeElement;
     if (!el) return;
     const rect = el.getBoundingClientRect();
+    const triggerCenterY = rect.top + rect.height / 2;
     this.unlockPopupStyle = {
       left: `${rect.right + POPUP_OFFSET}px`,
-      top: `${rect.top + rect.height / 2}px`,
+      top: `${triggerCenterY}px`,
     };
     this.unlockPopupVisible = true;
+    setTimeout(() => this.clampPopupToViewport(), 0);
+  }
+
+  /** Garde le popup dans la fenêtre (haut et bas). */
+  private clampPopupToViewport(): void {
+    const popup = document.querySelector(this.POPUP_SELECTOR) as HTMLElement | null;
+    if (!popup || !this.unlockPopupStyle) return;
+    const r = popup.getBoundingClientRect();
+    const minTop = this.POPUP_VIEWPORT_MARGIN;
+    const maxBottom = window.innerHeight - this.POPUP_VIEWPORT_MARGIN;
+    let topPx = parseFloat(this.unlockPopupStyle.top);
+    if (r.top < minTop) topPx += minTop - r.top;
+    if (r.bottom > maxBottom) topPx -= r.bottom - maxBottom;
+    this.unlockPopupStyle = { ...this.unlockPopupStyle, top: `${topPx}px` };
   }
 
   onUnlockMouseLeave(): void {

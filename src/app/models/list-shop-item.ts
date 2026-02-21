@@ -1,4 +1,4 @@
-import { requireBought, requirePower, ShopItem } from "./shop-item";
+import { requireBought, requirePower, requireWorkerLevel, ShopItem } from "./shop-item";
 /*
 Recap des workers :
 - Épée : 0
@@ -110,6 +110,55 @@ export const listShopItem: Array<ShopItem> = [
     bought: false,
     value: 2,
     workerIndex: 8,
+  },
+  {
+    id: 'shop-power-mana',
+    name: 'Amulette de mana',
+    description: 'Réduit le coût en mana du sort 마법 de 10%.',
+    imageUrl: 'assets/imgUpgrades/power/power.png',
+    price: 5000,
+    doesAppearInGame: false,
+    bought: false,
+    value: 1,
+    unlockCondition: requirePower('power'),
+    powerId: 'power',
+    powerManaFactor: 0.9,
+  },
+  {
+    id: 'shop-mana-max',
+    name: 'Cristal de mana',
+    description: '+30 mana max.',
+    imageUrl: 'assets/imgUpgrades/power/power.png',
+    price: 8000,
+    doesAppearInGame: false,
+    bought: false,
+    value: 1,
+    unlockCondition: requireWorkerLevel(5, 1),
+    manaMaxBonus: 30,
+  },
+  {
+    id: 'shop-mana-regen',
+    name: 'Fontaine de mana',
+    description: '+0.03 mana/s de régénération.',
+    imageUrl: 'assets/imgUpgrades/power/power.png',
+    price: 15000,
+    doesAppearInGame: false,
+    bought: false,
+    value: 1,
+    unlockCondition: requireWorkerLevel(5, 3),
+    manaRegenBonus: 0.03,
+  },
+  {
+    id: 'shop-critical-chance',
+    name: 'Pierre de chance',
+    description: '+1% de chance de coup critique (s\'ajoute au bonus du Mineur).',
+    imageUrl: 'assets/imgUpgrades/Miner/Miner1.png',
+    price: 2500,
+    doesAppearInGame: false,
+    bought: false,
+    value: 1,
+    unlockCondition: requireWorkerLevel(2, 1),
+    unlockUpgrade: { unlockId: 'critical-hit', type: 'chance', value: 0.01 },
   },
 ];
 

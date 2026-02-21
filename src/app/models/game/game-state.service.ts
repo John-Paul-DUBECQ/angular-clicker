@@ -1,32 +1,20 @@
 import { Injectable } from '@angular/core';
-import {
-  WorkerAuto,
-  WorkerAutoData,
-  createAutoWorker,
-  createClickWorker,
-  getPrice,
-  getDoesAppearInGame,
-  getCanBuyWorker,
-  calculateClicksPerSecondForWorker,
-  getClickBonus,
-} from '../worker-auto-model';
-import { ShopItem, getDoesAppearInShop } from '../shop-item';
-import { listShopItem } from '../list-shop-item';
+import { WorkerAutoData } from '../worker-auto-model';
 import { Game } from './game';
+import { isSunUnlocked, SUN_CLICK_MULTIPLIER } from '../unlocks/sun-unlock';
 import {
-  isSunUnlocked,
-  SUN_CLICK_MULTIPLIER,
-  sunUnlockDefinition,
-} from '../unlocks/sun-unlock';
-import {
-  criticalHitUnlockDefinition,
-  CRITICAL_HIT_UPGRADES,
   getCriticalHitStats,
   isCriticalHitUnlocked,
   MINER_WORKER_INDEX,
 } from '../unlocks/critical-hit';
-import { STREAK_UPGRADES, streakUnlockDefinition } from '../unlocks/streak';
+import { getManaStatsFromPowerWorker, isPowerUnlocked, POWER_WORKER_INDEX } from '../unlocks/power-unlock';
+import { DAMAGE_DOUBLE_POWER_ID } from '../powers/effects/damage-double.effect';
+import { WEAKNESS_POWER_ID } from '../powers/effects/weakness-power-effect';
 import { StreakStateService } from '../unlocks/streak-state.service';
+import { DEFAULT_MAX_MANA, ResourcesService } from './resources.service';
+import { WorkerStateService } from './worker-state.service';
+import { ShopStateService } from './shop-state.service';
+import { PowerStateService } from './power-state.service';
 
 const TICKS_PER_SECOND = 10;
 
@@ -37,167 +25,153 @@ export interface SaveData {
   workerIndicesOwned: number[];
 }
 
+/**
+ * Orchestrateur du jeu : délègue la logique aux services métier (Resources, Workers, Shop, Powers, Streak).
+ * Reste léger pour pouvoir ajouter facilement de nouvelles fonctionnalités (ex. powers) sans le surcharger.
+ */
 @Injectable({ providedIn: 'root' })
 export class GameStateService {
-  private clicks = 0;
-  private clickValue = 1;
-  private workersAvailable: WorkerAutoData[] = [];
-  private workers: WorkerAutoData[] = [];
-  private shopItems: Array<ShopItem> = listShopItem;
   private tickIntervalId: ReturnType<typeof setInterval> | null = null;
-  /** Évite uniquement le double envoi du même clic (ms), pas deux clics rapides volontaires. */
-  private lastUpgradedIndex = -1;
-  private lastUpgradedTime = 0;
-  private static readonly UPGRADE_COOLDOWN_MS = 80;
-  private static readonly CLICKS_EPSILON = 0.001;
 
-  constructor(private streakState: StreakStateService) {
-    this.initWorkers();
+  constructor(
+    private resources: ResourcesService,
+    private workerState: WorkerStateService,
+    private shopState: ShopStateService,
+    private powerState: PowerStateService,
+    private streakState: StreakStateService
+  ) {
     this.startTickLoop();
   }
 
-  private initWorkers(): void {
-    this.workersAvailable = [
-      createClickWorker('Épée', 1, 1.05, 10, 1.25),
-      createAutoWorker('Fermier', 2, 1.3, 50, 1.50),
-      createAutoWorker('Mineur', 4, 1.4, 150, 1.50, [
-        criticalHitUnlockDefinition,
-        ...CRITICAL_HIT_UPGRADES,
-      ]),
-      createAutoWorker('Forgeron', 16, 1.5, 500, 1.60, [streakUnlockDefinition, ...STREAK_UPGRADES]),
-      createAutoWorker('Astrologue', 32, 1.6, 2000, 1.85, [sunUnlockDefinition]),
-      createAutoWorker('Magicien', 64, 1.7, 5000, 1.95),
-      createAutoWorker('Alchimiste', 128, 1.8, 20000, 2.5),
-      createAutoWorker('Géomètre', 256, 1.9, 75000, 3),
-      createAutoWorker('Architecte', 512, 2.0, 150000, 4),
-    ];
-    this.workers = [];
-  }
+  private getShopMult = (workerIndex: number): number =>
+    this.shopState.getShopMultiplierForWorker(workerIndex);
 
   private startTickLoop(): void {
     if (this.tickIntervalId != null) return;
     this.tickIntervalId = setInterval(() => {
-      const autoPerTick = this.calculateClicksPerSecond() / TICKS_PER_SECOND;
-      this.clicks += autoPerTick;
-      this.tickStreakBar();
+      const workers = this.workerState.getWorkers();
+      const workersAvailable = this.workerState.getWorkersAvailable();
+      const baseAutoPerSecond = this.workerState.calculateClicksPerSecond(this.getShopMult);
+      const streakMult = this.streakState.getMultiplier(workers, workersAvailable);
+      const damageMult = this.powerState.getDamageMultiplier();
+      const autoPerTick =
+        (baseAutoPerSecond * streakMult * damageMult) / TICKS_PER_SECOND;
+      this.resources.addClicks(autoPerTick);
+      this.resources.tickManaRegen();
+      this.streakState.tick(TICKS_PER_SECOND, workers, workersAvailable);
     }, 1000 / TICKS_PER_SECOND);
   }
 
-  private tickStreakBar(): void {
-    this.streakState.tick(TICKS_PER_SECOND, this.workers, this.workersAvailable);
-  }
-
-  private stopTickLoop(): void {
-    if (this.tickIntervalId != null) {
-      clearInterval(this.tickIntervalId);
-      this.tickIntervalId = null;
-    }
-  }
-
-  /** Multiplicateur total des items shop achetés pour un worker (index dans workersAvailable). */
-  private getShopMultiplierForWorker(workerIndex: number): number {
-    return this.shopItems
-      .filter((i) => i.bought && i.workerIndex === workerIndex)
-      .reduce((p, i) => p * i.value, 1);
-  }
-
-  private getEffectiveProductionForWorker(w: WorkerAutoData): number {
-    const base = calculateClicksPerSecondForWorker(w);
-    const workerIndex = this.workersAvailable.indexOf(w);
-    if (workerIndex === -1) return base;
-    return base * this.getShopMultiplierForWorker(workerIndex);
-  }
-
-  private getEffectiveClickBonusForWorker(w: WorkerAutoData): number {
-    const base = getClickBonus(w);
-    const workerIndex = this.workersAvailable.indexOf(w);
-    if (workerIndex === -1) return base;
-    return base * this.getShopMultiplierForWorker(workerIndex);
-  }
-
-  private calculateClicksPerSecond(): number {
-    const base = this.workers.reduce(
-      (sum, w) => sum + this.getEffectiveProductionForWorker(w),
-      0
-    );
-    return base * this.streakState.getMultiplier(this.workers, this.workersAvailable);
-  }
-
-  /** Valeur d'un clic actuelle (1 + somme des bonus clic des workers). */
-  private getCurrentClickValue(): number {
-    return 1 + this.workers.reduce((sum, w) => sum + this.getEffectiveClickBonusForWorker(w), 0);
-  }
-
   getState(): Game {
-    const valueAutoPerSecond = this.calculateClicksPerSecond();
-    this.clickValue = this.getCurrentClickValue();
-    const workersAvailableView: WorkerAuto[] = this.workersAvailable.map((w) => ({
-      ...w,
-      price: getPrice(w),
-      canBuyWorker: getCanBuyWorker(w, this.clicks),
-      doesAppearInGame: getDoesAppearInGame(w, this.clicks),
-      effectiveProductionPerSecond: this.getEffectiveProductionForWorker(w),
-      effectiveClickBonus: this.getEffectiveClickBonusForWorker(w),
-    }));
-    const shopContext = {
-      clicks: this.clicks,
-      getWorkerLevel: (index: number) => {
-        if (index < 0 || index >= this.workersAvailable.length) return null;
-        const w = this.workersAvailable[index];
-        return this.workers.includes(w) ? w.level : null;
-      },
-      getShopItemBought: (ref: string | number) =>
-        typeof ref === 'number'
-          ? (this.shopItems[ref]?.bought ?? false)
-          : (this.shopItems.find((i) => i.id === ref)?.bought ?? false),
-    };
-    const shopItemsView: ShopItem[] = this.shopItems.map((item) => ({
-      ...item,
-      doesAppearInGame: getDoesAppearInShop(item, shopContext),
-      bought: item.bought,
-    }));
-    const workersView: WorkerAuto[] = this.workers.map((w) => {
-      return {
-        ...w,
-        price: getPrice(w),
-        canBuyWorker: getCanBuyWorker(w, this.clicks),
-        doesAppearInGame: getDoesAppearInGame(w, this.clicks),
-        effectiveProductionPerSecond: this.getEffectiveProductionForWorker(w),
-        effectiveClickBonus: this.getEffectiveClickBonusForWorker(w),
-      };
-    });
-    const streakView = this.streakState.getView(this.workers, this.workersAvailable);
+    const clicks = this.resources.getClicks();
+    const workers = this.workerState.getWorkers();
+    const workersAvailable = this.workerState.getWorkersAvailable();
+    const damageMult = this.powerState.getDamageMultiplier();
+    const valueAutoPerSecond =
+      this.workerState.calculateClicksPerSecond(this.getShopMult) *
+      this.streakState.getMultiplier(workers, workersAvailable) *
+      damageMult;
+    const clickValue =
+      this.workerState.getCurrentClickValue(this.getShopMult) * damageMult;
+    const getWorkerLevel = (i: number) => this.workerState.getWorkerLevel(i);
+    const streakView = this.streakState.getView(workers, workersAvailable);
+
+    const damageBuffActive = this.powerState.isDamageBuffActive();
+    const damageBuffEnd = this.powerState.getDamageBuffEndTime();
+    const damageBuffRemainingSeconds = damageBuffActive
+      ? Math.max(0, Math.ceil((damageBuffEnd - Date.now()) / 1000))
+      : undefined;
+
+    const weaknessBuffActive = this.powerState.isWeaknessBuffActive();
+    const weaknessBuffEnd = this.powerState.getWeaknessBuffEndTime();
+    const now = Date.now();
+    const DAMAGE_BUFF_DURATION_MS = 60 * 1000;
+    const WEAKNESS_BUFF_DURATION_MS = 60 * 1000;
+    const powerEffectRemainingPercent: Record<string, number> = {};
+    if (damageBuffActive && damageBuffEnd > now) {
+      powerEffectRemainingPercent[DAMAGE_DOUBLE_POWER_ID] = Math.max(
+        0,
+        Math.min(100, (100 * (damageBuffEnd - now)) / DAMAGE_BUFF_DURATION_MS)
+      );
+    }
+    if (weaknessBuffActive && weaknessBuffEnd > now) {
+      powerEffectRemainingPercent[WEAKNESS_POWER_ID] = Math.max(
+        0,
+        Math.min(100, (100 * (weaknessBuffEnd - now)) / WEAKNESS_BUFF_DURATION_MS)
+      );
+    }
+
+    const powerWorkerLevel =
+      workersAvailable[POWER_WORKER_INDEX]?.level ?? 0;
+
+    const powerManaStats = getManaStatsFromPowerWorker(powerWorkerLevel);
+    const effectiveMaxMana =
+      DEFAULT_MAX_MANA +
+      powerManaStats.manaMax +
+      this.shopState.getManaMaxBonus();
+    const baseManaRegenPerSecond = 0.5;
+    const effectiveRegenPerSecond =
+      baseManaRegenPerSecond +
+      powerManaStats.manaRegen +
+      this.shopState.getManaRegenBonus();
+    this.resources.setMaxMana(effectiveMaxMana);
+    this.resources.setManaRegenPerTick(effectiveRegenPerSecond / TICKS_PER_SECOND);
+
     return {
-      clicks: this.clicks,
-      workers: workersView,
-      workersAvailable: workersAvailableView,
-      clickValue: this.clickValue,
+      clicks,
+      mana: this.resources.getMana(),
+      maxMana: this.resources.getMaxMana(),
+      workers: this.workerState.getWorkersView(clicks, this.getShopMult),
+      workersAvailable: this.workerState.getWorkersAvailableView(clicks, this.getShopMult),
+      clickValue,
       valueAutoPerSecond,
-      shopItems: shopItemsView,
-      sunUnlocked: isSunUnlocked(this.workers, this.workersAvailable),
-      criticalHitUnlocked: isCriticalHitUnlocked(this.workers, this.workersAvailable),
-      ...streakView,
+      shopItems: this.shopState.getShopItemsView(getWorkerLevel),
+      powersAvailable: this.powerState.getPowersAvailableView(powerWorkerLevel),
+      sunUnlocked: isSunUnlocked(workers, workersAvailable),
+      powerUnlocked: isPowerUnlocked(workers, workersAvailable),
+      criticalHitUnlocked: isCriticalHitUnlocked(workers, workersAvailable),
+      streakUnlocked: streakView.streakUnlocked,
+      streakBarCurrent: streakView.streakBarCurrent,
+      streakBarMax: streakView.streakBarMax,
+      streakActive: streakView.streakActive,
+      streakDamageMultiplier: streakView.streakDamageMultiplier,
+      damageBuffActive,
+      damageBuffMultiplier: damageBuffActive ? this.powerState.getDamageMultiplier() : undefined,
+      damageBuffRemainingSeconds,
+      weaknessBuffActive,
+      powerEffectRemainingPercent: Object.keys(powerEffectRemainingPercent).length
+        ? powerEffectRemainingPercent
+        : undefined,
     };
   }
 
-  click(valueMultiplier: number = 1, clientX?: number, clientY?: number): void {
-    let value = this.getCurrentClickValue();
-    if (isCriticalHitUnlocked(this.workers, this.workersAvailable)) {
-      const miner = this.workersAvailable[MINER_WORKER_INDEX];
+  click(valueMultiplier = 1, clientX?: number, clientY?: number): void {
+    const workers = this.workerState.getWorkers();
+    const workersAvailable = this.workerState.getWorkersAvailable();
+    let value = this.workerState.getCurrentClickValue(this.getShopMult);
+    value *= this.powerState.getDamageMultiplier();
+
+    if (isCriticalHitUnlocked(workers, workersAvailable)) {
+      const miner = workersAvailable[MINER_WORKER_INDEX];
       const minerLevel = miner?.level ?? 0;
       const { totalChance, totalMultiplier } = getCriticalHitStats(minerLevel);
-      if (Math.random() < totalChance) {
+      const shopChanceBonus = this.shopState.getUnlockBonus('critical-hit', 'chance');
+      if (Math.random() < totalChance + shopChanceBonus) {
         value *= totalMultiplier;
         this.showCriticalHit(value * valueMultiplier, clientX, clientY);
       }
     }
-    this.streakState.onClick(this.workers, this.workersAvailable);
-    value *= this.streakState.getMultiplier(this.workers, this.workersAvailable);
-    this.clicks += value * valueMultiplier;
+
+    this.streakState.onClick(workers, workersAvailable);
+    value *= this.streakState.getMultiplier(workers, workersAvailable);
+    this.resources.addClicks(value * valueMultiplier);
+    this.resources.addManaOnClick(0.5);
   }
 
   clickSun(event?: MouseEvent): void {
-    if (!isSunUnlocked(this.workers, this.workersAvailable)) return;
+    const workers = this.workerState.getWorkers();
+    const workersAvailable = this.workerState.getWorkersAvailable();
+    if (!isSunUnlocked(workers, workersAvailable)) return;
     this.click(SUN_CLICK_MULTIPLIER, event?.clientX, event?.clientY);
   }
 
@@ -210,103 +184,46 @@ export class GameStateService {
     criticalHitPopup.style.left = `${x}px`;
     criticalHitPopup.style.top = `${y}px`;
     document.body.appendChild(criticalHitPopup);
-    setTimeout(() => {
-      criticalHitPopup.remove();
-    }, 1000);
+    setTimeout(() => criticalHitPopup.remove(), 1000);
   }
 
   upgradeWorker(workerIndex: number): void {
-    if (workerIndex < 0 || workerIndex >= this.workersAvailable.length) return;
-    const now = Date.now();
-    if (
-      this.lastUpgradedIndex === workerIndex &&
-      now - this.lastUpgradedTime < GameStateService.UPGRADE_COOLDOWN_MS
-    ) {
-      return;
-    }
-    const worker = this.workersAvailable[workerIndex];
-    const priceToPay = getPrice(worker);
-    if (this.clicks < priceToPay - GameStateService.CLICKS_EPSILON) return;
-    this.clicks = Math.max(0, this.clicks - priceToPay);
-    worker.level += 1;
-    worker.bought = true;
-    if (!this.workers.includes(worker)) {
-      this.workers.push(worker);
-    }
-    this.lastUpgradedIndex = workerIndex;
-    this.lastUpgradedTime = now;
+    this.workerState.upgradeWorker(workerIndex, this.getShopMult);
   }
 
   canBuyShopItem(price: number): boolean {
-    return this.clicks >= price;
+    return this.shopState.canBuyShopItem(price);
   }
 
   buyShopItem(shopItemIndex: number): void {
-    if (shopItemIndex < 0 || shopItemIndex >= this.shopItems.length) return;
-    const shopItem = this.shopItems[shopItemIndex];
-    if (shopItem.bought || !this.canBuyShopItem(shopItem.price)) return;
-    this.clicks = Math.max(0, this.clicks - shopItem.price);
-    shopItem.bought = true;
+    this.shopState.buyShopItem(shopItemIndex);
   }
 
-/*
-  exportSave(): string {
-    const workerIndicesOwned = this.workers.map((w) =>
-      this.workersAvailable.indexOf(w)
+  getCanBuyPower(price: number): boolean {
+    return this.powerState.getCanBuyPower(price);
+  }
+
+  buyPower(powerIndex: number): void {
+    this.powerState.buyPower(powerIndex);
+  }
+
+  getCanCastPower(powerIndex: number): boolean {
+    if (this.powerState.isPowerOnCooldown(powerIndex)) return false;
+    const cost = this.getPowerManaCost(powerIndex);
+    return cost != null && this.resources.canSpendMana(cost) && this.powerState.hasPowerEffect(powerIndex);
+  }
+
+  getPowerManaCost(powerIndex: number): number | null {
+    const base = this.powerState.getPowerManaCost(powerIndex);
+    if (base == null) return null;
+    const mult = this.shopState.getPowerManaMultiplier(
+      this.powerState.getPowersAvailable()[powerIndex]?.id ?? ''
     );
-    const data: SaveData = {
-      version: 1,
-      clicks: this.clicks,
-      workersAvailable: this.workersAvailable.map((w) => ({ ...w })),
-      workerIndicesOwned,
-    };
-    return JSON.stringify(data, null, 2);
+    return Math.max(1, Math.floor(base * mult));
   }
 
-  importSave(json: string): boolean {
-    try {
-      const data: SaveData = JSON.parse(json);
-      if (data.version !== 1 || !Array.isArray(data.workersAvailable)) {
-        return false;
-      }
-      this.clicks = data.clicks;
-      this.workersAvailable = data.workersAvailable.map((w) => this.migrateWorkerData(w));
-      if (!this.workersAvailable.some((w) => w.workerType === 'click')) {
-        this.workersAvailable.push(createClickWorker('Épée', 1, 1.2, 50, 1.25));
-      }
-      this.workers = (data.workerIndicesOwned || [])
-        .filter((i) => i >= 0 && i < this.workersAvailable.length)
-        .map((i) => this.workersAvailable[i]);
-      return true;
-    } catch {
-      return false;
-    }
+  castPower(powerIndex: number): void {
+    const cost = this.getPowerManaCost(powerIndex);
+    this.powerState.castPower(powerIndex, cost ?? undefined);
   }
-
-  private migrateWorkerData(w: Partial<WorkerAutoData> & { name: string; level: number; basePrice: number; curvePrice: number }): WorkerAutoData {
-    if (w.workerType != null && w.baseProduction != null && w.curveProduction != null) {
-      return w as WorkerAutoData;
-    }
-    const prod = (w as { productivity?: number }).productivity ?? 1;
-    return {
-      ...w,
-      workerType: (w as { workerType?: WorkerType }).workerType ?? 'auto',
-      baseProduction: (w as { baseProduction?: number }).baseProduction ?? prod,
-      curveProduction: (w as { curveProduction?: number }).curveProduction ?? 1.08,
-      doesAppearInGame: w.doesAppearInGame ?? false,
-      bought: w.bought ?? false,
-    } as WorkerAutoData;
-  }
-
-  downloadSave(): void {
-    const json = this.exportSave();
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `clicker-save-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-  */
 }

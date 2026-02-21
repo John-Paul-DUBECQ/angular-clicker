@@ -1,5 +1,3 @@
-import { Power, getPowerDoesAppearInGame } from "./powers/power.model";
-
 /**
  * Contexte passé aux conditions d'apparition des items du shop.
  * Tout ce dont une condition peut avoir besoin doit être exposé ici.
@@ -11,6 +9,8 @@ export interface ShopUnlockContext {
   getWorkerLevel: (workerIndex: number) => number | null;
   /** true si l'item est acheté : passer l'index (0-based) dans la liste, ou son id si l'item a un champ id. */
   getShopItemBought: (ref: string | number) => boolean;
+  /** true si le pouvoir avec cet id est possédé. */
+  getPowerBought?: (powerId: string) => boolean;
 }
 
 /** Condition d'apparition : prend le contexte et retourne true si l'item peut apparaître. */
@@ -33,6 +33,15 @@ export interface ShopItem {
    * Utiliser les helpers requireMinClicks, requireWorkerLevel, requireAll, requireAny.
    */
   unlockCondition?: ShopUnlockCondition;
+  /** Amélioration de pouvoir : réduit le coût en mana (ex: 0.9 = -10%). Un seul type d'effet power pour l'instant. */
+  powerId?: string;
+  powerManaFactor?: number;
+  /** Bonus mana max (s'ajoute à la base + bonus Magicien). */
+  manaMaxBonus?: number;
+  /** Bonus régénération mana en mana/s (s'ajoute à la base + bonus Magicien). */
+  manaRegenBonus?: number;
+  /** Amélioration d'un unlock (ex: coup critique, streak). */
+  unlockUpgrade?: { unlockId: string; type: string; value: number };
 }
 
 /** Règle de base : l'item est visible à partir de la moitié du prix. */
@@ -66,9 +75,9 @@ export function requireWorkerLevel(workerIndex: number, level: number): ShopUnlo
   return (ctx) => (ctx.getWorkerLevel(workerIndex) ?? 0) >= level;
 }
 
-/** Condition : le power est possédé. */
-export function requirePower(power: Power): ShopUnlockCondition {
-  return (ctx) => power.bought;
+/** Condition : le power avec cet id est possédé. */
+export function requirePower(powerId: string): ShopUnlockCondition {
+  return (ctx) => (ctx.getPowerBought ? ctx.getPowerBought(powerId) : false);
 }
 
 /** Condition : l'item du shop est acheté. `ref` = index (0-based) dans la liste, ou id (string) si l'item a un id. */

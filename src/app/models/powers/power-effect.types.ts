@@ -9,6 +9,10 @@ export interface PowerCastContext {
   setComboMultiplier(mult: number, durationSeconds: number): void;
   /** Pendant durationSeconds : une fois le streak actif, la barre descend moins vite (mult = 0.5 → moitié moins vite). */
   setSpeedDecrease(mult: number, durationSeconds: number): void;
+  /** Force le spawn du prochain mob (tue l’actuel et en fait apparaître un nouveau). */
+  spawnMonster(): void;
+  /** Ajoute des secondes au temps imparti du combat en cours. */
+  addMonsterTime(seconds: number): void;
 }
 
 /** Fonction d'effet d'un sort : exécutée quand le joueur lance le sort (après paiement du mana). */

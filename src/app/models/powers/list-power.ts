@@ -21,5 +21,25 @@ export const listPower: Power[] = [
     manaCost: 200,
     cooldownSeconds: 300,
   },
+  {
+    id: 'spawn-mob',
+    name: 'Spawn mob',
+    description: 'Fait apparaître le prochain monstre immédiatement (coût 0 pour test).',
+    imageUrl: 'assets/imgUpgrades/swords/Sword1.png',
+    doesAppearInGame: false,
+    bought: false,
+    manaCost: 0,
+    cooldownSeconds: 60,
+  },
+  {
+    id: 'monster-time',
+    name: '+30s combat',
+    description: 'Ajoute 30 secondes au temps imparti du combat en cours.',
+    imageUrl: 'assets/imgUpgrades/swords/Sword1.png',
+    doesAppearInGame: false,
+    bought: false,
+    manaCost: 40,
+    cooldownSeconds: 90,
+  },
 ];
 

@@ -6,11 +6,17 @@ import { listPower } from '../powers/list-power';
 import { getLevelRequiredForPower } from '../unlocks/power-unlock';
 import { DAMAGE_DOUBLE_POWER_ID, damageDoubleEffect } from '../powers/effects/damage-double.effect';
 import { WEAKNESS_POWER_ID, weaknessPowerEffect } from '../powers/effects/weakness-power-effect';
+import { SPAWN_MOB_POWER_ID, spawnMobEffect } from '../powers/effects/spawn-mob-effect';
+import { MONSTER_TIME_POWER_ID, monsterTimeEffect } from '../powers/effects/monster-time-effect';
+import { MonsterStateService } from './monster-state.service';
+import { WorkerStateService } from './worker-state.service';
 
 /** Registre des effets par id de pouvoir. Un fichier par power, enregistré ici. */
 const POWER_EFFECTS: Map<string, PowerEffect> = new Map([
   [DAMAGE_DOUBLE_POWER_ID, damageDoubleEffect],
   [WEAKNESS_POWER_ID, weaknessPowerEffect],
+  [SPAWN_MOB_POWER_ID, spawnMobEffect],
+  [MONSTER_TIME_POWER_ID, monsterTimeEffect],
 ]);
 
 @Injectable({ providedIn: 'root' })
@@ -26,7 +32,11 @@ export class PowerStateService {
   /** Fin du cooldown par power.id (timestamp ms). */
   private cooldownUntilByPowerId = new Map<string, number>();
 
-  constructor(private resources: ResourcesService) {}
+  constructor(
+    private resources: ResourcesService,
+    private monsterState: MonsterStateService,
+    private workerState: WorkerStateService
+  ) {}
 
   getPowersAvailable(): Power[] {
     return this.powersAvailable;
@@ -45,10 +55,13 @@ export class PowerStateService {
     return this.resources.canSpend(price);
   }
 
-  /** powerWorkerLevel : niveau du worker "power" (Magicien), pour débloquer les pouvoirs à certains niveaux. */
+  /** powerWorkerLevel : niveau du worker "power" (Magicien). Les pouvoirs mob n’apparaissent que si l’Alchimiste est débloqué. */
   getPowersAvailableView(powerWorkerLevel?: number): Power[] {
     const clicks = this.resources.getClicks();
     const now = Date.now();
+    const workers = this.workerState.getWorkers();
+    const workersAvailable = this.workerState.getWorkersAvailable();
+    const monsterUnlocked = this.monsterState.isMonsterUnlocked(workers, workersAvailable);
     return this.powersAvailable.map((p) => {
       const until = this.cooldownUntilByPowerId.get(p.id) ?? 0;
       const onCooldown = now < until;
@@ -59,7 +72,8 @@ export class PowerStateService {
           p,
           clicks,
           powerWorkerLevel,
-          getLevelRequiredForPower(p.id)
+          getLevelRequiredForPower(p.id),
+          monsterUnlocked
         ),
         bought: true,
         isOnCooldown: onCooldown,
@@ -110,6 +124,14 @@ export class PowerStateService {
           Date.now() + durationSeconds * 1000
         );
         this.weaknessSpeedMultiplier = mult;
+      },
+      spawnMonster: () => {
+        const workers = this.workerState.getWorkers();
+        const workersAvailable = this.workerState.getWorkersAvailable();
+        this.monsterState.forceSpawnNext(workers, workersAvailable);
+      },
+      addMonsterTime: (seconds: number) => {
+        this.monsterState.addTimeToCurrentMonster(seconds);
       },
     };
     effect(context);

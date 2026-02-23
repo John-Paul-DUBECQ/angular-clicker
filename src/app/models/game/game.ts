@@ -1,6 +1,7 @@
 import { ShopItem } from "../shop-item";
 import { WorkerAuto } from "../worker-auto-model";
 import { Power } from "../powers/power.model";
+import type { CurrentMonsterView } from "./monster-state.service";
 
 /**
  * Vue agrégée du jeu pour l'UI. Les données réelles sont dans Resources, WorkerState, ShopState, PowerState.
@@ -33,4 +34,12 @@ export class Game {
     weaknessBuffActive?: boolean;
     /** Pour chaque power.id ayant un effet à durée : pourcentage de temps restant (0–100) pour l’horloge sur la border. */
     powerEffectRemainingPercent?: Record<string, number>;
+    /** Zone monstre débloquée (Alchimiste). */
+    monsterUnlocked?: boolean;
+    /** Monstre actuel à la place du clicker (PV, temps restant). */
+    currentMonster?: CurrentMonsterView | null;
+    /** Jauge rencontre 0–100 : plus c’est haut, plus le cercle s’assombrit (prochain mob proche). */
+    encounterMeterPercent?: number;
+    /** Essence / âmes (récompense mob, plus si tué à la dernière seconde). */
+    monsterEssence?: number;
 }

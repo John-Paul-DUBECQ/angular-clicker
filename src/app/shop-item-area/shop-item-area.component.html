@@ -36,7 +36,7 @@
         <span class="shop-item-popup__name">{{ shopItemSelected.name }}</span>
         <span class="shop-item-popup__tag">Amélioration</span>
       </div>
-      <span class="shop-item-popup__price">{{ shopItemSelected.price | number:'1.0-0' }}</span>
+      <span class="shop-item-popup__price">{{ shopItemSelected.price | formatNumber:0 }}</span>
     </div>
     <p class="shop-item-popup__description" [innerHTML]="shopItemSelected.description"></p>
     <p class="shop-item-popup__cta">Clique pour acheter.</p>

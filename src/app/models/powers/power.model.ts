@@ -15,17 +15,24 @@ export interface Power {
   }
   
   
+  /** IDs des pouvoirs qui n’apparaissent que si l’Alchimiste (zone mob) est débloqué. */
+  const POWER_IDS_REQUIRING_MONSTER = ['spawn-mob', 'monster-time'];
+
   /**
    * Un pouvoir apparaît si :
-   * - il a un levelRequired et le niveau du worker "power" >= levelRequired, ou
-   * - sinon si power.doesAppearInGame est true.
+   * - niveau Magicien >= levelRequired pour ce pouvoir,
+   * - et si c’est un pouvoir mob (spawn-mob, monster-time), l’Alchimiste doit être débloqué.
    */
   export function getPowerDoesAppearInGame(
     power: Power,
     _clicks: number,
     powerWorkerLevel?: number,
-    levelRequiredForPower?: number
+    levelRequiredForPower?: number,
+    monsterUnlocked?: boolean
   ): boolean {
+    if (POWER_IDS_REQUIRING_MONSTER.includes(power.id) && !monsterUnlocked) {
+      return false;
+    }
     if (levelRequiredForPower != null && powerWorkerLevel != null) {
       return powerWorkerLevel >= levelRequiredForPower;
     }

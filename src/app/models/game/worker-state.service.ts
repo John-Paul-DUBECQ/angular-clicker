@@ -14,6 +14,7 @@ import { criticalHitUnlockDefinition, CRITICAL_HIT_UPGRADES } from '../unlocks/c
 import { STREAK_UPGRADES, streakUnlockDefinition } from '../unlocks/streak';
 import { sunUnlockDefinition } from '../unlocks/sun-unlock';
 import { powerUnlockDefinition, POWER_MANA_UPGRADES } from '../unlocks/power-unlock';
+import { monsterUnlockDefinition, MONSTER_UPGRADES } from '../unlocks/monster-unlock';
 import { ResourcesService } from './resources.service';
 
 export type GetShopMultiplierForWorker = (workerIndex: number) => number;
@@ -42,18 +43,18 @@ export class WorkerStateService {
 
   initWorkers(): void {
     this.workersAvailable = [
-      createClickWorker('Épée', 1, 1.05, 10, 1.25),
-      createAutoWorker('Fermier', 2, 1.3, 50, 1.50),
-      createAutoWorker('Mineur', 4, 1.4, 150, 1.50, [
+      createClickWorker('Épée', 1, 1.05, 10, 1.10),
+      createAutoWorker('Fermier', 2, 1.3, 50, 1.35),
+      createAutoWorker('Mineur', 4, 1.4, 150, 1.47, [
         criticalHitUnlockDefinition,
         ...CRITICAL_HIT_UPGRADES,
       ]),
       createAutoWorker('Forgeron', 16, 1.5, 500, 1.60, [streakUnlockDefinition, ...STREAK_UPGRADES]),
-      createAutoWorker('Astrologue', 32, 1.6, 2000, 1.85, [sunUnlockDefinition]),
-      createAutoWorker('Magicien', 64, 1.7, 5000, 2, [powerUnlockDefinition, ...POWER_MANA_UPGRADES]),
-      createAutoWorker('Alchimiste', 128, 1.8, 20000, 2.5),
-      createAutoWorker('Géomètre', 256, 1.9, 75000, 3),
-      createAutoWorker('Architecte', 512, 2.0, 150000, 4),
+      createAutoWorker('Astrologue', 32, 1.6, 2000, 1.71, [sunUnlockDefinition]),
+      createAutoWorker('Magicien', 64, 1.7, 5000, 1.82, [powerUnlockDefinition, ...POWER_MANA_UPGRADES]),
+      createAutoWorker('Alchimiste', 128, 1.8, 15000, 1.94, [monsterUnlockDefinition, ...MONSTER_UPGRADES]),
+      createAutoWorker('Géomètre', 256, 1.9, 75000, 2.05),
+      createAutoWorker('Architecte', 512, 2.0, 150000, 2.15),
     ];
     this.workers = [];
   }
@@ -81,6 +82,14 @@ export class WorkerStateService {
   calculateClicksPerSecond(getShopMult: GetShopMultiplierForWorker): number {
     return this.workers.reduce(
       (sum, w) => sum + this.getEffectiveProductionForWorker(w, getShopMult),
+      0
+    );
+  }
+
+  /** Production /s sans aucun bonus (shop, streak, buff). Utilisée pour les PV des monstres. */
+  getBaseProductionPerSecond(): number {
+    return this.workers.reduce(
+      (sum, w) => sum + calculateClicksPerSecondForWorker(w),
       0
     );
   }

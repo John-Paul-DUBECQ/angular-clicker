@@ -10,6 +10,8 @@ export const POWER_LEVEL_REQUIRED = 1;
 export const POWER_LEVELS_BY_POWER_ID: Record<string, number> = {
   power: 1,
   weakness: 9,
+  'spawn-mob': 0,
+  'monster-time': 5,
 };
 
 export function getLevelRequiredForPower(powerId: string): number | undefined {
@@ -100,8 +102,6 @@ export function getManaStatsFromPowerWorker(magicienLevel: number): ManaStatsFro
   }
   return { manaMax, manaRegen };
 }
-
-
 
 export function isPowerUnlocked(
   workers: WorkerAutoData[],

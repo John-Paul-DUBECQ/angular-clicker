@@ -1,9 +1,13 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { GameStateService } from './models/game/game-state.service';
 import { Game } from './models/game/game';
 import { ShopItem } from './models/shop-item';
 import { WorkerAuto } from './models/worker-auto-model';
 import { Power } from './models/powers/power.model';
+import { formatNumberValue } from './pipes/format-number.pipe';
+import { MonsterRewardNotificationService } from './models/game/monster-reward-notification.service';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-root',
@@ -33,18 +37,42 @@ export class AppComponent implements OnInit, OnDestroy {
   workersAvailable: WorkerAuto[] = [];
   powersAvailable: Power[] = [];
   importError = false;
-  
-  constructor(private gameState: GameStateService) {}
+  private rewardSub: Subscription | null = null;
+
+  constructor(
+    private gameState: GameStateService,
+    private monsterRewardNotify: MonsterRewardNotificationService
+  ) {}
 
   ngOnInit(): void {
     this.refreshGameState();
     this.refreshInterval = setInterval(() => this.refreshGameState(), 500);
+    this.rewardSub = this.monsterRewardNotify.reward$.subscribe((r) => this.showMonsterReward(r));
   }
 
   ngOnDestroy(): void {
     if (this.refreshInterval !== null) {
       clearInterval(this.refreshInterval);
     }
+    this.rewardSub?.unsubscribe();
+  }
+
+  private showMonsterReward(reward: { gold: number; essence: number }): void {
+    const goldStr = formatNumberValue(reward.gold, 0);
+    const essenceStr = formatNumberValue(reward.essence, 0);
+    Swal.fire({
+      title: 'Récompense !',
+      html: `<p>+${goldStr} clics</p><p>+${essenceStr} essence</p>`,
+      timer: 2000,
+      timerProgressBar: true,
+      showConfirmButton: false,
+      position: 'bottom-end',
+      backdrop: false,
+      customClass: {
+        popup: 'reward-toast',
+        container: 'reward-toast-container',
+      },
+    });
   }
 
   private refreshGameState(): void {
@@ -146,7 +174,22 @@ export class AppComponent implements OnInit, OnDestroy {
     return Math.min(100, (100 * current) / max);
   }
 
-  /** Pourcentage de temps restant de l’effet du pouvoir (0–100), pour l’horloge sur la border. */
+  /** Formate les PV du mob (k, M, B, T, A, B, C...). */
+  formatMonsterHp(value: number): string {
+    return formatNumberValue(value, 2);
+  }
+
+  getMonsterHpPercent(): number {
+    const m = this.game.currentMonster;
+    if (!m || m.maxHp <= 0) return 0;
+    return Math.min(100, (100 * m.currentHp) / m.maxHp);
+  }
+
+  /** Formate une ressource (ex. essence) : k, M, B, T, A, B, C... */
+  formatResourceValue(value: number): string {
+    return formatNumberValue(value, 2);
+  }
+
   getEffectRemainingPercent(powerId: string): number | null {
     const pct = this.game.powerEffectRemainingPercent?.[powerId];
     return pct != null ? pct : null;

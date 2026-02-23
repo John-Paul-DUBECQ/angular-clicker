@@ -17,7 +17,7 @@
               class="mana-bar__fill"
               [style.width.%]="manaBarPercent">
             </div>
-            <span class="mana-bar__hover-label">{{ game.mana | number:'1.0-0' }}/{{ game.maxMana | number:'1.0-0' }}</span>
+            <span class="mana-label">{{ game.mana | formatNumber:0 }}/{{ game.maxMana | formatNumber:0 }}</span>
           </div>
         </div>
         <div class="power-list">
@@ -48,16 +48,57 @@
           </div>
         </div>
       </div>
+      <div class="monster-gauge" *ngIf="game.monsterUnlocked">
+        <div class="monster-gauge__left">
+          <span class="monster-gauge__label">{{ game.currentMonster ? 'Combat !' : 'Prochain mob' }}</span>
+        </div>
+        <div
+          class="monster-gauge__darkness-circle"
+          [style.--encounter-pct]="game.encounterMeterPercent != null ? game.encounterMeterPercent : 0"
+          title="Plus c'est sombre, plus le monstre est proche">
+        </div>
+      </div>
       <div class="column-center__main">
+        <div class="monster-title" *ngIf="game.currentMonster">
+          <p class="monster-title__name">
+            <span class="monster-title__boss" *ngIf="game.currentMonster.isBoss">DANGER BOSS</span>
+            Nom du mob : {{ game.currentMonster.name }}
+          </p>
+          <p class="monster-title__hp">{{ formatMonsterHp(game.currentMonster.currentHp) }} HP</p>
+        </div>
         <div class="score-area">
-          <p class="value-click">{{ game.clicks | number:'1.2-2' }}</p>
+          <p class="value-click">{{ game.clicks | formatNumber }}</p>
           <p
             class="value-auto-per-second"
             [class.value-auto-per-second--buff]="game.damageBuffActive"
-          >{{ game.valueAutoPerSecond | number:'1.2-2' }}/s</p>
+          >{{ game.valueAutoPerSecond | formatNumber }}/s</p>
         </div>
         <div class="center-zone-wrapper">
-          <div id="click-area" (click)="click($event)"></div>
+          <div
+            *ngIf="!game.monsterUnlocked || !game.currentMonster"
+            id="click-area"
+            (click)="click($event)">
+          </div>
+          <div
+            *ngIf="game.monsterUnlocked && game.currentMonster"
+            id="monster-area"
+            class="monster-area"
+            (click)="click($event)">
+            <img
+              *ngIf="game.currentMonster.imageUrl"
+              [src]="game.currentMonster.imageUrl"
+              [alt]="game.currentMonster.name"
+              class="monster-area__img"
+            />
+            <span *ngIf="!game.currentMonster.imageUrl" class="monster-area__placeholder">{{ game.currentMonster.name?.charAt(0) }}</span>
+            <div class="monster-area__hp-track">
+              <div
+                class="monster-area__hp-fill"
+                [style.width.%]="getMonsterHpPercent()">
+              </div>
+            </div>
+            <div class="monster-area__timer">{{ game.currentMonster.remainingSeconds }}s</div>
+          </div>
           <app-sun-area
             [sunUnlocked]="game.sunUnlocked || false"
             (clicked)="onSunClicked()">
@@ -67,8 +108,14 @@
     </div>
 
     <div class="column column-right">
+      <div class="resources-bar" >
+        <div class="resources-bar__item" title="Essence de mob (plus si tué à la dernière seconde)">
+          <span class="resources-bar__label">Essence</span>
+          <span class="resources-bar__value">{{ formatResourceValue(game.monsterEssence != null ? game.monsterEssence : 0) }}</span>
+        </div>
+      </div>
       <div class="workers-list">
-        <ng-container *ngFor="let worker of workersAvailable; let i = index; trackBy: trackByIndex">
+        <ng-container class="worker-area" *ngFor="let worker of workersAvailable; let i = index; trackBy: trackByIndex" >
           <app-worker-area
             *ngIf="worker.doesAppearInGame"
             [workerSelected]="worker"

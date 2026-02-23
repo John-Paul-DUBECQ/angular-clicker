@@ -43,7 +43,7 @@
           <span class="power-popup__name">{{ powerSelected.name }}</span>
           <span class="power-popup__tag">Amélioration</span>
         </div>
-        <span class="power-popup__mana" *ngIf="manaCost != null">{{ manaCost | number:'1.0-0' }} mana</span>
+        <span class="power-popup__mana" *ngIf="manaCost != null">{{ manaCost | formatNumber:0 }} mana</span>
       </div>
       <p class="power-popup__description" [innerHTML]="powerSelected.description"></p>
       <p class="power-popup__cooldown" *ngIf="powerSelected.isOnCooldown && powerSelected.cooldownRemainingSeconds != null">

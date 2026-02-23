@@ -13,10 +13,12 @@ import {MatTooltipModule} from '@angular/material/tooltip';
 import { ShopItemAreaComponent } from './shop-item-area/shop-item-area.component';
 import { SunAreaComponent } from './sun-area/sun-area.component';
 import { PowerAreaComponent } from './power-area/power-area.component';
+import { FormatNumberPipe } from './pipes/format-number.pipe';
 
 @NgModule({
   declarations: [
     AppComponent,
+    FormatNumberPipe,
     WorkerAreaComponent,
     ShopItemAreaComponent,
     SunAreaComponent,

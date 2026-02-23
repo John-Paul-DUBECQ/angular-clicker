@@ -55,6 +55,43 @@
   background: linear-gradient(90deg, #c9a227, #e8c547);
 }
 
+/* Jauge prochain mob + cercle danger (sous la barre streak) */
+.monster-gauge {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.35rem 0.75rem;
+  background: #1a1a1a;
+  border-bottom: 1px solid #444;
+}
+
+.monster-gauge__left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.monster-gauge__label {
+  font-size: 0.7rem;
+  color: #9c9a94;
+}
+
+.monster-gauge__darkness-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  /* Plus encounter-pct est haut, plus le cercle est sombre (monstre très proche). */
+  background: rgb(
+    calc(78 - 60 * var(--encounter-pct, 0) / 100),
+    calc(82 - 65 * var(--encounter-pct, 0) / 100),
+    calc(75 - 58 * var(--encounter-pct, 0) / 100)
+  );
+  transition: background 0.35s ease;
+}
+
 .mana-bar {
   flex-shrink: 0;
   width: 100%;
@@ -71,7 +108,7 @@
   border: 1px solid #444;
 }
 
-.mana-bar__hover-label {
+.mana-label {
   position: absolute;
   left: 50%;
   top: 50%;
@@ -81,13 +118,10 @@
   color: rgba(255, 255, 255, 0.9);
   text-shadow: 0 0 2px #000, 0 1px 3px #000;
   pointer-events: none;
-  opacity: 0;
+  opacity: 1;
   transition: opacity 0.15s ease;
 }
 
-.mana-bar__track:hover .mana-bar__hover-label {
-  opacity: 1;
-}
 
 .mana-bar__fill {
   height: 100%;
@@ -122,7 +156,38 @@
 }
 
 .column-right {
-  overflow-y:scroll
+  overflow-y: scroll;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
+.resources-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  padding: 0.5rem 0.75rem;
+  background: #1a1a1a;
+  border-bottom: 1px solid #444;
+  width: 100%;
+}
+
+.resources-bar__item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.resources-bar__label {
+  font-size: 0.75rem;
+  color: #b1b1b1;
+}
+
+.resources-bar__value {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #ffffff;
 }
 
 .workers-title {
@@ -173,6 +238,109 @@
 
 #click-area:active {
   transform: scale(1.1);
+}
+
+.monster-title {
+  text-align: center;
+  margin-bottom: 0.25rem;
+}
+
+.monster-title__name {
+  font-size: 0.8rem;
+  color: #b1b1b1;
+  margin: 0 0 0.1rem 0;
+}
+
+.monster-title__boss {
+  display: inline-block;
+  margin-right: 0.4rem;
+  padding: 0.1rem 0.35rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #1a0a0a;
+  background: #e85a5a;
+  border-radius: 3px;
+  letter-spacing: 0.02em;
+}
+
+.monster-title__hp {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #e8c547;
+  margin: 0;
+}
+
+.monster-area {
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+  min-width: 220px;
+  min-height: 220px;
+  background-color: #2a1a1a;
+  border-radius: 10px;
+  border: 1px solid #8b4513;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.1s ease;
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.monster-area:hover {
+  background-color: #3d2525;
+}
+
+.monster-area:active {
+  transform: scale(1.02);
+}
+
+.monster-area__img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.monster-area__placeholder {
+  font-size: 4rem;
+  font-weight: bold;
+  color: #c44;
+  z-index: 1;
+}
+
+.monster-area__hp-track {
+  position: absolute;
+  bottom: 4px;
+  left: 6px;
+  right: 6px;
+  height: 6px;
+  background: #1a1a1a;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.monster-area__hp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #c44, #e66);
+  border-radius: 3px;
+  transition: width 0.08s ease-out;
+}
+
+.monster-area__timer {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #f1f1f1;
 }
 
 .icon-click {
@@ -233,14 +401,14 @@
 }
 
 .shop-items-list {
-  height: 33%;
+  max-height: 33%;
   padding: 1rem;
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
   gap: 1rem;
-  justify-content: center;
-  align-items: center;
+  justify-content: flex-start;
+  align-items: stretch;
 
   overflow-y: auto;
   overflow-x: hidden;

@@ -15,6 +15,7 @@ import { DEFAULT_MAX_MANA, ResourcesService } from './resources.service';
 import { WorkerStateService } from './worker-state.service';
 import { ShopStateService } from './shop-state.service';
 import { PowerStateService } from './power-state.service';
+import { MonsterStateService } from './monster-state.service';
 
 const TICKS_PER_SECOND = 10;
 
@@ -38,7 +39,8 @@ export class GameStateService {
     private workerState: WorkerStateService,
     private shopState: ShopStateService,
     private powerState: PowerStateService,
-    private streakState: StreakStateService
+    private streakState: StreakStateService,
+    private monsterState: MonsterStateService
   ) {
     this.startTickLoop();
   }
@@ -56,9 +58,14 @@ export class GameStateService {
       const damageMult = this.powerState.getDamageMultiplier();
       const autoPerTick =
         (baseAutoPerSecond * streakMult * damageMult) / TICKS_PER_SECOND;
-      this.resources.addClicks(autoPerTick);
+      if (this.monsterState.hasCurrentMonster()) {
+        this.monsterState.dealDamage(autoPerTick, workers, workersAvailable);
+      } else {
+        this.resources.addClicks(autoPerTick);
+      }
       this.resources.tickManaRegen();
       this.streakState.tick(TICKS_PER_SECOND, workers, workersAvailable);
+      this.monsterState.tick(workers, workersAvailable);
     }, 1000 / TICKS_PER_SECOND);
   }
 
@@ -142,6 +149,10 @@ export class GameStateService {
       powerEffectRemainingPercent: Object.keys(powerEffectRemainingPercent).length
         ? powerEffectRemainingPercent
         : undefined,
+      monsterUnlocked: this.monsterState.isMonsterUnlocked(workers, workersAvailable),
+      currentMonster: this.monsterState.getCurrentMonsterView(workers, workersAvailable),
+      encounterMeterPercent: this.monsterState.getEncounterMeterPercent(),
+      monsterEssence: this.resources.getMonsterEssence(),
     };
   }
 
@@ -164,6 +175,13 @@ export class GameStateService {
 
     this.streakState.onClick(workers, workersAvailable);
     value *= this.streakState.getMultiplier(workers, workersAvailable);
+
+    if (this.monsterState.isMonsterUnlocked(workers, workersAvailable) && this.monsterState.hasCurrentMonster()) {
+      this.monsterState.dealDamage(value * valueMultiplier, workers, workersAvailable);
+      this.resources.addManaOnClick(0.5);
+      return;
+    }
+
     this.resources.addClicks(value * valueMultiplier);
     this.resources.addManaOnClick(0.5);
   }

@@ -4,13 +4,20 @@ export const DEFAULT_MAX_MANA = 100;
 /** Régénération de base par tick (10 ticks/s → 0.5 mana/s). */
 const DEFAULT_MANA_REGEN_PER_TICK = 0.05;
 
-/** Service global pour les ressources : clics (monnaie) et mana (sorts). */
+/** Ressources spéciales (ex. récompenses de mob). */
+export interface GameResources {
+  /** Essence / âmes gagnées en tuant des mobs (plus si tué à la dernière seconde). */
+  monsterEssence: number;
+}
+
+/** Service global pour les ressources : clics (monnaie), mana (sorts), ressources mob. */
 @Injectable({ providedIn: 'root' })
 export class ResourcesService {
   private clicks = 0;
   private mana = 0;
   private maxMana = DEFAULT_MAX_MANA;
   private manaRegenPerTick = DEFAULT_MANA_REGEN_PER_TICK;
+  private monsterEssence = 0;
 
   getClicks(): number {
     return this.clicks;
@@ -73,5 +80,15 @@ export class ResourcesService {
   /** Optionnel : gagner du mana en cliquant (ex: 0.5 mana par clic). */
   addManaOnClick(amount: number): void {
     this.addMana(amount);
+  }
+
+  // --- Ressources mob (essence / âmes) ---
+
+  getMonsterEssence(): number {
+    return this.monsterEssence;
+  }
+
+  addMonsterEssence(amount: number): void {
+    this.monsterEssence = Math.max(0, this.monsterEssence + amount);
   }
 }

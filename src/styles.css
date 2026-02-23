@@ -32,3 +32,53 @@ body {
     transform: translate(-50%, calc(-50% - 28px));
   }
 }
+
+/* Toast récompense mob : en bas à droite, même fond que l’app, pas d’ombre sur l’écran */
+.reward-toast-container.swal2-container {
+  background: transparent !important;
+  pointer-events: none;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 1rem;
+}
+.reward-toast-container .swal2-popup {
+  pointer-events: auto;
+}
+.reward-toast.swal2-popup {
+  background: #1a1a1a;
+  color: #fff;
+  box-shadow: none;
+  border: 1px solid #444;
+  padding: 0.5rem 0.75rem;
+  width: auto;
+  max-width: 200px;
+}
+.reward-toast .swal2-title {
+  color: #fff;
+  font-size: 0.8rem;
+  margin-bottom: 0.2rem;
+  padding: 0;
+}
+.reward-toast .swal2-html-container {
+  color: #fff;
+  font-size: 0.75rem;
+  margin: 0;
+  padding: 0;
+}
+.reward-toast .swal2-html-container p {
+  margin: 0.1rem 0;
+  color: #fff;
+  font-size: 0.75rem;
+}
+.reward-toast .swal2-icon {
+  display: none;
+}
+.reward-toast .swal2-success-ring {
+  border-color: rgba(232, 197, 71, 0.3);
+}
+.reward-toast [class^='swal2-success-line'] {
+  background-color: #e8c547;
+}
+.reward-toast .swal2-timer-progress-bar {
+  background: #e8c547;
+}

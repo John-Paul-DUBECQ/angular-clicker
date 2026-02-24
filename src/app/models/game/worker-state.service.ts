@@ -12,7 +12,7 @@ import {
 } from '../worker-auto-model';
 import { criticalHitUnlockDefinition, CRITICAL_HIT_UPGRADES } from '../unlocks/critical-hit';
 import { STREAK_UPGRADES, streakUnlockDefinition } from '../unlocks/streak';
-import { sunUnlockDefinition } from '../unlocks/sun-unlock';
+import { sunUnlockDefinition, SUN_UPGRADES } from '../unlocks/sun-unlock';
 import { powerUnlockDefinition, POWER_MANA_UPGRADES } from '../unlocks/power-unlock';
 import { monsterUnlockDefinition, MONSTER_UPGRADES } from '../unlocks/monster-unlock';
 import { vesselUnlockDefinition, VESSEL_UPGRADES } from '../unlocks/vessel';
@@ -44,19 +44,19 @@ export class WorkerStateService {
 
   initWorkers(): void {
     this.workersAvailable = [
-      createClickWorker('Épée', 1, 1.05, 10, 1.10),
-      createAutoWorker('Fermier', 2, 1.10, 50, 1.16),
-      createAutoWorker('Mineur', 4, 1.15, 150, 1.22, [
+      createClickWorker('Épée', 1.5, 1.05, 25, 1.10),
+      createAutoWorker('Fermier', 5, 1.10, 125, 1.16),
+      createAutoWorker('Mineur', 15, 1.15, 375, 1.22, [
         criticalHitUnlockDefinition,
         ...CRITICAL_HIT_UPGRADES,
       ]),
-      createAutoWorker('Forgeron', 16, 1.20, 500, 1.27, [streakUnlockDefinition, ...STREAK_UPGRADES]),
-      createAutoWorker('Astrologue', 32, 1.25, 2000, 1.33, [sunUnlockDefinition]),
-      createAutoWorker('Magicien', 64, 1.30, 5000, 1.39, [powerUnlockDefinition, ...POWER_MANA_UPGRADES]),
-      createAutoWorker('Alchimiste', 128, 1.35, 15000, 1.45, [monsterUnlockDefinition, ...MONSTER_UPGRADES]),
-      createAutoWorker('Géomètre', 4444, 1.40, 65000, 1.51, [vesselUnlockDefinition, ...VESSEL_UPGRADES]),
-      createAutoWorker('Architecte', 512, 1.45, 150000, 1.57),
-      createAutoWorker('Explorateur', 1024, 1.50, 300000, 1.63),
+      createAutoWorker('Forgeron', 50, 1.20, 1250, 1.27, [streakUnlockDefinition, ...STREAK_UPGRADES]),
+      createAutoWorker('Astrologue', 500, 1.25, 12500, 1.33, [sunUnlockDefinition, ...SUN_UPGRADES]),
+      createAutoWorker('Magicien', 1000, 1.30, 25000, 1.39, [powerUnlockDefinition, ...POWER_MANA_UPGRADES]),
+      createAutoWorker('Alchimiste', 4500, 1.35, 112500, 1.45, [monsterUnlockDefinition, ...MONSTER_UPGRADES]),
+      createAutoWorker('Géomètre', 20000, 1.40, 500000, 1.51, [vesselUnlockDefinition, ...VESSEL_UPGRADES]),
+      createAutoWorker('Architecte', 100000, 1.45, 2500000, 1.57),
+      createAutoWorker('Explorateur', 900000, 1.50, 22500000, 1.63),
     ];
     this.workers = [];
   }

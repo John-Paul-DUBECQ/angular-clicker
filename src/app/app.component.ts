@@ -244,7 +244,6 @@ export class AppComponent implements OnInit, OnDestroy {
     return Math.min(100, (100 * current) / max);
   }
 
-  /** Formate les PV du mob (k, M, B, T, A, B, C...). */
   formatMonsterHp(value: number): string {
     return formatNumberValue(value, 2);
   }
@@ -255,7 +254,6 @@ export class AppComponent implements OnInit, OnDestroy {
     return Math.min(100, (100 * m.currentHp) / m.maxHp);
   }
 
-  /** Formate une ressource (ex. essence) : k, M, B, T, A, B, C... */
   formatResourceValue(value: number): string {
     return formatNumberValue(value, 2);
   }
@@ -264,6 +262,7 @@ export class AppComponent implements OnInit, OnDestroy {
     const pct = this.game.powerEffectRemainingPercent?.[powerId];
     return pct != null ? pct : null;
   }
+  
 /*
   exportSave(): void {
     this.gameState.downloadSave();

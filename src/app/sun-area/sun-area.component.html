@@ -1,5 +1,5 @@
-<div class="sun-area-wrapper" *ngIf="sunUnlocked">
+<div class="sun-area-wrapper" *ngIf="sunUnlocked" [style.--sun-orbit-duration]="15 * sunSpeedFactor" [style.--sun-size.px]="44 * sunSizeFactor">
   <div class="sun-orbit-track" (click)="clickSun($event)">
-    <div class="sun" title="Clic x2"></div>
+    <div class="sun" [title]="'Clic x' + (sunDamageMultiplier || 2)"></div>
   </div>
 </div>

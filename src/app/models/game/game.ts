@@ -19,6 +19,12 @@ export class Game {
     /** Pouvoirs disponibles (ex. débloqués par le Magicien). Renseigné par PowerStateService. */
     powersAvailable?: Power[];
     sunUnlocked?: boolean;
+    /** Multiplicateur de dégâts du clic soleil (niveau Astrologue + upgrades). */
+    sunDamageMultiplier?: number;
+    /** Facteur durée rotation soleil (1 = 8s, <1 = plus rapide). */
+    sunSpeedFactor?: number;
+    /** Facteur taille du soleil (1 = base). */
+    sunSizeFactor?: number;
     /** Zone pouvoirs/mana débloquée (Magicien niveau 1). */
     powerUnlocked?: boolean;
     criticalHitUnlocked?: boolean;

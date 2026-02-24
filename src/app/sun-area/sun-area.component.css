@@ -1,6 +1,6 @@
 /* Distance du centre (réutilisable pour d’éventuelles planètes). */
 .sun-area-wrapper {
-  --orbit-distance: 125px;
+  --orbit-distance: 250px;
   --orbit-width: 220px;
   --orbit-height: 220px;
   position: absolute;
@@ -20,7 +20,7 @@
   top: 50%;
   width: 0;
   height: 0;
-  animation: sun-orbit 8s linear infinite;
+  animation: sun-orbit calc(var(--sun-orbit-duration, 8) * 1s) linear infinite;
   cursor: pointer;
   pointer-events: auto;
 }
@@ -30,8 +30,8 @@
   position: absolute;
   left: var(--orbit-distance);
   top: 0;
-  width: 44px;
-  height: 44px;
+  width: var(--sun-size, 44px);
+  height: var(--sun-size, 44px);
   transform: translate(-50%, -50%);
   background-color: #292929;
   border: 1px solid #f1f1f1;

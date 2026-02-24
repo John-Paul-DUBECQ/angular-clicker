@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { WorkerAutoData } from '../worker-auto-model';
 import { Game } from './game';
-import { isSunUnlocked, SUN_CLICK_MULTIPLIER } from '../unlocks/sun-unlock';
+import { isSunUnlocked, getSunUpgradeStats, SUN_WORKER_INDEX } from '../unlocks/sun-unlock';
 import {
   getCriticalHitStats,
   isCriticalHitUnlocked,
@@ -18,6 +18,7 @@ import { PowerStateService } from './power-state.service';
 import { MonsterStateService } from './monster-state.service';
 import { VesselService } from './vessel.service';
 import { isVesselUnlocked } from '../unlocks/vessel';
+import { formatNumberValue } from '../../pipes/format-number.pipe';
 
 const TICKS_PER_SECOND = 10;
 
@@ -139,6 +140,21 @@ export class GameStateService {
       shopItems: this.shopState.getShopItemsView(getWorkerLevel),
       powersAvailable: this.powerState.getPowersAvailableView(powerWorkerLevel),
       sunUnlocked: isSunUnlocked(workers, workersAvailable),
+      sunDamageMultiplier: (() => {
+        if (!isSunUnlocked(workers, workersAvailable)) return undefined;
+        const astrologue = workersAvailable[SUN_WORKER_INDEX];
+        return getSunUpgradeStats(astrologue?.level ?? 0).damageMultiplier;
+      })(),
+      sunSpeedFactor: (() => {
+        if (!isSunUnlocked(workers, workersAvailable)) return undefined;
+        const astrologue = workersAvailable[SUN_WORKER_INDEX];
+        return getSunUpgradeStats(astrologue?.level ?? 0).speedFactor;
+      })(),
+      sunSizeFactor: (() => {
+        if (!isSunUnlocked(workers, workersAvailable)) return undefined;
+        const astrologue = workersAvailable[SUN_WORKER_INDEX];
+        return getSunUpgradeStats(astrologue?.level ?? 0).sizeFactor;
+      })(),
       powerUnlocked: isPowerUnlocked(workers, workersAvailable),
       criticalHitUnlocked: isCriticalHitUnlocked(workers, workersAvailable),
       streakUnlocked: streakView.streakUnlocked,
@@ -196,7 +212,9 @@ export class GameStateService {
     const workers = this.workerState.getWorkers();
     const workersAvailable = this.workerState.getWorkersAvailable();
     if (!isSunUnlocked(workers, workersAvailable)) return;
-    this.click(SUN_CLICK_MULTIPLIER, event?.clientX, event?.clientY);
+    const astrologue = workersAvailable[SUN_WORKER_INDEX];
+    const sunMult = getSunUpgradeStats(astrologue?.level ?? 0).damageMultiplier;
+    this.click(sunMult, event?.clientX, event?.clientY);
   }
 
   showCriticalHit(value: number, clientX?: number, clientY?: number): void {
@@ -204,7 +222,7 @@ export class GameStateService {
     const y = clientY ?? window.innerHeight / 2;
     const criticalHitPopup = document.createElement('div');
     criticalHitPopup.className = 'critical-hit-popup';
-    criticalHitPopup.innerHTML = value.toFixed(2).toString();
+    criticalHitPopup.innerHTML = formatNumberValue(value, 2);
     criticalHitPopup.style.left = `${x}px`;
     criticalHitPopup.style.top = `${y}px`;
     document.body.appendChild(criticalHitPopup);

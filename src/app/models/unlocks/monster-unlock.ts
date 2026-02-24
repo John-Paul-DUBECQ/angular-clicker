@@ -9,6 +9,7 @@ export const MONSTER_LEVEL_REQUIRED = 1;
 export const MONSTER_LEVELS_BY_MONSTER_ID: Record<string, number> = {
   monster1: 1,
   monster2: 5,
+  monster3: 10,
 };
 
 export function getLevelRequiredForMonster(monsterId: string): number | undefined {

@@ -18,6 +18,14 @@ export const listMonster: Monster[] = [
     doesAppearInGame: false,
     lootMultiplier: 2,
     probabilityToSpawn: 1,
-  },
+  },{
+    id: 'monster3',
+    name: 'Gribouy',
+    description: 'Gribouy est un petit être très robuste, mais il a une phobie de ses mains, il faut donc le tuer avec ses propres mains.',
+    imageUrl: 'assets/imgUpgrades/shadocks/gribouyi.png',
+    doesAppearInGame: false,
+    lootMultiplier: 3,
+    probabilityToSpawn: 20,
+  }
 ];
 

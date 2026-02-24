@@ -114,6 +114,9 @@
           </div>
           <app-sun-area
             [sunUnlocked]="game.sunUnlocked || false"
+            [sunSpeedFactor]="game.sunSpeedFactor != null ? game.sunSpeedFactor : 1"
+            [sunSizeFactor]="game.sunSizeFactor != null ? game.sunSizeFactor : 1"
+            [sunDamageMultiplier]="game.sunDamageMultiplier"
             (clicked)="onSunClicked()">
           </app-sun-area>
         </div>

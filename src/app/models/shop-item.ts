@@ -1,3 +1,5 @@
+import type { WorkerUnlock } from './unlocks/worker-unlock.model';
+
 /**
  * Contexte passé aux conditions d'apparition des items du shop.
  * Tout ce dont une condition peut avoir besoin doit être exposé ici.
@@ -17,6 +19,7 @@ export interface ShopUnlockContext {
 export type ShopUnlockCondition = (ctx: ShopUnlockContext) => boolean;
 
 export interface ShopItem {
+
   name: string;
   description: string;
   imageUrl?: string;
@@ -42,6 +45,11 @@ export interface ShopItem {
   manaRegenBonus?: number;
   /** Amélioration d'un unlock (ex: coup critique, streak). */
   unlockUpgrade?: { unlockId: string; type: string; value: number };
+  /**
+   * Si défini, cet item apparaît dans "Prochains paliers" pour ce worker à ce niveau.
+   * Doit correspondre à la condition requireWorkerLevel utilisée dans unlockCondition.
+   */
+  requiredWorkerLevelForUnlock?: { workerIndex: number; level: number };
 }
 
 /** Règle de base : l'item est visible à partir de la moitié du prix. */
@@ -89,6 +97,37 @@ export function requireBought(ref: string | number): ShopUnlockCondition {
 /** Condition : toutes les conditions doivent être vraies. */
 export function requireAll(...conditions: ShopUnlockCondition[]): ShopUnlockCondition {
   return (ctx) => conditions.every((c) => c(ctx));
+}
+
+/**
+ * Paliers "déblocage d'item shop" pour un worker : items dont requiredWorkerLevelForUnlock
+ * correspond à ce worker et niveau > currentLevel. Pour affichage dans "Prochains paliers".
+ */
+export function getUpcomingShopItemUnlockTiers(
+  workerIndex: number,
+  currentLevel: number,
+  items: ShopItem[]
+): WorkerUnlock[] {
+  return items
+    .filter(
+      (item) =>
+        item.requiredWorkerLevelForUnlock != null &&
+        item.requiredWorkerLevelForUnlock.workerIndex === workerIndex &&
+        item.requiredWorkerLevelForUnlock.level > currentLevel
+    )
+    .map((item) => {
+      const { level } = item.requiredWorkerLevelForUnlock!;
+      return {
+        id: `shop-item-${item.id ?? item.name}`,
+        name: item.name,
+        description: item.description,
+        imageUrl: item.imageUrl ?? '',
+        levelRequired: level,
+        unlockType: 'item' as const,
+        price: item.price,
+      };
+    })
+    .sort((a, b) => (a.levelRequired ?? 0) - (b.levelRequired ?? 0));
 }
 
 

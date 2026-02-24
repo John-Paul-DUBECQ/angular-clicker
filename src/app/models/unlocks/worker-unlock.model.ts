@@ -8,4 +8,10 @@ export interface WorkerUnlock {
   levelRequired?: number;
   /** Renseigné par le game state selon worker acheté et level >= levelRequired. */
   doesAppearInGame?: boolean;
+  /** 'item' = item du shop (tag + prix). 'spell' = sort (tag + coût mana). */
+  unlockType?: 'item' | 'spell';
+  /** Prix de l'item (or, pour affichage prochains paliers). */
+  price?: number;
+  /** Coût en mana du sort (pour affichage prochains paliers). */
+  manaCost?: number;
 }

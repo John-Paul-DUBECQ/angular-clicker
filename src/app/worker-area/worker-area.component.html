@@ -40,7 +40,11 @@
                 />
                 <span *ngIf="!u.imageUrl" class="worker-unlock-popup__icon-placeholder">{{ u.name?.charAt(0) || '?' }}</span>
                 <span class="worker-unlock-popup__name">{{ u.name }}</span>
+                <span class="worker-unlock-popup__tag worker-unlock-popup__tag--item" *ngIf="u.unlockType === 'item'">Item</span>
+                <span class="worker-unlock-popup__tag worker-unlock-popup__tag--spell" *ngIf="u.unlockType === 'spell'">Sort</span>
                 <span class="worker-unlock-popup__level" *ngIf="u.levelRequired != null">Niv. {{ u.levelRequired }}</span>
+                <span class="worker-unlock-popup__price" *ngIf="u.price != null">{{ u.price | formatNumber }}</span>
+                <span class="worker-unlock-popup__mana" *ngIf="u.manaCost != null">{{ u.manaCost | formatNumber }} mana</span>
             </div>
             <p class="worker-unlock-popup__description" [innerHTML]="u.description"></p>
         </li>

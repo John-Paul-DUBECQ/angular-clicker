@@ -1,4 +1,4 @@
-import { requireBought, requirePower, requireWorkerLevel, ShopItem } from "./shop-item";
+import { requireAll, requireBought, requirePower, requireWorkerLevel, ShopItem } from "./shop-item";
 /*
 Recap des workers :
 - Épée : 0
@@ -14,15 +14,17 @@ Recap des workers :
 */
 export const listShopItem: Array<ShopItem> = [
   {
+    id: 'shop-sword-training',
     name: 'Epée d\'entrainement',
-    description: 'Aussi piquant qu\'un cure-dent, multiplie les dégats de l\'épée définitivement par 1.5',
+    description: 'Aussi piquant qu\'un cure-dent, multiplie les dégats de l\'épée définitivement par 1.2',
     imageUrl: 'assets/imgUpgrades/swords/Sword1.png',
     price: 10,
     doesAppearInGame: false,
     bought: false,
-    value: 1.5,
+    value: 1.2,
     workerIndex: 0,
   },{ 
+    id: 'shop-sword-tempered',
     name: 'Epée en bois trempé',
     description: 'Avec de l\'acier trempé, ça aurait été plus efficace, multiplie les dégats de l\'épée définitivement par 1.5',
     imageUrl: 'assets/imgUpgrades/swords/Sword2.png',
@@ -31,13 +33,38 @@ export const listShopItem: Array<ShopItem> = [
     bought: false,
     value: 1.5,
     workerIndex: 0,
-    unlockCondition: requireBought(0), // épée d'entrainement
+    unlockCondition: requireAll(requireBought('shop-sword-training'), requireWorkerLevel(0, 25)),
+    requiredWorkerLevelForUnlock: { workerIndex: 0, level: 25 }, 
+   },{ 
+    id: 'shop-sword-calcaire',
+    name: 'Epée en calcaire',
+    description: 'Cette épée est un unique exemplaire, certainement parce qu\'elle est inutile. Multiplie les dégats de l\'épée définitivement par 1.2',
+    imageUrl: 'assets/imgUpgrades/swords/Sword2.png',
+    price: 3000,
+    doesAppearInGame: false,
+    bought: false,
+    value: 1.2,
+    workerIndex: 0,
+    unlockCondition: requireAll(requireBought('shop-sword-tempered'), requireWorkerLevel(0, 50)),
+    requiredWorkerLevelForUnlock: { workerIndex: 0, level: 50 },
+  },{ 
+    id: 'shop-sword-frangipane',
+    name: 'Epée en frangipane',
+    description: 'Dans un saladier, mélanger la poudre d\'amandes, le sucre, les 2 oeufs et le beurre mou. Enfourner pendant 20 à 30 min à 200°C (thermostat 6-7); vérifier régulièrement la cuisson ! Multiplie les dégats de l\'épée définitivement par 1.5',
+    imageUrl: 'assets/imgUpgrades/swords/Sword1.png',
+    price: 200,
+    doesAppearInGame: false,
+    bought: false,
+    value: 1.5,
+    workerIndex: 0,
+    unlockCondition: requireAll(requireBought('shop-sword-training'), requireWorkerLevel(1, 10)),
+    requiredWorkerLevelForUnlock: { workerIndex: 1, level: 10 },
   },
   {
     name: 'FourcheLangue',
     description: 'Fourche légendaire datant d\'un temps oublié, dommage qu\'elle soit cassée. Multiplie les dégâts du fermier définitivement par 2',
     imageUrl: 'assets/imgUpgrades/Farmer/Farmer1.png',
-    price: 10,
+    price: 50,
     doesAppearInGame: false,
     bought: false,
     value: 2,
@@ -120,21 +147,23 @@ export const listShopItem: Array<ShopItem> = [
     doesAppearInGame: false,
     bought: false,
     value: 1,
-    unlockCondition: requirePower('power'),
+    unlockCondition: requireWorkerLevel(5, 1),
+    requiredWorkerLevelForUnlock: { workerIndex: 5, level: 1 },
     powerId: 'power',
     powerManaFactor: 0.9,
   },
   {
     id: 'shop-mana-max',
     name: 'Cristal de mana',
-    description: '+30 mana max.',
+    description: '+100 mana max.',
     imageUrl: 'assets/imgUpgrades/power/power.png',
     price: 8000,
     doesAppearInGame: false,
     bought: false,
     value: 1,
-    unlockCondition: requireWorkerLevel(5, 1),
-    manaMaxBonus: 30,
+    unlockCondition: requireWorkerLevel(5, 5),
+    requiredWorkerLevelForUnlock: { workerIndex: 5, level: 5 },
+    manaMaxBonus: 100,
   },
   {
     id: 'shop-mana-regen',
@@ -145,7 +174,8 @@ export const listShopItem: Array<ShopItem> = [
     doesAppearInGame: false,
     bought: false,
     value: 1,
-    unlockCondition: requireWorkerLevel(5, 3),
+    unlockCondition: requireWorkerLevel(5, 10),
+    requiredWorkerLevelForUnlock: { workerIndex: 5, level: 10 },
     manaRegenBonus: 0.03,
   },
   {
@@ -158,6 +188,7 @@ export const listShopItem: Array<ShopItem> = [
     bought: false,
     value: 1,
     unlockCondition: requireWorkerLevel(2, 1),
+    requiredWorkerLevelForUnlock: { workerIndex: 2, level: 1 },
     unlockUpgrade: { unlockId: 'critical-hit', type: 'chance', value: 0.01 },
   },
 ];

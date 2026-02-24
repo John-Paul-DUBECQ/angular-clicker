@@ -37,6 +37,19 @@
     </div>
     
     <div class="column column-center">
+      <!-- Lane vaisseaux : uniquement colonne centrale, hauteur aléatoire, mouvement fluide (position = temps) -->
+      <div class="vessel-lane" *ngIf="game.vesselUnlocked && game.activeVessels && game.activeVessels.length > 0">
+        <div
+          *ngFor="let v of game.activeVessels; trackBy: trackByVesselInstance"
+          class="vessel-lane__ship"
+          [style.left.%]="getVesselLeft(v)"
+          [style.top.%]="v.topPercent"
+          [title]="v.name"
+          (mousedown)="onVesselClick(v.instanceId); $event.stopPropagation(); $event.preventDefault()">
+          <img *ngIf="v.imageUrl" [src]="v.imageUrl" [alt]="v.name" class="vessel-lane__img" />
+          <span *ngIf="!v.imageUrl" class="vessel-lane__placeholder">{{ v.name?.charAt(0) }}</span>
+        </div>
+      </div>
       <div class="streak-bar" *ngIf="game.streakUnlocked">
         <div class="streak-bar__label">{{ game.streakActive && game.streakDamageMultiplier ? '×' + game.streakDamageMultiplier : '' }}</div>
         <div class="streak-bar__track">

@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
 
-export const DEFAULT_MAX_MANA = 100;
+export const DEFAULT_MAX_MANA = 600;
 /** Régénération de base par tick (10 ticks/s → 0.5 mana/s). */
-const DEFAULT_MANA_REGEN_PER_TICK = 0.05;
+const DEFAULT_MANA_REGEN_PER_TICK = 0.5;
 
 /** Ressources spéciales (ex. récompenses de mob). */
 export interface GameResources {

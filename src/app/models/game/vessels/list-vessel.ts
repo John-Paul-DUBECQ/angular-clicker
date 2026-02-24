@@ -1,0 +1,43 @@
+import { Vessel } from './vessel.model';
+import { listMonster } from '../../monsters/list-monster';
+
+export const listVessel: Vessel[] = [
+  {
+    id: 'vessel-clicks',
+    name: 'Cargo',
+    description: 'Clique pour recevoir un bonus d\'or.',
+    imageUrl: 'assets/imgUpgrades/Machine/Ship1.png',
+    doesAppearInGame: true,
+    probabilityToSpawn: 60,
+    speed: 5,
+    rewardType: 'clicks',
+    rewardValue: 12,
+    probabilityToSpawnMonster: 0.1,
+    monster: listMonster[0],
+  },
+  {
+    id: 'vessel-buff',
+    name: 'Vaisseau de guerre',
+    description: 'Clique pour dégâts x2 pendant 30 secondes.',
+    imageUrl: 'assets/imgUpgrades/Machine/Ship2.png',
+    doesAppearInGame: true,
+    probabilityToSpawn: 25,
+    speed: 10,
+    rewardType: 'tempBonus',
+    rewardValue: 15,
+    probabilityToSpawnMonster: 0.1,
+    monster: listMonster[0],
+  },
+  {
+    id: 'vessel-mob',
+    name: 'Chasseur',
+    description: 'Clique pour faire apparaître un monstre immédiatement.',
+    imageUrl: 'assets/imgUpgrades/Machine/Ship3.png',
+    doesAppearInGame: true,
+    probabilityToSpawn: 15,
+    speed: 8,
+    rewardType: 'spawnMonster',
+    monster: listMonster[0],
+    probabilityToSpawnMonster: 1,
+  },
+];

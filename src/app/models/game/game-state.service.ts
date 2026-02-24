@@ -16,6 +16,8 @@ import { WorkerStateService } from './worker-state.service';
 import { ShopStateService } from './shop-state.service';
 import { PowerStateService } from './power-state.service';
 import { MonsterStateService } from './monster-state.service';
+import { VesselService } from './vessel.service';
+import { isVesselUnlocked } from '../unlocks/vessel';
 
 const TICKS_PER_SECOND = 10;
 
@@ -40,7 +42,8 @@ export class GameStateService {
     private shopState: ShopStateService,
     private powerState: PowerStateService,
     private streakState: StreakStateService,
-    private monsterState: MonsterStateService
+    private monsterState: MonsterStateService,
+    private vesselState: VesselService
   ) {
     this.startTickLoop();
   }
@@ -66,6 +69,7 @@ export class GameStateService {
       this.resources.tickManaRegen();
       this.streakState.tick(TICKS_PER_SECOND, workers, workersAvailable);
       this.monsterState.tick(workers, workersAvailable);
+      this.vesselState.tick(workers, workersAvailable);
     }, 1000 / TICKS_PER_SECOND);
   }
 
@@ -153,6 +157,8 @@ export class GameStateService {
       currentMonster: this.monsterState.getCurrentMonsterView(workers, workersAvailable),
       encounterMeterPercent: this.monsterState.getEncounterMeterPercent(),
       monsterEssence: this.resources.getMonsterEssence(),
+      vesselUnlocked: isVesselUnlocked(workers, workersAvailable),
+      activeVessels: this.vesselState.getActiveVesselsView(),
     };
   }
 
@@ -243,5 +249,11 @@ export class GameStateService {
   castPower(powerIndex: number): void {
     const cost = this.getPowerManaCost(powerIndex);
     this.powerState.castPower(powerIndex, cost ?? undefined);
+  }
+
+  clickVessel(instanceId: string): void {
+    const workers = this.workerState.getWorkers();
+    const workersAvailable = this.workerState.getWorkersAvailable();
+    this.vesselState.clickVessel(instanceId, workers, workersAvailable);
   }
 }

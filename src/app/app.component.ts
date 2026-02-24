@@ -1,12 +1,15 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { GameStateService } from './models/game/game-state.service';
 import { Game } from './models/game/game';
+import type { ActiveVesselView } from './models/game/vessel.service';
 import { ShopItem } from './models/shop-item';
 import { WorkerAuto } from './models/worker-auto-model';
 import { Power } from './models/powers/power.model';
 import { formatNumberValue } from './pipes/format-number.pipe';
 import { MonsterRewardNotificationService } from './models/game/monster-reward-notification.service';
+import { VesselRewardNotificationService } from './models/game/vessel-reward-notification.service';
+import type { VesselReward } from './models/game/vessel-reward-notification.service';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -17,6 +20,9 @@ import Swal from 'sweetalert2';
 export class AppComponent implements OnInit, OnDestroy {
   title = 'Clicker Game';
   private refreshInterval: ReturnType<typeof setInterval> | null = null;
+  private vesselTickId: ReturnType<typeof setInterval> | null = null;
+  /** Position left fluide (dérivée du temps) pour chaque vaisseau, mise à jour ~50 ms. */
+  vesselSmoothLeft: Record<string, number> = {};
 
   game: Game = {
     clicks: 0,
@@ -38,23 +44,54 @@ export class AppComponent implements OnInit, OnDestroy {
   powersAvailable: Power[] = [];
   importError = false;
   private rewardSub: Subscription | null = null;
+  private vesselRewardSub: Subscription | null = null;
 
   constructor(
     private gameState: GameStateService,
-    private monsterRewardNotify: MonsterRewardNotificationService
+    private monsterRewardNotify: MonsterRewardNotificationService,
+    private vesselRewardNotify: VesselRewardNotificationService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
     this.refreshGameState();
     this.refreshInterval = setInterval(() => this.refreshGameState(), 500);
     this.rewardSub = this.monsterRewardNotify.reward$.subscribe((r) => this.showMonsterReward(r));
+    this.vesselRewardSub = this.vesselRewardNotify.reward$.subscribe((r) => this.showVesselReward(r));
+    this.startVesselSmoothTick();
   }
 
   ngOnDestroy(): void {
     if (this.refreshInterval !== null) {
       clearInterval(this.refreshInterval);
     }
+    if (this.vesselTickId !== null) {
+      clearInterval(this.vesselTickId);
+    }
     this.rewardSub?.unsubscribe();
+    this.vesselRewardSub?.unsubscribe();
+  }
+
+  private startVesselSmoothTick(): void {
+    const tick = (): void => {
+      const vessels = this.game.activeVessels;
+      if (vessels && vessels.length > 0) {
+        const now = Date.now();
+        const next: Record<string, number> = {};
+        for (const v of vessels) {
+          next[v.instanceId] = ((now - v.spawnTime) / 1000) * v.speed;
+        }
+        this.vesselSmoothLeft = next;
+        this.cdr.detectChanges();
+      }
+    };
+    tick();
+    this.vesselTickId = setInterval(tick, 50);
+  }
+
+  /** Position left fluide pour le rendu (mouvement linéaire comme le soleil). */
+  getVesselLeft(v: ActiveVesselView): number {
+    return this.vesselSmoothLeft[v.instanceId] != null ? this.vesselSmoothLeft[v.instanceId] : v.leftPercent;
   }
 
   private showMonsterReward(reward: { gold: number; essence: number }): void {
@@ -63,6 +100,30 @@ export class AppComponent implements OnInit, OnDestroy {
     Swal.fire({
       title: 'Récompense !',
       html: `<p>+${goldStr} clics</p><p>+${essenceStr} essence</p>`,
+      timer: 2000,
+      timerProgressBar: true,
+      showConfirmButton: false,
+      position: 'bottom-end',
+      backdrop: false,
+      customClass: {
+        popup: 'reward-toast',
+        container: 'reward-toast-container',
+      },
+    });
+  }
+
+  private showVesselReward(reward: VesselReward): void {
+    const parts: string[] = [];
+    if (reward.gold != null && reward.gold > 0) {
+      parts.push(`<p>+${formatNumberValue(reward.gold, 0)} clics</p>`);
+    }
+    if (reward.message) {
+      parts.push(`<p>${reward.message}</p>`);
+    }
+    if (parts.length === 0) return;
+    Swal.fire({
+      title: 'Récompense !',
+      html: parts.join(''),
       timer: 2000,
       timerProgressBar: true,
       showConfirmButton: false,
@@ -85,6 +146,11 @@ export class AppComponent implements OnInit, OnDestroy {
 
   click($event: MouseEvent): void {
     this.gameState.click(1, $event?.clientX, $event?.clientY);
+    this.refreshGameState();
+  }
+
+  onVesselClick(instanceId: string): void {
+    this.gameState.clickVessel(instanceId);
     this.refreshGameState();
   }
 
@@ -138,6 +204,10 @@ export class AppComponent implements OnInit, OnDestroy {
 
   trackByPowerEntry(_i: number, entry: { power: Power; index: number }): number {
     return entry.index;
+  }
+
+  trackByVesselInstance(_i: number, v: { instanceId: string }): string {
+    return v.instanceId;
   }
 
   trackByPowerIndex(index: number, _power: Power): number {

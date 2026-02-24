@@ -94,6 +94,15 @@ export class PowerStateService {
     return 1;
   }
 
+  /** Applique un buff de dégâts (ex. depuis un vaisseau cliqué). Si un buff est déjà actif, on ajoute la durée au timer. */
+  applyDamageBuff(mult: number, durationSeconds: number): void {
+    const now = Date.now();
+    const alreadyActive = this.damageBuffUntil > now;
+    const currentEnd = alreadyActive ? this.damageBuffUntil : now;
+    this.damageBuffUntil = currentEnd + durationSeconds * 1000;
+    if (!alreadyActive) this.damageBuffMultiplier = mult;
+  }
+
   /** Coût en mana effectif du pouvoir (peut être réduit par des items du shop plus tard). */
   getEffectiveManaCost(power: Power): number {
     return power.manaCost;

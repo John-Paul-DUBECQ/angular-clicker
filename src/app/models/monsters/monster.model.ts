@@ -5,7 +5,6 @@ export interface Monster {
   description: string;
   imageUrl?: string;
   doesAppearInGame: boolean;
-  bought: boolean;
   lootMultiplier?: number;
   probabilityToSpawn?: number;
 }

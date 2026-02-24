@@ -125,6 +125,8 @@ export function getUpcomingPowerUnlockTiers(magicienLevel: number): WorkerUnlock
         description: power?.description ?? `Débloque le sort ${power?.name ?? powerId}.`,
         imageUrl: power?.imageUrl ?? '',
         levelRequired,
+        unlockType: 'spell' as const,
+        manaCost: power?.manaCost,
       };
     })
     .sort((a, b) => (a.levelRequired ?? 0) - (b.levelRequired ?? 0));

@@ -3,6 +3,8 @@ import { WorkerAuto, calculateClicksPerSecondForWorker, getClickBonus } from '..
 import { GameStateService } from '../models/game/game-state.service';
 import { WorkerUnlock } from '../models/unlocks/worker-unlock.model';
 import { getUpcomingPowerUnlockTiers, POWER_WORKER_INDEX } from '../models/unlocks/power-unlock';
+import { getUpcomingShopItemUnlockTiers } from '../models/shop-item';
+import { listShopItem } from '../models/list-shop-item';
 
 const POPUP_OFFSET = 12;
 
@@ -57,7 +59,8 @@ export class WorkerAreaComponent {
     );
     const fromPowerTiers =
       this.workerIndex === POWER_WORKER_INDEX ? getUpcomingPowerUnlockTiers(level) : [];
-    const merged = [...fromUnlocks, ...fromPowerTiers].sort(
+    const fromShopItems = getUpcomingShopItemUnlockTiers(this.workerIndex, level, listShopItem);
+    const merged = [...fromUnlocks, ...fromPowerTiers, ...fromShopItems].sort(
       (a, b) => (a.levelRequired ?? 0) - (b.levelRequired ?? 0)
     );
     return merged.slice(0, this.NEXT_UNLOCKS_MAX);

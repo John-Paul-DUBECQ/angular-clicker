@@ -8,7 +8,7 @@ export const listPower: Power[] = [
     imageUrl: 'assets/imgUpgrades/swords/Sword1.png',
     doesAppearInGame: false,
     bought: false,
-    manaCost: 60,
+    manaCost: 200,
     cooldownSeconds: 120,
   },
   {
@@ -18,17 +18,17 @@ export const listPower: Power[] = [
     imageUrl: 'assets/imgUpgrades/swords/Sword1.png',
     doesAppearInGame: false,
     bought: false,
-    manaCost: 200,
+    manaCost: 400,
     cooldownSeconds: 300,
   },
   {
     id: 'spawn-mob',
     name: 'Spawn mob',
-    description: 'Fait apparaître le prochain monstre immédiatement (coût 0 pour test).',
+    description: 'Fait apparaître le prochain monstre immédiatement.',
     imageUrl: 'assets/imgUpgrades/swords/Sword1.png',
     doesAppearInGame: false,
     bought: false,
-    manaCost: 0,
+    manaCost: 100,
     cooldownSeconds: 60,
   },
   {
@@ -38,7 +38,7 @@ export const listPower: Power[] = [
     imageUrl: 'assets/imgUpgrades/swords/Sword1.png',
     doesAppearInGame: false,
     bought: false,
-    manaCost: 40,
+    manaCost: 200,
     cooldownSeconds: 90,
   },
 ];

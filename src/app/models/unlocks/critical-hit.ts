@@ -28,46 +28,65 @@ export const criticalHitUnlockDefinition: CriticalHitUnlock = {
 
 export const upgradeCriticalHitRate1: CriticalHitUpgrade = {
   id: 'upgrade-critical-hit-rate-1',
-  name: 'Amélioration du coup critique',
-  description: 'Augmente les chances de coups critiques.',
+  name: 'Amélioration des chances de critique',
+  description: 'Augmente les chances de coups critiques. +2%',
   imageUrl: '',
   levelRequired: 10,
   criticalChance: 0.02,
 };
 
-export const upgradeCriticalHitDamage1: CriticalHitUpgrade = {
-  id: 'upgrade-critical-hit-damage-1',
-  name: 'Amélioration du coup critique',
-  description: 'Augmente les dégâts des coups critiques.',
-  imageUrl: '',
-  levelRequired: 25,
-  damageMultiplier: 1.5,
-};
-
 export const upgradeCriticalHitRate2: CriticalHitUpgrade = {
   id: 'upgrade-critical-hit-rate-2',
-  name: 'Amélioration du coup critique',
-  description: 'Augmente les chances de coups critiques.',
+  name: 'Amélioration des chances de critique',
+  description: 'Augmente les chances de coups critiques. +2%',
   imageUrl: '',
-  levelRequired: 50,
+  levelRequired: 25,
   criticalChance: 0.02,
+};
+
+export const upgradeCriticalHitRate3: CriticalHitUpgrade = {
+  id: 'upgrade-critical-hit-rate-3',
+  name: 'Amélioration des chances de critique',
+  description: 'Augmente les chances de coups critiques. +2%',
+  imageUrl: '',
+  levelRequired: 40,
+  criticalChance: 0.02,
+};
+export const upgradeCriticalHitDamage1: CriticalHitUpgrade = {
+  id: 'upgrade-critical-hit-damage-1',
+  name: 'Amélioration des dégâts critique',
+  description: 'Augmente les dégâts des coups critiques. +50% de dégâts',
+  imageUrl: '',
+  levelRequired: 15,
+  damageMultiplier: 1.5,
 };
 
 export const upgradeCriticalHitDamage2: CriticalHitUpgrade = {
   id: 'upgrade-critical-hit-damage-2',
-  name: 'Amélioration du coup critique',
-  description: 'Augmente les dégâts des coups critiques.',
+  name: 'Amélioration des dégâts critique',
+  description: 'Augmente les dégâts des coups critiques. +50% de dégâts',
   imageUrl: '',
-  levelRequired: 100,
+  levelRequired: 35,
+  damageMultiplier: 1.5,
+};
+
+export const upgradeCriticalHitDamage3: CriticalHitUpgrade = {
+  id: 'upgrade-critical-hit-damage-3',
+  name: 'Amélioration des dégâts critique',
+  description: 'Augmente les dégâts des coups critiques. +50% de dégâts',
+  imageUrl: '',
+  levelRequired: 50,
   damageMultiplier: 1.5,
 };
 
 /** Toutes les améliorations coup critique (ordre par levelRequired). */
 export const CRITICAL_HIT_UPGRADES: CriticalHitUpgrade[] = [
-  upgradeCriticalHitRate1,//10
-  upgradeCriticalHitDamage1,//25
-  upgradeCriticalHitRate2,//50
-  upgradeCriticalHitDamage2,//100
+  upgradeCriticalHitRate1,
+  upgradeCriticalHitDamage1,
+  upgradeCriticalHitRate2,
+  upgradeCriticalHitDamage2,
+  upgradeCriticalHitRate3,
+  upgradeCriticalHitDamage3,
 ];
 
 export interface CriticalHitStats {

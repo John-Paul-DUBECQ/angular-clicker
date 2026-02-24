@@ -8,7 +8,7 @@ export const MONSTER_LEVEL_REQUIRED = 1;
 /** Niveau du worker (Alchimiste) à partir duquel chaque monstre peut apparaître. */
 export const MONSTER_LEVELS_BY_MONSTER_ID: Record<string, number> = {
   monster1: 1,
-  monster2: 1,
+  monster2: 5,
 };
 
 export function getLevelRequiredForMonster(monsterId: string): number | undefined {
@@ -30,14 +30,7 @@ export const monsterUnlockDefinition: MonsterUnlockDefinition = {
 };
 
 export const MONSTER_UPGRADES: MonsterUnlockDefinition[] = [
-  {
-    id: 'monster-damage-1',
-    name: 'Dégâts monstres',
-    description: '+50 dégâts vs monstres.',
-    imageUrl: 'assets/imgUpgrades/shadocks/shadock1.png',
-    levelRequired: 5,
-    damageMultiplier: 50,
-  },
+ 
 ];
 
 export function isMonsterUnlocked(

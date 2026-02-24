@@ -15,6 +15,7 @@ import { STREAK_UPGRADES, streakUnlockDefinition } from '../unlocks/streak';
 import { sunUnlockDefinition } from '../unlocks/sun-unlock';
 import { powerUnlockDefinition, POWER_MANA_UPGRADES } from '../unlocks/power-unlock';
 import { monsterUnlockDefinition, MONSTER_UPGRADES } from '../unlocks/monster-unlock';
+import { vesselUnlockDefinition, VESSEL_UPGRADES } from '../unlocks/vessel';
 import { ResourcesService } from './resources.service';
 
 export type GetShopMultiplierForWorker = (workerIndex: number) => number;
@@ -44,17 +45,18 @@ export class WorkerStateService {
   initWorkers(): void {
     this.workersAvailable = [
       createClickWorker('Épée', 1, 1.05, 10, 1.10),
-      createAutoWorker('Fermier', 2, 1.3, 50, 1.35),
-      createAutoWorker('Mineur', 4, 1.4, 150, 1.47, [
+      createAutoWorker('Fermier', 2, 1.10, 50, 1.16),
+      createAutoWorker('Mineur', 4, 1.15, 150, 1.22, [
         criticalHitUnlockDefinition,
         ...CRITICAL_HIT_UPGRADES,
       ]),
-      createAutoWorker('Forgeron', 16, 1.5, 500, 1.60, [streakUnlockDefinition, ...STREAK_UPGRADES]),
-      createAutoWorker('Astrologue', 32, 1.6, 2000, 1.71, [sunUnlockDefinition]),
-      createAutoWorker('Magicien', 64, 1.7, 5000, 1.82, [powerUnlockDefinition, ...POWER_MANA_UPGRADES]),
-      createAutoWorker('Alchimiste', 128, 1.8, 15000, 1.94, [monsterUnlockDefinition, ...MONSTER_UPGRADES]),
-      createAutoWorker('Géomètre', 256, 1.9, 75000, 2.05),
-      createAutoWorker('Architecte', 512, 2.0, 150000, 2.15),
+      createAutoWorker('Forgeron', 16, 1.20, 500, 1.27, [streakUnlockDefinition, ...STREAK_UPGRADES]),
+      createAutoWorker('Astrologue', 32, 1.25, 2000, 1.33, [sunUnlockDefinition]),
+      createAutoWorker('Magicien', 64, 1.30, 5000, 1.39, [powerUnlockDefinition, ...POWER_MANA_UPGRADES]),
+      createAutoWorker('Alchimiste', 128, 1.35, 15000, 1.45, [monsterUnlockDefinition, ...MONSTER_UPGRADES]),
+      createAutoWorker('Géomètre', 4444, 1.40, 65000, 1.51, [vesselUnlockDefinition, ...VESSEL_UPGRADES]),
+      createAutoWorker('Architecte', 512, 1.45, 150000, 1.57),
+      createAutoWorker('Explorateur', 1024, 1.50, 300000, 1.63),
     ];
     this.workers = [];
   }

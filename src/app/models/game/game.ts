@@ -2,6 +2,7 @@ import { ShopItem } from "../shop-item";
 import { WorkerAuto } from "../worker-auto-model";
 import { Power } from "../powers/power.model";
 import type { CurrentMonsterView } from "./monster-state.service";
+import type { ActiveVesselView } from "./vessel.service";
 
 /**
  * Vue agrégée du jeu pour l'UI. Les données réelles sont dans Resources, WorkerState, ShopState, PowerState.
@@ -42,4 +43,8 @@ export class Game {
     encounterMeterPercent?: number;
     /** Essence / âmes (récompense mob, plus si tué à la dernière seconde). */
     monsterEssence?: number;
+    /** Vaisseaux débloqués (Géomètre). */
+    vesselUnlocked?: boolean;
+    /** Vaisseaux en cours de traversée (gauche → droite). */
+    activeVessels?: ActiveVesselView[];
 }

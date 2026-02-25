@@ -22,8 +22,9 @@
         <div
             #infoRef
             class="worker-info-trigger"
-            (mouseenter)="onInfoMouseEnter()"
-            (mouseleave)="onInfoMouseLeave()"
+            [class.worker-info-trigger--disabled]="!workerSelected.bought"
+            (mouseenter)="workerSelected.bought && onInfoMouseEnter()"
+            (mouseleave)="workerSelected.bought && onInfoMouseLeave()"
         >ℹ</div>
     </div>
 </div>

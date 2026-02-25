@@ -246,6 +246,13 @@
     color: #fff;
 }
 
+.worker-info-trigger--disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    filter: grayscale(1);
+    pointer-events: none;
+}
+
 /* Popup Infos worker (stats + pouvoirs) */
 .worker-info-popup {
     min-width: 50vw;

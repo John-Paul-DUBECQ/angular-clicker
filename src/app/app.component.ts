@@ -10,6 +10,7 @@ import { formatNumberValue } from './pipes/format-number.pipe';
 import { MonsterRewardNotificationService } from './models/game/monster-reward-notification.service';
 import { VesselRewardNotificationService } from './models/game/vessel-reward-notification.service';
 import type { VesselReward } from './models/game/vessel-reward-notification.service';
+import { LoreNotificationService, LorePayload } from './models/lore/lore-notification.service';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -46,6 +47,8 @@ export class AppComponent implements OnInit, OnDestroy {
   importError = false;
   private rewardSub: Subscription | null = null;
   private vesselRewardSub: Subscription | null = null;
+  private loreSub: Subscription | null = null;
+  private loreQueue: LorePayload[] = [];
 
   /** État actuel du popup de lore plein écran. */
   loreVisible = false;
@@ -57,6 +60,7 @@ export class AppComponent implements OnInit, OnDestroy {
     private gameState: GameStateService,
     private monsterRewardNotify: MonsterRewardNotificationService,
     private vesselRewardNotify: VesselRewardNotificationService,
+    private loreNotify: LoreNotificationService,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -66,6 +70,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.rewardSub = this.monsterRewardNotify.reward$.subscribe((r) => this.showMonsterReward(r));
     this.vesselRewardSub = this.vesselRewardNotify.reward$.subscribe((r) => this.showVesselReward(r));
     this.startVesselSmoothTick();
+    this.loreSub = this.loreNotify.lore$.subscribe((payload) => this.enqueueOrShowLore(payload));
 
     // Popup de lore d'intro au lancement du jeu.
     this.openIntroLore();
@@ -80,6 +85,7 @@ export class AppComponent implements OnInit, OnDestroy {
     }
     this.rewardSub?.unsubscribe();
     this.vesselRewardSub?.unsubscribe();
+    this.loreSub?.unsubscribe();
   }
 
   private startVesselSmoothTick(): void {
@@ -157,6 +163,26 @@ export class AppComponent implements OnInit, OnDestroy {
   /** Ferme le popup de lore actuel. */
   onLoreClosed(): void {
     this.loreVisible = false;
+    const next = this.loreQueue.shift();
+    if (next) {
+      // Laisse le temps au DOM de masquer l'ancien avant d'afficher le suivant.
+      setTimeout(() => this.showLore(next), 0);
+    }
+  }
+
+  private enqueueOrShowLore(payload: LorePayload): void {
+    if (this.loreVisible) {
+      this.loreQueue.push(payload);
+      return;
+    }
+    this.showLore(payload);
+  }
+
+  private showLore(payload: LorePayload): void {
+    this.loreTitle = payload.title;
+    this.loreText = payload.text;
+    this.loreImageUrl = payload.imageUrl ?? null;
+    this.loreVisible = true;
   }
 
   /** Ouvre le popup de lore d'introduction (acte 1). */

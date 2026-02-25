@@ -53,4 +53,5 @@ export class Game {
     vesselUnlocked?: boolean;
     /** Vaisseaux en cours de traversée (gauche → droite). */
     activeVessels?: ActiveVesselView[];
+    acteActual!: number; // à quel acte le jeu est actuellement (commence à 1)
 }

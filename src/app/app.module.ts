@@ -14,6 +14,7 @@ import { ShopItemAreaComponent } from './shop-item-area/shop-item-area.component
 import { SunAreaComponent } from './sun-area/sun-area.component';
 import { PowerAreaComponent } from './power-area/power-area.component';
 import { FormatNumberPipe } from './pipes/format-number.pipe';
+import { LoreMessageComponent } from './lore-message/lore-message.component';
 
 @NgModule({
   declarations: [
@@ -23,6 +24,7 @@ import { FormatNumberPipe } from './pipes/format-number.pipe';
     ShopItemAreaComponent,
     SunAreaComponent,
     PowerAreaComponent,
+    LoreMessageComponent,
   ],
   imports: [
     BrowserModule,

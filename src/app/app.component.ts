@@ -38,6 +38,7 @@ export class AppComponent implements OnInit, OnDestroy {
     streakBarCurrent: 0,
     streakBarMax: 0,
     streakActive: false,
+    acteActual: 1,
   };
   workers: WorkerAuto[] = [];
   workersAvailable: WorkerAuto[] = [];
@@ -45,6 +46,12 @@ export class AppComponent implements OnInit, OnDestroy {
   importError = false;
   private rewardSub: Subscription | null = null;
   private vesselRewardSub: Subscription | null = null;
+
+  /** État actuel du popup de lore plein écran. */
+  loreVisible = false;
+  loreTitle = '';
+  loreText = '';
+  loreImageUrl: string | null = null;
 
   constructor(
     private gameState: GameStateService,
@@ -59,6 +66,9 @@ export class AppComponent implements OnInit, OnDestroy {
     this.rewardSub = this.monsterRewardNotify.reward$.subscribe((r) => this.showMonsterReward(r));
     this.vesselRewardSub = this.vesselRewardNotify.reward$.subscribe((r) => this.showVesselReward(r));
     this.startVesselSmoothTick();
+
+    // Popup de lore d'intro au lancement du jeu.
+    this.openIntroLore();
   }
 
   ngOnDestroy(): void {
@@ -143,6 +153,33 @@ export class AppComponent implements OnInit, OnDestroy {
     this.workersAvailable = state.workersAvailable;
     this.powersAvailable = state.powersAvailable ?? [];
   }
+
+  /** Ferme le popup de lore actuel. */
+  onLoreClosed(): void {
+    this.loreVisible = false;
+  }
+
+  /** Ouvre le popup de lore d'introduction (acte 1). */
+  private openIntroLore(): void {
+    this.loreTitle = 'Acte I – Prologue';
+    this.loreText =
+      'An 2056 du calendrier grégorien, alors que les puissances mondiales s\'affrontent dans une nouvelle guerre froide. Les conflits éclatent rapidement en Occident où les états de l\'Union européenne se regroupent afin de contrer la menace russe. Suite à la rupture du traité de non-agression établi en 2045 par la Russie, les puissances mondiales doivent réagir et commencent à bombarder la Russie ainsi que ses alliés. La population de la Russie a été radicalement changée, en effet les bombardements continus ont anéanti toute forme de vie sur le front Ouest emportant Moscou ainsi que Saint-Pétersbourg, les lieux de décisions principaux du camp de la Russie. Notre histoire débute à Vladivostok, qui suite à une insurrection de son peuple a perdu près de 98 % de ses habitants.  Le peu d\'habitants qui restent préfère rester dans les décombres cependant certains préfèrent partir afin de rejoindre le Japon, qui d\'après les rumeurs, serait une zone de refuge. "Il faut aller vers l\'Est à tout prix" '
+    this.loreImageUrl = null;
+    this.loreVisible = true;
+  }
+
+  /*
+   * Exemple (à brancher plus tard) : lore lors de l'unlock d'un personnage,
+   * par exemple l'Explorateur qui fera passer le jeu à l'acte 2.
+   *
+   * private openExplorerUnlockLore(): void {
+   *   this.loreTitle = 'Acte II – Premiers pas au-delà';
+   *   this.loreText =
+   *     'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.';
+   *   this.loreImageUrl = null;
+   *   this.loreVisible = true;
+   * }
+   */
 
   click($event: MouseEvent): void {
     this.gameState.click(1, $event?.clientX, $event?.clientY);

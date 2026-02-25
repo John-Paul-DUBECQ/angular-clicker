@@ -44,19 +44,17 @@ export class WorkerStateService {
 
   initWorkers(): void {
     this.workersAvailable = [
-      createClickWorker('Épée', 1.5, 1.05, 25, 1.10),
-      createAutoWorker('Fermier', 5, 1.10, 125, 1.16),
-      createAutoWorker('Mineur', 15, 1.15, 375, 1.22, [
-        criticalHitUnlockDefinition,
-        ...CRITICAL_HIT_UPGRADES,
-      ]),
-      createAutoWorker('Forgeron', 50, 1.20, 1250, 1.27, [streakUnlockDefinition, ...STREAK_UPGRADES]),
-      createAutoWorker('Astrologue', 500, 1.25, 12500, 1.33, [sunUnlockDefinition, ...SUN_UPGRADES]),
-      createAutoWorker('Magicien', 1000, 1.30, 25000, 1.39, [powerUnlockDefinition, ...POWER_MANA_UPGRADES]),
-      createAutoWorker('Alchimiste', 4500, 1.35, 112500, 1.45, [monsterUnlockDefinition, ...MONSTER_UPGRADES]),
-      createAutoWorker('Géomètre', 20000, 1.40, 500000, 1.51, [vesselUnlockDefinition, ...VESSEL_UPGRADES]),
-      createAutoWorker('Architecte', 100000, 1.45, 2500000, 1.57),
-      createAutoWorker('Explorateur', 900000, 1.50, 22500000, 1.63),
+      createClickWorker('Épée', 1.5, 1.05, 25, 1.10,
+         'Après vous être rendu compte que Vladivostok était dévastée suite à la catastrophe, vous décidez de partir vers l\'Est à la recherche d\'un bateau afin d\'aller au Japon et rejondre votre village natal. C\'est dans le village de Козьмино que vous trouvez cette épée, on ne sait pas encore à quel point elle va être utile mais il vaut mieux la prendre dans le doute.'),
+      createAutoWorker('Fermier', 5, 1.10, 125, 1.16, 'En continuant de marcher le long de la côte, aux abords de Преображение, vous faites la rencontre d\'un fermier. Vous êtes suspicieux mais il a l\'air d\'être un homme de confiance. Pour survivre, il a décidé de se déplacer avec une charette dans laquelle il a planté différent types de plantes afin de survivre contre la faim. Ne sachant pas contre quel danger nous pourrions tomber, nous avons donc décidé de faire route ensemble. Il s\'appelait Александр (Alexandre).', 1),
+      createAutoWorker('Mineur', 15, 1.15, 375, 1.22, 'Afin de trouver des ressources pouvant être utile dans notre exploration, nous avons décidé de faire un détour dans la ville de Милоградово. La ville semblait calme et inhabitée aux premiers abords, jusqu\'à ce qu\'on entende un bruit ressemblant à celui d\'une radio à l\'intérieur. On décide donc de rentrer dans cette maison afin de pouvoir contacter d\'autres survivants, or, en rentrant, quelle fut notre surprise de trouver un humain devant cette machine de radio. Il fit tout aussi surpris que nous et a failli nous transpercer à coup de pioche mais il a très vite vu que nous n\'étions pas un danger. Il nous explique donc qu\'il reçoit un message radio de Tokyo, disant en anglais que Tokyo est sauve. L\'inconnu nous disait donc qu\'il avait reçu de la même manière un message de Busan disant qu\'il était impossible d\'aller au Japon via l\'Ouest en passant par l\'île de Jeju, celle-ci étant infectée de monstres. Nous décidâmes donc de continuer notre chemin tous les trois vers le Nord et de passer par Сахалин pour arriver au Japon par Hokkaido, c\'était un long voyage à faire mais si la liberté était de l\'autre côté, c\'était la seule solution.', 1, [criticalHitUnlockDefinition,...CRITICAL_HIT_UPGRADES,]),
+      createAutoWorker('Forgeron', 50, 1.20, 1250, 1.27, 'Production automatique de ' + 50 + ' /s.', 2, [streakUnlockDefinition, ...STREAK_UPGRADES]),
+      createAutoWorker('Astrologue', 500, 1.25, 12500, 1.33, 'Production automatique de ' + 500 + ' /s.', 1, [sunUnlockDefinition, ...SUN_UPGRADES]),
+      createAutoWorker('Magicien', 1000, 1.30, 25000, 1.39, 'Production automatique de ' + 1000 + ' /s.', 1, [powerUnlockDefinition, ...POWER_MANA_UPGRADES]),
+      createAutoWorker('Alchimiste', 4500, 1.35, 112500, 1.45, 'Production automatique de ' + 4500 + ' /s.', 1, [monsterUnlockDefinition, ...MONSTER_UPGRADES]),
+      createAutoWorker('Géomètre', 20000, 1.40, 500000, 1.51, 'Production automatique de ' + 20000 + ' /s.', 1, [vesselUnlockDefinition, ...VESSEL_UPGRADES]),
+      createAutoWorker('Architecte', 100000, 1.45, 2500000, 1.57, 'Production automatique de ' + 100000 + ' /s.', 1),
+      createAutoWorker('Explorateur', 40000000000000, 1.50, 1000000000000000, 1.63, 'Production automatique de ' + 40000000000000 + ' /s.', 1),
     ];
     this.workers = [];
   }

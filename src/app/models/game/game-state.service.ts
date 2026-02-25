@@ -17,10 +17,20 @@ import { ShopStateService } from './shop-state.service';
 import { PowerStateService } from './power-state.service';
 import { MonsterStateService } from './monster-state.service';
 import { VesselService } from './vessel.service';
-import { isVesselUnlocked } from '../unlocks/vessel';
+import { getVesselUpgradeStats, isVesselUnlocked, VESSEL_WORKER_INDEX } from '../unlocks/vessel';
+import { getSmithLevel, getStreakStats, SMITH_WORKER_INDEX } from '../unlocks/streak';
 import { formatNumberValue } from '../../pipes/format-number.pipe';
 
 const TICKS_PER_SECOND = 10;
+
+export interface WorkerInfoLine {
+  label: string;
+  value: string;
+}
+
+export interface WorkerInfoStats {
+  lines: WorkerInfoLine[];
+}
 
 export interface SaveData {
   version: number;
@@ -29,10 +39,6 @@ export interface SaveData {
   workerIndicesOwned: number[];
 }
 
-/**
- * Orchestrateur du jeu : délègue la logique aux services métier (Resources, Workers, Shop, Powers, Streak).
- * Reste léger pour pouvoir ajouter facilement de nouvelles fonctionnalités (ex. powers) sans le surcharger.
- */
 @Injectable({ providedIn: 'root' })
 export class GameStateService {
   private tickIntervalId: ReturnType<typeof setInterval> | null = null;
@@ -175,6 +181,7 @@ export class GameStateService {
       monsterEssence: this.resources.getMonsterEssence(),
       vesselUnlocked: isVesselUnlocked(workers, workersAvailable),
       activeVessels: this.vesselState.getActiveVesselsView(),
+      acteActual: 1,
     };
   }
 
@@ -233,6 +240,83 @@ export class GameStateService {
     this.workerState.upgradeWorker(workerIndex, this.getShopMult);
   }
 
+  /**
+   * Retourne les stats à afficher dans le popup "Infos" du worker (ex. Mineur : chance critique, dégâts critique).
+   */
+  getWorkerInfoStats(workerIndex: number): WorkerInfoStats {
+    const workers = this.workerState.getWorkers();
+    const workersAvailable = this.workerState.getWorkersAvailable();
+    const lines: WorkerInfoLine[] = [];
+
+    if (workerIndex === MINER_WORKER_INDEX) {
+      const miner = workersAvailable[MINER_WORKER_INDEX];
+      const minerLevel = miner?.level ?? 0;
+      const { totalChance, totalMultiplier } = getCriticalHitStats(minerLevel);
+      const shopChanceBonus = this.shopState.getUnlockBonus('critical-hit', 'chance');
+      const chancePercent = (totalChance + shopChanceBonus) * 100;
+      lines.push(
+        { label: 'Chance de coup critique', value: `${chancePercent.toFixed(1)} %` },
+        { label: 'Dégâts critique', value: `×${totalMultiplier.toFixed(2)}` }
+      );
+    }
+
+    if (workerIndex === SMITH_WORKER_INDEX) {
+      const smithLevel = getSmithLevel(workers, workersAvailable);
+      const stats = getStreakStats(smithLevel);
+      lines.push(
+        { label: 'Multiplicateur streak', value: `×${stats.damageMultiplier}` },
+        { label: 'Clics pour activer la barre', value: `${stats.numberOfClicksRequiredForBar}` },
+        { label: 'Descente barre (par s)', value: `${stats.speedOfDecreaseOfBar}` }
+      );
+    }
+
+    if (workerIndex === SUN_WORKER_INDEX) {
+      const astrologue = workersAvailable[SUN_WORKER_INDEX];
+      const level = astrologue?.level ?? 0;
+      const sun = getSunUpgradeStats(level);
+      lines.push(
+        { label: 'Dégâts clic soleil', value: `×${sun.damageMultiplier}` },
+        { label: 'Vitesse rotation soleil', value: `${(sun.speedFactor * 100).toFixed(0)} %` },
+        { label: 'Taille soleil', value: `${(sun.sizeFactor * 100).toFixed(0)} %` }
+      );
+    }
+
+    if (workerIndex === POWER_WORKER_INDEX) {
+      const magicien = workersAvailable[POWER_WORKER_INDEX];
+      const level = magicien?.level ?? 0;
+      const manaStats = getManaStatsFromPowerWorker(level);
+      const effectiveMaxMana = DEFAULT_MAX_MANA + manaStats.manaMax + this.shopState.getManaMaxBonus();
+      const baseRegen = 0.5;
+      const effectiveRegen = baseRegen + manaStats.manaRegen + this.shopState.getManaRegenBonus();
+      lines.push(
+        { label: 'Mana max', value: `${effectiveMaxMana}` },
+        { label: 'Régénération mana', value: `${effectiveRegen.toFixed(2)}/s` }
+      );
+    }
+
+    if (workerIndex === VESSEL_WORKER_INDEX) {
+      const vessel = getVesselUpgradeStats(workers, workersAvailable);
+      const freqPercent = vessel.spawnIntervalFactor <= 0 ? 0 : (100 / vessel.spawnIntervalFactor - 100);
+      lines.push(
+        { label: 'Vitesse apparition vaisseaux', value: `+${freqPercent.toFixed(0)} %` },
+        { label: 'Gain récompenses vaisseaux', value: `×${vessel.rewardMultiplier.toFixed(2)}` }
+      );
+    }
+
+    if (workerIndex === 0) {
+      const epee = workersAvailable[0];
+      // Description gérée par workerDescription (WorkerAreaComponent)
+    }
+
+    if (workerIndex === 1) {
+      const farmer = workersAvailable[1];
+      const level = farmer?.level ?? 0;
+      // Description gérée par workerDescription (WorkerAreaComponent)
+    }
+
+    return { lines };
+  }
+
   canBuyShopItem(price: number): boolean {
     return this.shopState.canBuyShopItem(price);
   }
@@ -273,5 +357,12 @@ export class GameStateService {
     const workers = this.workerState.getWorkers();
     const workersAvailable = this.workerState.getWorkersAvailable();
     this.vesselState.clickVessel(instanceId, workers, workersAvailable);
+  }
+
+  /**
+   * Transition vers l'acte 2 (déclenchée par l'unlock de l'Explorateur).
+   * Pour l'instant, laissée vide : la logique sera ajoutée plus tard.
+   */
+  goToAct2(): void {
   }
 }

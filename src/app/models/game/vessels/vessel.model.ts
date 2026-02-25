@@ -22,5 +22,6 @@ export interface Vessel {
   probabilityToSpawnMonster?: number;
   /** Monstre à faire spawner (optionnel, sinon spawn normal). */
   monster?: Monster | null;
+  acteUnlocked?: number; // à quel acte le vaisseau est débloqué
 }
   

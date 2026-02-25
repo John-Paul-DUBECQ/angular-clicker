@@ -9,6 +9,7 @@ export const listMonster: Monster[] = [
     doesAppearInGame: false,
     lootMultiplier: 1,
     probabilityToSpawn: 100,
+    acteUnlocked: 1,
   },
   {
     id: 'monster2',
@@ -18,6 +19,7 @@ export const listMonster: Monster[] = [
     doesAppearInGame: false,
     lootMultiplier: 2,
     probabilityToSpawn: 1,
+    acteUnlocked: 1,
   },{
     id: 'monster3',
     name: 'Gribouy',
@@ -26,6 +28,7 @@ export const listMonster: Monster[] = [
     doesAppearInGame: false,
     lootMultiplier: 3,
     probabilityToSpawn: 20,
+    acteUnlocked: 1,
   }
 ];
 

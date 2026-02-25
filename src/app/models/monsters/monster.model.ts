@@ -7,4 +7,5 @@ export interface Monster {
   doesAppearInGame: boolean;
   lootMultiplier?: number;
   probabilityToSpawn?: number;
+  acteUnlocked?: number; // à quel acte le monstre est débloqué
 }

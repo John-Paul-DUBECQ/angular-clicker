@@ -143,3 +143,11 @@
     </div>
   </div>
 </div>
+
+<app-lore-message
+  *ngIf="loreVisible"
+  [title]="loreTitle"
+  [text]="loreText"
+  [imageUrl]="loreImageUrl"
+  (closed)="onLoreClosed()">
+</app-lore-message>

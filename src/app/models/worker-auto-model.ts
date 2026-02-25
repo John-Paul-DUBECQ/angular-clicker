@@ -4,6 +4,7 @@ export type WorkerType = 'auto' | 'click';
 
 export interface WorkerAutoData {
   name: string;
+  description?: string;
   /** @deprecated Conservé pour compatibilité sauvegarde; utiliser baseProduction. */
   productivity?: number;
   level: number;
@@ -16,6 +17,7 @@ export interface WorkerAutoData {
   bought: boolean;
   /** Pouvoirs débloqués par ce worker (achat ou niveau). */
   unlocks: WorkerUnlock[];
+  acteUnlocked?: number; // à quel acte le worker est débloqué
 }
 
 /** Worker avec champs calculés pour la vue (price, canBuyWorker, valeurs effectives après bonus shop). */
@@ -35,6 +37,8 @@ export function createAutoWorker(
   curveProduction: number,
   basePrice: number,
   curvePrice: number,
+  description?: string,
+  acteUnlocked?: number,
   unlocks: WorkerUnlock[] = []
 ): WorkerAutoData {
   return {
@@ -43,11 +47,13 @@ export function createAutoWorker(
     basePrice: Math.floor(basePrice),
     curvePrice,
     workerType: 'auto',
+    description,
     baseProduction,
     curveProduction,
     doesAppearInGame: false,
     bought: false,
     unlocks,
+    acteUnlocked: acteUnlocked ?? 1,
   };
 }
 
@@ -58,6 +64,7 @@ export function createClickWorker(
   curveClickBonus: number,
   basePrice: number,
   curvePrice: number,
+  description?: string,
   unlocks: WorkerUnlock[] = []
 ): WorkerAutoData {
   return {
@@ -66,6 +73,7 @@ export function createClickWorker(
     basePrice: Math.floor(basePrice),
     curvePrice,
     workerType: 'click',
+    description,
     baseProduction: baseClickBonus,
     curveProduction: curveClickBonus,
     doesAppearInGame: false,

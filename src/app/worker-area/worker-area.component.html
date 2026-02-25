@@ -19,6 +19,12 @@
     <div class="worker-buy-button">
         <button class="btn btn-secondary" *ngIf="workerSelected.canBuyWorker" (click)="upgradeWorker()">Upgrade : {{ workerSelected.price | formatNumber }}</button>
         <button class="btn btn-secondary disabled" *ngIf="!workerSelected.canBuyWorker" disabled>Upgrade : {{ workerSelected.price | formatNumber }}</button>
+        <div
+            #infoRef
+            class="worker-info-trigger"
+            (mouseenter)="onInfoMouseEnter()"
+            (mouseleave)="onInfoMouseLeave()"
+        >ℹ</div>
     </div>
 </div>
 
@@ -50,4 +56,19 @@
         </li>
     </ul>
     <p class="worker-unlock-popup__cta">Monte en niveau pour débloquer.</p>
+</div>
+
+<!-- Popup Infos worker (description + passifs) -->
+<div
+    *ngIf="infoPopupVisible && infoPopupStyle"
+    class="worker-info-popup worker-info-popup--fixed"
+    [ngStyle]="infoPopupStyle"
+>
+    <p class="worker-info-popup__description" *ngIf="workerDescription" [innerHTML]="workerDescription"></p>
+    <dl class="worker-info-popup__stats" *ngIf="workerInfoStats.lines.length">
+        <ng-container *ngFor="let line of workerInfoStats.lines">
+            <dt class="worker-info-popup__label">{{ line.label }}</dt>
+            <dd class="worker-info-popup__value">{{ line.value }}</dd>
+        </ng-container>
+    </dl>
 </div>

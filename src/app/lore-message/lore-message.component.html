@@ -1,0 +1,22 @@
+<div class="lore-overlay" (click)="onClose()">
+  <div class="lore-backdrop"></div>
+
+  <div class="lore-dialog" (click)="$event.stopPropagation()">
+    <div class="lore-header">
+      <h2 class="lore-title">{{ title }}</h2>
+      <button type="button" class="lore-close-button" (click)="onClose()">
+        ✕
+      </button>
+    </div>
+
+    <div class="lore-body">
+      <div *ngIf="imageUrl" class="lore-image-wrapper">
+        <img [src]="imageUrl" alt="Illustration" class="lore-image">
+      </div>
+
+      <div class="lore-text">
+        {{ text }}
+      </div>
+    </div>
+  </div>
+</div>

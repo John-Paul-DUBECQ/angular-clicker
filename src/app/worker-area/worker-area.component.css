@@ -219,3 +219,105 @@
     align-items: center;
     justify-content: center;
 }
+
+.worker-buy-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.worker-info-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.12);
+    color: #b0aea8;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: help;
+    flex-shrink: 0;
+}
+
+.worker-info-trigger:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+/* Popup Infos worker (stats + pouvoirs) */
+.worker-info-popup {
+    min-width: 50vw;
+    max-height: 50vh;
+    overflow-y: auto;
+    padding: 12px 14px;
+    background: rgba(45, 42, 38, 0.98);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    color: #ffffff;
+    font-size: 14px;
+    line-height: 1.4;
+    pointer-events: none;
+}
+
+.worker-info-popup--fixed {
+    position: fixed;
+    z-index: 1000;
+    /* À gauche du trigger : right edge du popup = left du trigger - offset */
+    transform: translate(-100%, -50%);
+}
+
+.worker-info-popup__tag {
+    display: inline-block;
+    padding: 2px 8px;
+    margin-bottom: 10px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 4px;
+    font-size: 11px;
+    color: #b0aea8;
+}
+
+/* Description sans label : pas d’indent à gauche, alignée comme le reste du contenu */
+.worker-info-popup__description {
+    margin: 0 0 12px 0;
+    padding: 0;
+    overflow-y: auto;
+    color: #d4d2ce;
+    font-size: 13px;
+    line-height: 1.5;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+}
+
+.worker-info-popup__description ::ng-deep strong {
+    color: #fff;
+}
+
+/* Passifs : colonne label avec assez de place pour ne pas écraser le texte */
+.worker-info-popup__stats {
+    display: grid;
+    grid-template-columns: minmax(11em, 1fr) auto;
+    gap: 8px 20px;
+    margin: 0;
+}
+
+.worker-info-popup__label {
+    margin: 0;
+    padding: 0;
+    color: #9c9a94;
+    font-weight: normal;
+    line-height: 1.5;
+}
+
+.worker-info-popup__value {
+    margin: 0;
+    padding: 0;
+    color: #fff;
+    font-weight: 600;
+    white-space: normal;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}

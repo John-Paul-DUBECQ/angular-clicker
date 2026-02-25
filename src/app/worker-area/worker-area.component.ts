@@ -1,6 +1,6 @@
 import { Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
 import { WorkerAuto, calculateClicksPerSecondForWorker, getClickBonus } from '../models/worker-auto-model';
-import { GameStateService } from '../models/game/game-state.service';
+import { GameStateService, WorkerInfoStats } from '../models/game/game-state.service';
 import { WorkerUnlock } from '../models/unlocks/worker-unlock.model';
 import { getUpcomingPowerUnlockTiers, POWER_WORKER_INDEX } from '../models/unlocks/power-unlock';
 import { getUpcomingShopItemUnlockTiers } from '../models/shop-item';
@@ -23,12 +23,17 @@ export class WorkerAreaComponent {
   @Output() upgraded = new EventEmitter<void>();
   
   @ViewChild('unlockRef') unlockRef!: ElementRef<HTMLElement>;
+  @ViewChild('infoRef') infoRef!: ElementRef<HTMLElement>;
 
   unlockPopupVisible = false;
   unlockPopupStyle: { left: string; top: string } | null = null;
 
+  infoPopupVisible = false;
+  infoPopupStyle: { left: string; top: string } | null = null;
+
   private readonly POPUP_VIEWPORT_MARGIN = 12;
   private readonly POPUP_SELECTOR = '.worker-unlock-popup--fixed';
+  private readonly INFO_POPUP_SELECTOR = '.worker-info-popup--fixed';
 
   constructor(private gameState: GameStateService) {}
 
@@ -50,6 +55,20 @@ export class WorkerAreaComponent {
 
   /** Prochains paliers (unlocks worker + déblocage sorts pour Magicien), triés par niveau, limité à 3 pour ne pas flood. */
   private readonly NEXT_UNLOCKS_MAX = 3;
+
+  /** Stats à afficher dans le popup Infos (ex. Mineur : chance critique, dégâts critique). */
+  get workerInfoStats(): WorkerInfoStats {
+    return this.gameState.getWorkerInfoStats(this.workerIndex);
+  }
+
+  /** Description narrative du worker (sans label, alignée à gauche). Déduplique si la même phrase apparaît deux fois. */
+  get workerDescription(): string | undefined {
+    const d = this.workerSelected?.description;
+    if (!d || d.length < 200) return d;
+    const half = Math.floor(d.length / 2);
+    if (d.slice(0, half).trim() === d.slice(half).trim()) return d.slice(0, half).trim();
+    return d;
+  }
 
   get nextWorkerUnlocks(): WorkerUnlock[] {
     const w = this.workerSelected;
@@ -112,6 +131,39 @@ export class WorkerAreaComponent {
 
   onUnlockMouseLeave(): void {
     this.unlockPopupVisible = false;
+  }
+
+  onInfoMouseEnter(): void {
+    const el = this.infoRef?.nativeElement;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const triggerCenterY = rect.top + rect.height / 2;
+    // Popup à gauche du trigger (comportement inverse du shop) pour ne pas être masqué par la souris / tooltip
+    this.infoPopupStyle = {
+      left: `${rect.left - POPUP_OFFSET}px`,
+      top: `${triggerCenterY}px`,
+    };
+    this.infoPopupVisible = true;
+    setTimeout(() => this.clampInfoPopupToViewport(), 0);
+  }
+
+  /** Garde le popup Infos dans la fenêtre (haut, bas, gauche, droite). */
+  private clampInfoPopupToViewport(): void {
+    const popupEl = document.querySelector(this.INFO_POPUP_SELECTOR) as HTMLElement | null;
+    if (!popupEl || !this.infoPopupStyle) return;
+    const r = popupEl.getBoundingClientRect();
+    const margin = this.POPUP_VIEWPORT_MARGIN;
+    let leftPx = parseFloat(this.infoPopupStyle.left);
+    let topPx = parseFloat(this.infoPopupStyle.top);
+    if (r.left < margin) leftPx += margin - r.left;
+    if (r.right > window.innerWidth - margin) leftPx -= r.right - (window.innerWidth - margin);
+    if (r.top < margin) topPx += margin - r.top;
+    if (r.bottom > window.innerHeight - margin) topPx -= r.bottom - (window.innerHeight - margin);
+    this.infoPopupStyle = { ...this.infoPopupStyle, left: `${leftPx}px`, top: `${topPx}px` };
+  }
+
+  onInfoMouseLeave(): void {
+    this.infoPopupVisible = false;
   }
 
 }

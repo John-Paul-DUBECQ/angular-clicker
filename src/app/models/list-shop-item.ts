@@ -155,7 +155,7 @@ export const listShopItem: Array<ShopItem> = [
   {
     id: 'shop-mana-max',
     name: 'Cristal de mana',
-    description: '+100 mana max.',
+    description: '+300 mana max.',
     imageUrl: 'assets/imgUpgrades/power/power.png',
     price: 8000,
     doesAppearInGame: false,
@@ -163,12 +163,12 @@ export const listShopItem: Array<ShopItem> = [
     value: 1,
     unlockCondition: requireWorkerLevel(5, 5),
     requiredWorkerLevelForUnlock: { workerIndex: 5, level: 5 },
-    manaMaxBonus: 100,
+    manaMaxBonus: 300,
   },
   {
     id: 'shop-mana-regen',
     name: 'Fontaine de mana',
-    description: '+0.03 mana/s de régénération.',
+    description: '+0.05 mana/s de régénération.',
     imageUrl: 'assets/imgUpgrades/power/power.png',
     price: 15000,
     doesAppearInGame: false,
@@ -176,7 +176,7 @@ export const listShopItem: Array<ShopItem> = [
     value: 1,
     unlockCondition: requireWorkerLevel(5, 10),
     requiredWorkerLevelForUnlock: { workerIndex: 5, level: 10 },
-    manaRegenBonus: 0.03,
+    manaRegenBonus: 0.05,
   },
   {
     id: 'shop-critical-chance',
@@ -190,6 +190,19 @@ export const listShopItem: Array<ShopItem> = [
     unlockCondition: requireWorkerLevel(2, 1),
     requiredWorkerLevelForUnlock: { workerIndex: 2, level: 1 },
     unlockUpgrade: { unlockId: 'critical-hit', type: 'chance', value: 0.01 },
+  },
+  {
+    id: 'shop-critical-chance-2',
+    name: 'Pierre de chance 2',
+    description: '+2% de chance de coup critique (s\'ajoute au bonus du Mineur).',
+    imageUrl: 'assets/imgUpgrades/Miner/Miner1.png',
+    price: 20000,
+    doesAppearInGame: false,
+    bought: false,
+    value: 2,
+    unlockCondition: requireAll(requireBought('shop-critical-chance'), requireWorkerLevel(2, 30)),
+    requiredWorkerLevelForUnlock: { workerIndex: 2, level: 30 },
+    unlockUpgrade: { unlockId: 'critical-hit', type: 'chance', value: 0.02 },
   },
 ];
 

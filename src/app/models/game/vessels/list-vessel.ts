@@ -14,6 +14,7 @@ export const listVessel: Vessel[] = [
     rewardValue: 12,
     probabilityToSpawnMonster: 0.1,
     monster: listMonster[0],
+    acteUnlocked: 1,
   },
   {
     id: 'vessel-buff',
@@ -27,6 +28,7 @@ export const listVessel: Vessel[] = [
     rewardValue: 15,
     probabilityToSpawnMonster: 0.1,
     monster: listMonster[0],
+    acteUnlocked: 1,
   },
   {
     id: 'vessel-mob',
@@ -39,5 +41,6 @@ export const listVessel: Vessel[] = [
     rewardType: 'spawnMonster',
     monster: listMonster[0],
     probabilityToSpawnMonster: 1,
+    acteUnlocked: 1,
   },
 ];

@@ -17,7 +17,7 @@ export function formatNumberValue(value: number, decimals = 2): string {
 }
 
 function getSuffix(tier: number): string {
-  const short = ['k', 'm', 'b', 't']; // tier 1→1e3, 2→1e6, 3→1e9, 4→1e12
+  const short = ['k', 'm', 'b', 't']; // tier 1→1e3, 2→1e6, 3→1e9, 4→1e12 
   if (tier <= short.length) return short[tier - 1];
   // tier 5→1e15=A, 6→1e18=B, 7→1e21=C...
   const letterIndex = tier - 5;

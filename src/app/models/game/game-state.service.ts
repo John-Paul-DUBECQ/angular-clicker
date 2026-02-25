@@ -139,6 +139,7 @@ export class GameStateService {
       clicks,
       mana: this.resources.getMana(),
       maxMana: this.resources.getMaxMana(),
+      totalManualClicks: this.resources.getTotalManualClicks(),
       workers: this.workerState.getWorkersView(clicks, this.getShopMult),
       workersAvailable: this.workerState.getWorkersAvailableView(clicks, this.getShopMult),
       clickValue,
@@ -186,6 +187,7 @@ export class GameStateService {
   }
 
   click(valueMultiplier = 1, clientX?: number, clientY?: number): void {
+    this.resources.incrementTotalManualClicks();
     const workers = this.workerState.getWorkers();
     const workersAvailable = this.workerState.getWorkersAvailable();
     let value = this.workerState.getCurrentClickValue(this.getShopMult);

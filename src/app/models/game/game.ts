@@ -11,6 +11,8 @@ export class Game {
     clicks!: number;
     mana!: number;
     maxMana!: number;
+    /** Nombre total de clics manuels sur la zone de clic. */
+    totalManualClicks?: number;
     workers!: WorkerAuto[];
     workersAvailable!: WorkerAuto[];
     clickValue!: number;

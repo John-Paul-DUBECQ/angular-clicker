@@ -128,6 +128,13 @@
         <div class="resources-bar__item" title="Essence de mob (plus si tué à la dernière seconde)">
           <span class="resources-bar__label">Essence</span>
           <span class="resources-bar__value">{{ formatResourceValue(game.monsterEssence != null ? game.monsterEssence : 0) }}</span>
+          <button
+            type="button"
+            class="resources-bar__settings-btn"
+            aria-label="Ouvrir les paramètres et le récap"
+            (click)="openSettings($event)">
+            ⚙
+          </button>
         </div>
       </div>
       <div class="workers-list">
@@ -151,3 +158,88 @@
   [imageUrl]="loreImageUrl"
   (closed)="onLoreClosed()">
 </app-lore-message>
+
+<div
+  class="settings-overlay"
+  *ngIf="settingsVisible"
+  (click)="closeSettings()">
+  <div
+    class="settings-dialog"
+    (click)="$event.stopPropagation()">
+    <div class="settings-dialog__header">
+      <h2 class="settings-dialog__title">Paramètres &amp; récap</h2>
+      <button
+        type="button"
+        class="settings-dialog__close"
+        (click)="closeSettings()">
+        ✕
+      </button>
+    </div>
+
+    <div class="settings-dialog__content">
+      <section class="settings-section">
+        <h3 class="settings-section__title">Stats</h3>
+        <div class="settings-stats-row">
+          <div class="settings-stat">
+            <span class="settings-stat__label">Temps de jeu</span>
+            <span class="settings-stat__value">{{ playTimeLabel }}</span>
+          </div>
+          <div class="settings-stat">
+            <span class="settings-stat__label">Clics (zone)</span>
+            <span class="settings-stat__value">{{ totalManualClicks | formatNumber:0 }}</span>
+          </div>
+          <div class="settings-stat">
+            <span class="settings-stat__label">Essence</span>
+            <span class="settings-stat__value">{{ formatResourceValue(game.monsterEssence != null ? game.monsterEssence : 0) }}</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h3 class="settings-section__title">Items achetés</h3>
+        <div class="settings-items-grid" *ngIf="boughtShopItemsWithIndex.length > 0; else noItems">
+          <ng-container *ngFor="let entry of boughtShopItemsWithIndex; trackBy: trackByShopEntry">
+            <app-shop-item-area
+              [shopItemSelected]="entry.item"
+              [itemIndex]="entry.index"
+              (bought)="onShopItemBought()">
+            </app-shop-item-area>
+          </ng-container>
+        </div>
+        <ng-template #noItems>
+          <p class="settings-section__empty">
+            Aucun item acheté pour le moment.
+          </p>
+        </ng-template>
+      </section>
+
+      <section class="settings-section settings-section--lore">
+        <h3 class="settings-section__title">Lore déjà vu</h3>
+        <div class="settings-lore">
+          <div class="settings-lore__list" *ngIf="loreHistory.length > 0; else noLore">
+            <button
+              type="button"
+              class="settings-lore__item"
+              *ngFor="let lore of loreHistory; let i = index"
+              [class.settings-lore__item--active]="i === selectedLoreIndex"
+              (click)="selectLore(i)">
+              <span class="settings-lore__item-title">{{ lore.title }}</span>
+            </button>
+          </div>
+          <ng-template #noLore>
+            <p class="settings-section__empty">
+              Aucun message de lore pour le moment.
+            </p>
+          </ng-template>
+
+          <div class="settings-lore__detail" *ngIf="selectedLore">
+            <h4 class="settings-lore__detail-title">{{ selectedLore.title }}</h4>
+            <p class="settings-lore__detail-text">
+              {{ selectedLore.text }}
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>

@@ -18,6 +18,8 @@ export class ResourcesService {
   private maxMana = DEFAULT_MAX_MANA;
   private manaRegenPerTick = DEFAULT_MANA_REGEN_PER_TICK;
   private monsterEssence = 0;
+  /** Nombre total de clics manuels sur la zone de clic (hors auto). */
+  private totalManualClicks = 0;
 
   getClicks(): number {
     return this.clicks;
@@ -25,6 +27,15 @@ export class ResourcesService {
 
   addClicks(amount: number): void {
     this.clicks = Math.max(0, this.clicks + amount);
+  }
+
+  incrementTotalManualClicks(count: number = 1): void {
+    if (count <= 0) return;
+    this.totalManualClicks += count;
+  }
+
+  getTotalManualClicks(): number {
+    return this.totalManualClicks;
   }
 
   canSpend(amount: number): boolean {

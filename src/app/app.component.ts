@@ -25,6 +25,12 @@ export class AppComponent implements OnInit, OnDestroy {
   /** Position left fluide (dérivée du temps) pour chaque vaisseau, mise à jour ~50 ms. */
   vesselSmoothLeft: Record<string, number> = {};
 
+  /** Popup paramètres / récap global. */
+  settingsVisible = false;
+
+  /** Timestamp du début de la session (ms). */
+  private sessionStartTime = Date.now();
+
   game: Game = {
     clicks: 0,
     mana: 0,
@@ -49,6 +55,12 @@ export class AppComponent implements OnInit, OnDestroy {
   private vesselRewardSub: Subscription | null = null;
   private loreSub: Subscription | null = null;
   private loreQueue: LorePayload[] = [];
+
+  /** Historique complet des messages de lore vus. */
+  loreHistory: LorePayload[] = [];
+
+  /** Index du lore sélectionné dans le panneau d'historique. */
+  selectedLoreIndex: number | null = null;
 
   /** État actuel du popup de lore plein écran. */
   loreVisible = false;
@@ -171,6 +183,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   private enqueueOrShowLore(payload: LorePayload): void {
+    this.rememberLore(payload);
     if (this.loreVisible) {
       this.loreQueue.push(payload);
       return;
@@ -185,13 +198,22 @@ export class AppComponent implements OnInit, OnDestroy {
     this.loreVisible = true;
   }
 
+  private rememberLore(payload: LorePayload): void {
+    this.loreHistory.push(payload);
+    this.selectedLoreIndex = this.loreHistory.length - 1;
+  }
+
   /** Ouvre le popup de lore d'introduction (acte 1). */
   private openIntroLore(): void {
-    this.loreTitle = 'Acte I – Prologue';
-    this.loreText =
-      'An 2056 du calendrier grégorien, alors que les puissances mondiales s\'affrontent dans une nouvelle guerre froide. Les conflits éclatent rapidement en Occident où les états de l\'Union européenne se regroupent afin de contrer la menace russe. Suite à la rupture du traité de non-agression établi en 2045 par la Russie, les puissances mondiales doivent réagir et commencent à bombarder la Russie ainsi que ses alliés. La population de la Russie a été radicalement changée, en effet les bombardements continus ont anéanti toute forme de vie sur le front Ouest emportant Moscou ainsi que Saint-Pétersbourg, les lieux de décisions principaux du camp de la Russie. Notre histoire débute à Vladivostok, qui suite à une insurrection de son peuple a perdu près de 98 % de ses habitants.  Le peu d\'habitants qui restent préfère rester dans les décombres cependant certains préfèrent partir afin de rejoindre le Japon, qui d\'après les rumeurs, serait une zone de refuge. "Il faut aller vers l\'Est à tout prix" '
-    this.loreImageUrl = null;
-    this.loreVisible = true;
+    const payload: LorePayload = {
+      title: 'Acte I – Prologue',
+      text:
+        'An 2056 du calendrier grégorien, alors que les puissances mondiales s\'affrontent dans une nouvelle guerre froide. Les conflits éclatent rapidement en Occident où les états de l\'Union européenne se regroupent afin de contrer la menace russe. Suite à la rupture du traité de non-agression établi en 2045 par la Russie, les puissances mondiales doivent réagir et commencent à bombarder la Russie ainsi que ses alliés. La population de la Russie a été radicalement changée, en effet les bombardements continus ont anéanti toute forme de vie sur le front Ouest emportant Moscou ainsi que Saint-Pétersbourg, les lieux de décisions principaux du camp de la Russie. Notre histoire débute à Vladivostok, qui suite à une insurrection de son peuple a perdu près de 98 % de ses habitants.  Le peu d\'habitants qui restent préfère rester dans les décombres cependant certains préfèrent partir afin de rejoindre le Japon, qui d\'après les rumeurs, serait une zone de refuge. "Il faut aller vers l\'Est à tout prix" ',
+      imageUrl: null,
+      key: 'intro:act1',
+    };
+    this.rememberLore(payload);
+    this.showLore(payload);
   }
 
   /*
@@ -325,7 +347,57 @@ export class AppComponent implements OnInit, OnDestroy {
     const pct = this.game.powerEffectRemainingPercent?.[powerId];
     return pct != null ? pct : null;
   }
-  
+
+  get totalManualClicks(): number {
+    return this.game.totalManualClicks ?? 0;
+  }
+
+  get playTimeLabel(): string {
+    const totalSeconds = Math.floor((Date.now() - this.sessionStartTime) / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    if (hours > 0) {
+      return `${hours}h ${this.padNumber(minutes)}m ${this.padNumber(seconds)}s`;
+    }
+    return `${minutes}m ${this.padNumber(seconds)}s`;
+  }
+
+  get boughtShopItemsWithIndex(): { item: ShopItem; index: number }[] {
+    return (this.game.shopItems ?? [])
+      .map((item, index) => ({ item, index }))
+      .filter((entry) => entry.item.bought);
+  }
+
+  get selectedLore(): LorePayload | null {
+    if (this.selectedLoreIndex == null) return null;
+    if (this.selectedLoreIndex < 0 || this.selectedLoreIndex >= this.loreHistory.length) {
+      return null;
+    }
+    return this.loreHistory[this.selectedLoreIndex];
+  }
+
+  openSettings(event?: MouseEvent): void {
+    event?.stopPropagation();
+    this.settingsVisible = true;
+  }
+
+  closeSettings(): void {
+    this.settingsVisible = false;
+  }
+
+  selectLore(index: number): void {
+    if (index < 0 || index >= this.loreHistory.length) {
+      this.selectedLoreIndex = null;
+      return;
+    }
+    this.selectedLoreIndex = index;
+  }
+
+  private padNumber(value: number): string {
+    return value < 10 ? `0${value}` : `${value}`;
+  }
+
 /*
   exportSave(): void {
     this.gameState.downloadSave();

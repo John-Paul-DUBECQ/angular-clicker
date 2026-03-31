@@ -10,12 +10,11 @@
     </div>
 
     <div class="lore-body">
-      <div *ngIf="imageUrl" class="lore-image-wrapper">
-        <img [src]="imageUrl" alt="Illustration" class="lore-image">
-      </div>
-
       <div class="lore-text">
         {{ text }}
+      </div>
+      <div *ngIf="imageUrl" class="lore-image-wrapper">
+        <img [src]="imageUrl" alt="Illustration" class="lore-image">
       </div>
     </div>
   </div>

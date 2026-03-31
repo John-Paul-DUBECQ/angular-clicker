@@ -45,7 +45,7 @@
                     [alt]=""
                     class="worker-unlock-popup__icon"
                 />
-                <span *ngIf="!u.imageUrl" class="worker-unlock-popup__icon-placeholder">{{ u.name?.charAt(0) || '?' }}</span>
+                <span *ngIf="!u.imageUrl" class="worker-unlock-popup__icon-placeholder">{{ u.name.charAt(0) || '?' }}</span>
                 <span class="worker-unlock-popup__name">{{ u.name }}</span>
                 <span class="worker-unlock-popup__tag worker-unlock-popup__tag--item" *ngIf="u.unlockType === 'item'">Item</span>
                 <span class="worker-unlock-popup__tag worker-unlock-popup__tag--spell" *ngIf="u.unlockType === 'spell'">Sort</span>
@@ -65,7 +65,7 @@
     class="worker-info-popup worker-info-popup--fixed"
     [ngStyle]="infoPopupStyle"
 >
-    <p class="worker-info-popup__description" *ngIf="workerDescription" [innerHTML]="workerDescription"></p>
+    <p class="worker-info-popup__description" *ngIf="workerDescription">{{ workerDescription }}</p>
     <dl class="worker-info-popup__stats" *ngIf="workerInfoStats.lines.length">
         <ng-container *ngFor="let line of workerInfoStats.lines">
             <dt class="worker-info-popup__label">{{ line.label }}</dt>

@@ -17,8 +17,8 @@
         </div>
     </div>
     <div class="worker-buy-button">
-        <button class="btn btn-secondary" *ngIf="workerSelected.canBuyWorker" (click)="upgradeWorker()">Upgrade : {{ workerSelected.price | formatNumber }}</button>
-        <button class="btn btn-secondary disabled" *ngIf="!workerSelected.canBuyWorker" disabled>Upgrade : {{ workerSelected.price | formatNumber }}</button>
+        <button class="btn btn-secondary" *ngIf="canBuyWorkerWithDependencies" (click)="upgradeWorker()">{{ buyButtonText }}</button>
+        <button class="btn btn-secondary disabled" *ngIf="!canBuyWorkerWithDependencies" disabled>{{ buyButtonText }}</button>
         <div
             #infoRef
             class="worker-info-trigger"

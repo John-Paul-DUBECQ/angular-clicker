@@ -9,7 +9,7 @@ export const WORKER_LORE_BY_NAME: Record<string, LorePayload> = {
     key: 'worker:epee',
     title: 'Козьмино',
     text:
-      "Après vous être rendu compte que Vladivostok était dévastée suite à la catastrophe, vous décidez de partir vers l'Est à la recherche d'un bateau afin d'aller au Japon et rejoindre votre village natal. C'est dans le village de Козьмино que vous trouvez cette épée, on ne sait pas encore à quel point elle va être utile mais il vaut mieux la prendre dans le doute.",
+      "Après vous être rendu compte que Vladivostok était dévastée suite à la catastrophe, vous décidez de partir vers l'Est à la recherche d'un bateau afin d'aller au Japon. C'est dans le village de Козьмино que vous trouvez cette épée, on ne sait pas encore à quel point elle va être utile mais il vaut mieux la prendre dans le doute.",
     imageUrl: null,
   },
   Fermier: {
@@ -28,14 +28,14 @@ export const WORKER_LORE_BY_NAME: Record<string, LorePayload> = {
   },
   Forgeron: {
     key: 'worker:forgeron',
-    title: 'Forgeron',
+    title: 'Анатолий',
     text: "Cela fait maintenant quelques jours que nous continuons notre chemin vers l\'Est et nous n\'avons encore vu aucun signe de vie humaine. Cependant nous arrivons bientôt dans la ville de Дальнегорск et bien que la population ait déjà certainement pris l\'avion afin de fuir, nous pouvons toujours espérer trouver un groupe de survivants. \n\n En entrant dans la ville, nous pouvons voir une grande fumée à l\'horizon; nous n\'étions donc pas seul. En nous rapprochant, nous trouvons un homme regardant un immeuble en train de brûler; Les barils d\'essence à ses côtés ne laissaient aucun doute sur le fait qu\'il était à l'origine de ce feu. Nous décidons donc de nous présenter à lui et de lui demander ce qu\'il se passait ici et si nous pouvions être d\'un quelconque utilité.\n Il répondit d'un ton sec et solennel \"Je viens de faire mes derniers adieux à un être cher. Quant à vous, je ne sais pas ce que vous faites par ici, mais dans cette ville, je suis le dernier. Et tous les avions sont déjà partis il y a des semaines\".\n\n Après lui avoir expliqué notre situation, Mikhail sortit une bouteille d\'alcool et en proposa une autre à l\'inconnu, \"Nous sommes semblables tous les deux, ça te dirait de te joindre à nous ?\" Alexandre et moi fûmes surpris de voir que l\'inconnu accepta sans hésiter. Il nous expliqua qu\'il travaillait avec le fer en tant que soudeur et se proposa pour rendre nos armes encore plus tranchantes, bien qu\'il ne voyait pas vraiment l\'interêt d'avoir des armes dans ces terres désolées. Il s\'appelait donc Анатолий (Anatole).",
     imageUrl: null,
   },
   Astrologue: {
     key: 'worker:astrologue',
-    title: 'Astrologue',
-    text: 'Production automatique de 500 /s.',
+    title: 'София',
+    text: "C'est en partant de Терней dans la bonne humeur que nous vîmes une charrette au pied d'un arbre. En nous approchant de celle-ci, une jeune femme s'approcha de nous et nous dit \"Je vous attendais ; enfin, je ne savais pas quand, ni où pour être honnête, mais je savais que j'allais vous rencontrer. Je m'appelle София (Sofia) et c'est un plaisir de vous rencontrer\". \n\nNous étions tous les quatre très surpris par ce qu'elle venait de dire et Mikhail lui répondit \"On n'a pas de temps à perdre avec des diseuses de bonne aventure. Désolé petite, mais nous, on va continuer notre chemin vers le Nord et on ne peut pas se permettre de parler à tous les fous sur notre route\". \n\nSa réponse fut assez directe et surprenante mais, dans le fond, il n'avait pas si tort que ça ; on ne peut pas faire confiance à n'importe qui. Mais en même temps, elle avait l'air sincère et honnête. Je pris Mikhail à part et lui dis \"On ne peut pas se permettre de la laisser ici toute seule, t'imagines les dangers qui pourraient lui arriver, ou même si les Russes décident de la pourchasser\" ; Mikhail me répondit droit dans les yeux \"J'adorerais que tu aies raison mais si elle était tant en danger que ça, qu'est-ce qu'elle fait aux abords d'une ville abandonnée ? Et même, comment a-t-elle survécu jusque-là ? Si ça se trouve, elle nous a espionnés pendant qu'on était dans la ville et a décidé de se jouer de nous pour voler nos ressources plus tard, voire pire, nous vendre à l'armée russe.\". Il avait raison. \n\nAprès avoir dit à Sofia que nous devions poursuivre notre chemin, elle cria \"Depuis ce qu'il s'est passé à Kaliningrad, je ressens des choses. Jusque-là, ça m'a porté chance ; ça peut être un pressentiment sur le chemin à suivre ou parfois, ça peut être bien plus fort. Par exemple, quand je te regarde toi, je ne sais pas ton nom mais quand je te vois, je vois que tu recherches des réponses sur qui tu es et je sens que toi aussi tu es lié à ce jour de l'insurrection de Kaliningrad. Ce n'est peut-être rien mais le fait que deux personnes liées à ce point-là se rencontrent ne peut pas être un hasard\".\n\nMikhail se retourna vers elle et lui dit \"Tu sais quoi, je sens que depuis quelques mois, rien n'est comme avant et ça ne tient pas qu'à l'état du pays. Mais le fait que tu aies réussi à mettre le doigt dessus, j'ai envie de te croire. Et après tout, un petit peu de compagnie féminine ne va pas nous faire de mal\". Bien évidemment, il ne pouvait pas finir sur une note de gentillesse, il devait bien sortir une remarque sexiste. \n\nSofia nous rejoignit en courant et c'est ainsi que nous continuâmes notre chemin à cinq vers le Nord. \"Je suis sûr qu'on va trouver toutes les réponses sur qui tu es à la fin de ce voyage\".",
     imageUrl: null,
   },
   Magicien: {
@@ -68,5 +68,31 @@ export const WORKER_LORE_BY_NAME: Record<string, LorePayload> = {
     text: 'Production automatique de 40000000000000 /s.',
     imageUrl: null,
   },
+};
+
+/**
+ * Lore affiché lors de l'atteinte de certains paliers de niveau pour chaque worker.
+ * Structure: WORKER_LORE_BY_LEVEL[workerName][level] = LorePayload
+ */
+export const WORKER_LORE_BY_LEVEL: Record<string, Record<number, LorePayload>> = {
+  Fermier: {},
+  Mineur: {},
+  Forgeron: {
+    8: {
+      key: 'worker:forgeron:level8',
+      title: 'Юрий',
+      text: "En continuant notre chemin vers le nord, nous décidons de rester quelques jours dans la ville de Терней afin de faire le plein de ressources. \n\n Un soir au coin du feu, l'alcool coulait à flot et les discussions sur nos vies passées allaient bon train; cependant on remarquait bien que Anatole et Mikhail ne nous disaient pas tout mais en ces temps de désolation, chacun a le droit de garder le silence sur certains sujets. C'est à ce moment que Alexandre se tourna vers moi et me demandit \"Et toi ? On ne sait au final même pas ton nom ou même pourquoi tu tiens tant à rester en vie et à continuer ce voyage.\" \n\n Un vertige commenca à s'installer en moi et d'une voix tremblante je répondis \"Je ne me rappelle de rien... Je me suis réveillé au centre de Vladivostok mais je n'ai aucun souvenir de quoi que ce soit... Et suite à toutes les rumeurs qui disent que Tokyo est une zone sécurisée, j'ai donc décidé d'y aller, pour peut-être retrouver des connaissances, de la famille; je ne sais pas. En tout cas, même si je ne retrouve personne et que la mémoire ne me revient pas, je veux rester en vie.\". \n\n Après lui avoir raconté ça, je ressentis un silence pesant mais je suis conscient que je me devais de leur dire la vérité, même si je ne me rappelle de rien, même si je ne sais pas qui je suis, je ne veux pas mourir ici, dans ces terres désolées. \n\n C'est à ce moment que Mikhail se leva et dit \"Tu sais, on a tous nos raisons de vouloir rester en vie, et c'est très bien comme ça. Je pense que le plus important, c'est qu'on continue à avancer ensemble, peu importe les obstacles qu'on peut rencontrer sur notre chemin.\" \n\n Anatole acquiesça et ajouta \"Exactement, on est une équipe maintenant, et on va s'entraider pour survivre et atteindre notre objectif. Peu importe d'où on vient ou ce qu'on a vécu avant, ce qui compte c'est ce qu'on fait maintenant. Cependant, cela ne nous dit pas comment on peut t'appeler, et si on t'appelait \"Yuri\", c'était le nom de mon chien, je suis sûr que ça lui ferait plaisir.\". \n\n Je répondis sans attendre \"Content de savoir que quand tu penses à moi, tu penses à ton chien!\".",
+      imageUrl: null,
+    }
+  },
+    Astrologue: {
+      3: {
+        key: 'worker:astrologue:level3',
+        title: 'Le début de la confiance, et même plus',
+        text: "Le premier jour avec Sofia se finit après une grosse journée de marche. Nous n'avions pas forcément l'habitude de voyager avec une femme mais je suis sûr qu'on s'y habituera rapidement. \n\nLa soirée se poursuivit donc au coin du feu \"Merci de m'avoir laissé rejoindre votre groupe, les gars. Je dois bien avouer que cela fait maintenant trois mois que je suis seule et je peux vous dire que ça fait du bien de pouvoir dormir sans avoir peur de se faire piller ou agresser pendant notre sommeil.\" La soirée continua ; on faisait cependant chambre à part, elle préférait dormir dans une tente tandis que nous, on dormait à l'intérieur d'une maison si possible ou sinon à la belle étoile. Avant de dormir, Alexandre se retourna vers moi et me dit \"Eh, Yuri ? Tu es la personne en qui j'ai le plus confiance ici ; pas que je n'aie pas confiance en Mikhail ou Anatole, mais ils sont quand même plus vieux que nous... Alors je me demandais, tu penses quoi de Sofia ? Parce que... je sais pas trop comment dire, mais je la trouve vraiment gentille... et j'aimerais bien apprendre à la connaître un peu plus...\"\n  \"Il est vrai qu'elle est très gentille mais je ne suis en aucun cas intéressé par elle, alors je te souhaite bon courage avec Sofia ! Juste n'en fais pas trop, ce serait dommage de ruiner l'ambiance.\"\n \"Merci de m'avoir écouté, je devais vraiment me confier... et ça me rassure un peu d'en avoir parlé.\"",
+        imageUrl: null,
+      }
+    },
+  // Ajoutez d'autres workers et paliers selon vos besoins
 };
 

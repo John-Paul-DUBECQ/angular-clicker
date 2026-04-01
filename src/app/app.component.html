@@ -143,6 +143,8 @@
             *ngIf="worker.doesAppearInGame"
             [workerSelected]="worker"
             [workerIndex]="i"
+            [workersAvailable]="workersAvailable"
+            [clicks]="game.clicks"
             (upgraded)="onWorkerUpgraded()">
           </app-worker-area>
         </ng-container>

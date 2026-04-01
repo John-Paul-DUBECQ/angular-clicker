@@ -18,6 +18,8 @@ export interface WorkerAutoData {
   /** Pouvoirs débloqués par ce worker (achat ou niveau). */
   unlocks: WorkerUnlock[];
   acteUnlocked?: number; // à quel acte le worker est débloqué
+  /** Index du worker précédent requis et son niveau minimum pour débloquer celui-ci. Ex: {workerIndex: 3, minLevel: 5} */
+  requirePreviousWorker?: { workerIndex: number; minLevel: number };
 }
 
 /** Worker avec champs calculés pour la vue (price, canBuyWorker, valeurs effectives après bonus shop). */
@@ -39,7 +41,8 @@ export function createAutoWorker(
   curvePrice: number,
   description?: string,
   acteUnlocked?: number,
-  unlocks: WorkerUnlock[] = []
+  unlocks: WorkerUnlock[] = [],
+  requirePreviousWorker?: { workerIndex: number; minLevel: number }
 ): WorkerAutoData {
   return {
     name,
@@ -54,6 +57,7 @@ export function createAutoWorker(
     bought: false,
     unlocks,
     acteUnlocked: acteUnlocked ?? 1,
+    requirePreviousWorker,
   };
 }
 
@@ -65,7 +69,8 @@ export function createClickWorker(
   basePrice: number,
   curvePrice: number,
   description?: string,
-  unlocks: WorkerUnlock[] = []
+  unlocks: WorkerUnlock[] = [],
+  requirePreviousWorker?: { workerIndex: number; minLevel: number }
 ): WorkerAutoData {
   return {
     name,
@@ -79,6 +84,7 @@ export function createClickWorker(
     doesAppearInGame: false,
     bought: false,
     unlocks,
+    requirePreviousWorker,
   };
 }
 
@@ -101,8 +107,65 @@ export function getDoesAppearInGame(w: WorkerAutoData, clicks: number): boolean 
   return should;
 }
 
+/** Vérifie si un worker doit apparaître (basé sur les clics, pas les dépendances). */
+export function getDoesAppearInGameWithDependencies(
+  w: WorkerAutoData,
+  clicks: number,
+  workersAvailable: WorkerAutoData[]
+): boolean {
+  // Affiche le worker s'il a assez de clics ou a été acheté
+  return getDoesAppearInGame(w, clicks);
+}
+
+/** Obtient le texte du bouton d'achat d'un worker (prix + condition si nécessaire). */
+export function getWorkerBuyButtonText(
+  w: WorkerAutoData,
+  clicks: number,
+  workersAvailable: WorkerAutoData[]
+): string {
+  const price = getPrice(w);
+  const priceText = `Upgrade : ${price}`;
+  
+  // Vérifie la dépendance si elle existe
+  if (w.requirePreviousWorker) {
+    const { workerIndex, minLevel } = w.requirePreviousWorker;
+    if (workerIndex >= 0 && workerIndex < workersAvailable.length) {
+      const previousWorker = workersAvailable[workerIndex];
+      if (previousWorker.level < minLevel) {
+        return `${priceText} + ${previousWorker.name} lvl ${minLevel}`;
+      }
+    }
+  }
+  
+  return priceText;
+}
+
 export function getCanBuyWorker(w: WorkerAutoData, clicks: number): boolean {
   return clicks >= getPrice(w);
+}
+
+/** Vérifie si un worker peut être acheté en tenant compte des dépendances. */
+export function getCanBuyWorkerWithDependencies(
+  w: WorkerAutoData,
+  clicks: number,
+  workersAvailable: WorkerAutoData[]
+): boolean {
+  // Vérifie les clics d'abord
+  if (clicks < getPrice(w)) {
+    return false;
+  }
+  
+  // Vérifie la dépendance si elle existe
+  if (w.requirePreviousWorker) {
+    const { workerIndex, minLevel } = w.requirePreviousWorker;
+    if (workerIndex < 0 || workerIndex >= workersAvailable.length) {
+      return false;
+    }
+    const previousWorker = workersAvailable[workerIndex];
+    return previousWorker.level >= minLevel;
+  }
+  
+  return true;
 }
 
 /** Exposant du multiplicateur x2 par palier (niveau 10, 25, puis tous les 25). */

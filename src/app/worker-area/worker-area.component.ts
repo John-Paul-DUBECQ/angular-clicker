@@ -1,5 +1,5 @@
 import { Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
-import { WorkerAuto, calculateClicksPerSecondForWorker, getClickBonus } from '../models/worker-auto-model';
+import { WorkerAuto, WorkerAutoData, calculateClicksPerSecondForWorker, getClickBonus, getWorkerBuyButtonText, getCanBuyWorkerWithDependencies } from '../models/worker-auto-model';
 import { GameStateService, WorkerInfoStats } from '../models/game/game-state.service';
 import { WorkerUnlock } from '../models/unlocks/worker-unlock.model';
 import { getUpcomingPowerUnlockTiers, POWER_WORKER_INDEX } from '../models/unlocks/power-unlock';
@@ -18,8 +18,10 @@ export class WorkerAreaComponent {
   /** Worker à afficher : passé par le parent. */
   @Input() workerSelected: WorkerAuto | null = null;
   /** Index du worker dans la liste (pour le bouton Upgrade). */
-  @Input() workerIndex = 0;
-  /** Émis après un upgrade pour que le parent rafraîchisse l’affichage tout de suite. */
+  @Input() workerIndex = 0;  /** Tous les workers disponibles (pour les dépendances). */
+  @Input() workersAvailable: WorkerAutoData[] = [];
+  /** Clics actuels (pour afficher le motif du blocage). */
+  @Input() clicks = 0;  /** Émis après un upgrade pour que le parent rafraîchisse l’affichage tout de suite. */
   @Output() upgraded = new EventEmitter<void>();
   
   @ViewChild('unlockRef') unlockRef!: ElementRef<HTMLElement>;
@@ -51,6 +53,18 @@ export class WorkerAreaComponent {
 
   get isClickWorker(): boolean {
     return this.workerSelected?.workerType === 'click';
+  }
+
+  /** Texte du bouton d'achat (prix + condition si nécessaire). */
+  get buyButtonText(): string {
+    if (!this.workerSelected) return '';
+    return getWorkerBuyButtonText(this.workerSelected, this.clicks, this.workersAvailable);
+  }
+
+  /** Vérifie si le worker peut être acheté en tenant compte des dépendances. */
+  get canBuyWorkerWithDependencies(): boolean {
+    if (!this.workerSelected) return false;
+    return getCanBuyWorkerWithDependencies(this.workerSelected, this.clicks, this.workersAvailable);
   }
 
   /** Prochains paliers (unlocks worker + déblocage sorts pour Magicien), triés par niveau, limité à 3 pour ne pas flood. */

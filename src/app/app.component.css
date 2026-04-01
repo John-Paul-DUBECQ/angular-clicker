@@ -652,6 +652,7 @@
   flex: 0 0 220px;
   max-height: 260px;
   overflow-y: auto;
+  overflow-x: hidden;
   border-right: 1px solid rgba(255, 255, 255, 0.12);
   padding-right: 8px;
 }
@@ -698,6 +699,7 @@
 }
 
 .settings-lore__detail-text {
+  white-space: pre-line;
   margin: 0;
   font-size: 0.9rem;
   line-height: 1.5;

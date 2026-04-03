@@ -1,4 +1,5 @@
 import { WorkerUnlock } from './unlocks/worker-unlock.model';
+import { WORKER_DESCRIPTIONS_BY_LEVEL } from './lore/worker-lore';
 
 export type WorkerType = 'auto' | 'click';
 
@@ -183,4 +184,37 @@ export function calculateClicksPerSecondForWorker(w: WorkerAutoData): number {
 export function getClickBonus(w: WorkerAutoData): number {
   if (w.workerType !== 'click') return 0;
   return getProductionOrClickBonus(w) * Math.pow(2, getTierExponent(w.level))*0.75;
+}
+
+/**
+ * Obtient la description d'un worker selon son niveau actuel.
+ * La description change en fonction du niveau et peut ne pas être définie pour certains niveaux.
+ * Si aucune description n'est définie pour le niveau actuel, retourne la description par défaut (si elle existe).
+ */
+export function getWorkerDescription(w: WorkerAutoData): string | undefined {
+  const levelDescriptions = WORKER_DESCRIPTIONS_BY_LEVEL[w.name];
+  
+  if (!levelDescriptions) {
+    // Si pas de descriptions par niveau, utiliser la description par défaut
+    return w.description;
+  }
+  
+  // Chercher une description pour le niveau actuel
+  const currentLevelDesc = levelDescriptions[w.level];
+  if (currentLevelDesc !== undefined) {
+    return currentLevelDesc;
+  }
+  
+  // Si aucune description pour ce niveau, chercher le niveau le plus proche inférieur
+  const availableLevels = Object.keys(levelDescriptions)
+    .map(Number)
+    .filter(level => level <= w.level)
+    .sort((a, b) => b - a);
+  
+  if (availableLevels.length > 0) {
+    return levelDescriptions[availableLevels[0]];
+  }
+  
+  // En dernier recours, retourner la description par défaut
+  return w.description;
 }

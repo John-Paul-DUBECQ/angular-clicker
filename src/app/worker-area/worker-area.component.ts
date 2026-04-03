@@ -1,5 +1,5 @@
 import { Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
-import { WorkerAuto, WorkerAutoData, calculateClicksPerSecondForWorker, getClickBonus, getWorkerBuyButtonText, getCanBuyWorkerWithDependencies } from '../models/worker-auto-model';
+import { WorkerAuto, WorkerAutoData, calculateClicksPerSecondForWorker, getClickBonus, getWorkerBuyButtonText, getCanBuyWorkerWithDependencies, getWorkerDescription } from '../models/worker-auto-model';
 import { GameStateService, WorkerInfoStats } from '../models/game/game-state.service';
 import { WorkerUnlock } from '../models/unlocks/worker-unlock.model';
 import { getUpcomingPowerUnlockTiers, POWER_WORKER_INDEX } from '../models/unlocks/power-unlock';
@@ -77,7 +77,8 @@ export class WorkerAreaComponent {
 
   /** Description narrative du worker (sans label, alignée à gauche). Déduplique si la même phrase apparaît deux fois. */
   get workerDescription(): string | undefined {
-    const d = this.workerSelected?.description;
+    if (!this.workerSelected) return undefined;
+    const d = getWorkerDescription(this.workerSelected);
     if (!d || d.length < 200) return d;
     const half = Math.floor(d.length / 2);
     if (d.slice(0, half).trim() === d.slice(half).trim()) return d.slice(0, half).trim();

@@ -58,7 +58,7 @@ export class WorkerStateService {
       createAutoWorker('Astrologue', 500, 1.25, 12500, 1.33, undefined, 1, [sunUnlockDefinition, ...SUN_UPGRADES], { workerIndex: 3, minLevel: 8 }),
       createAutoWorker('Magicien', 1000, 1.30, 25000, 1.39, undefined, 1, [powerUnlockDefinition, ...POWER_MANA_UPGRADES], { workerIndex: 4, minLevel: 10 }),
       createAutoWorker('Alchimiste', 4500, 1.35, 112500, 1.45, undefined, 1, [monsterUnlockDefinition, ...MONSTER_UPGRADES], { workerIndex: 5, minLevel: 10 }),
-      createAutoWorker('Géomètre', 20000, 1.40, 500000, 1.51, undefined, 1, [vesselUnlockDefinition, ...VESSEL_UPGRADES], { workerIndex: 6, minLevel: 10 }),
+      createAutoWorker('Géomètre', 20000, 1.40, 500000, 1.51, undefined, 1, [vesselUnlockDefinition, ...VESSEL_UPGRADES], { workerIndex: 6, minLevel: 12 }),
       createAutoWorker('Architecte', 100000, 1.45, 2500000, 1.57, undefined, 1, [], { workerIndex: 7, minLevel: 10 }),
       createAutoWorker('Explorateur', 40000000000000, 1.50, 1000000000000000, 1.63, undefined, 1, [], { workerIndex: 8, minLevel: 10 }),
     ];

@@ -57,7 +57,9 @@ export class AppComponent implements OnInit, OnDestroy {
   private loreQueue: LorePayload[] = [];
 
   /** Historique complet des messages de lore vus. */
-  loreHistory: LorePayload[] = [];
+  get loreHistory(): LorePayload[] {
+    return this.game.loreHistory || [];
+  }
 
   /** Index du lore sélectionné dans le panneau d'historique. */
   selectedLoreIndex: number | null = null;
@@ -86,6 +88,11 @@ export class AppComponent implements OnInit, OnDestroy {
 
     // Popup de lore d'intro au lancement du jeu.
     this.openIntroLore();
+
+    // Sauvegarde automatique avant de quitter la page
+    window.addEventListener('beforeunload', () => {
+      this.gameState.saveToLocalStorage();
+    });
   }
 
   ngOnDestroy(): void {
@@ -199,18 +206,23 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   private rememberLore(payload: LorePayload): void {
-    this.loreHistory.push(payload);
+    this.gameState.addLore(payload);
+    this.gameState.saveToLocalStorage(); // Sauvegarde immédiate pour éviter la répétition au rechargement
     this.selectedLoreIndex = this.loreHistory.length - 1;
   }
 
   /** Ouvre le popup de lore d'introduction (acte 1). */
   private openIntroLore(): void {
+    const key = 'intro:act1';
+    if (this.loreHistory.some(l => l.key === key)) {
+      return; // Déjà vu, ne pas afficher
+    }
     const payload: LorePayload = {
       title: 'Acte I – Prologue',
       text:
         'An 2056 du calendrier grégorien, alors que les puissances mondiales s\'affrontent dans une nouvelle guerre froide. Les conflits éclatent rapidement en Occident où les états de l\'Union européenne se regroupent afin de contrer la menace russe. \n\n Suite à la rupture du traité de non-agression établi en 2045 par la Russie, les puissances mondiales doivent réagir et commencent à bombarder la Russie ainsi que ses alliés. La population de la Russie a été radicalement changée, en effet les bombardements continus ont anéanti toute forme de vie sur le front Ouest emportant Moscou ainsi que Saint-Pétersbourg, les lieux de décisions principaux du camp de la Russie.\n\n Notre histoire débute à Vladivostok, qui suite à une insurrection de son peuple a perdu près de 98 % de ses habitants.  Le peu d\'habitants qui restent préfère rester dans les décombres cependant certains préfèrent partir afin de rejoindre le Japon, qui d\'après les rumeurs, serait une zone de refuge. \n\n "Il faut aller vers l\'Est à tout prix" ',
       imageUrl: null,
-      key: 'intro:act1',
+      key: key,
     };
     this.rememberLore(payload);
     this.showLore(payload);
@@ -225,6 +237,7 @@ export class AppComponent implements OnInit, OnDestroy {
    *   this.loreText =
    *     'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.';
    *   this.loreImageUrl = null;
+   *   this.gameState.saveToLocalStorage(); // Sauvegarde immédiate pour éviter la répétition au rechargement
    *   this.loreVisible = true;
    * }
    */

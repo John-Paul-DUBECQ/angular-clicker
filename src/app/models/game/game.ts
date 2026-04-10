@@ -3,6 +3,7 @@ import { WorkerAuto } from "../worker-auto-model";
 import { Power } from "../powers/power.model";
 import type { CurrentMonsterView } from "./monster-state.service";
 import type { ActiveVesselView } from "./vessel.service";
+import { LorePayload } from "../lore/lore-notification.service";
 
 /**
  * Vue agrégée du jeu pour l'UI. Les données réelles sont dans Resources, WorkerState, ShopState, PowerState.
@@ -56,4 +57,6 @@ export class Game {
     /** Vaisseaux en cours de traversée (gauche → droite). */
     activeVessels?: ActiveVesselView[];
     acteActual!: number; // à quel acte le jeu est actuellement (commence à 1)
+    /** Historique des lores vus. */
+    loreHistory?: LorePayload[];
 }

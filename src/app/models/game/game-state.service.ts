@@ -20,6 +20,7 @@ import { VesselService } from './vessel.service';
 import { getVesselUpgradeStats, isVesselUnlocked, VESSEL_WORKER_INDEX } from '../unlocks/vessel';
 import { getSmithLevel, getStreakStats, SMITH_WORKER_INDEX } from '../unlocks/streak';
 import { formatNumberValue } from '../../pipes/format-number.pipe';
+import { LorePayload } from '../lore/lore-notification.service';
 
 const TICKS_PER_SECOND = 10;
 
@@ -41,11 +42,16 @@ export interface SaveData {
   shopItemsBought: boolean[];
   monsterEssence: number;
   totalManualClicks: number;
+  loreHistory: LorePayload[];
 }
 
 @Injectable({ providedIn: 'root' })
 export class GameStateService {
   private tickIntervalId: ReturnType<typeof setInterval> | null = null;
+
+  private saveIntervalId: ReturnType<typeof setInterval> | null = null;
+
+  private loreHistory: LorePayload[] = [];
 
   constructor(
     private resources: ResourcesService,
@@ -57,6 +63,8 @@ export class GameStateService {
     private vesselState: VesselService
   ) {
     this.startTickLoop();
+    this.startAutoSave();
+    this.loadFromLocalStorage();
   }
 
   private getShopMult = (workerIndex: number): number =>
@@ -187,6 +195,7 @@ export class GameStateService {
       vesselUnlocked: isVesselUnlocked(workers, workersAvailable),
       activeVessels: this.vesselState.getActiveVesselsView(),
       acteActual: 1,
+      loreHistory: this.loreHistory,
     };
   }
 
@@ -372,6 +381,56 @@ export class GameStateService {
   goToAct2(): void {
   }
 
+  addLore(lore: LorePayload): void {
+    if (this.loreHistory.some(l => l.key === lore.key)) return;
+    this.loreHistory.push(lore);
+  }
+
+  private startAutoSave(): void {
+    if (this.saveIntervalId != null) return;
+    this.saveIntervalId = setInterval(() => {
+      this.saveToLocalStorage();
+    }, 10000); // Save every 10 seconds
+  }
+
+  saveToLocalStorage(): void {
+    try {
+      const saveData: SaveData = {
+        version: 1,
+        clicks: this.resources.getClicks(),
+        mana: this.resources.getMana(),
+        workersAvailable: this.workerState.getWorkersAvailable(),
+        workerIndicesOwned: this.workerState.getWorkers().map(w => this.workerState.getWorkersAvailable().indexOf(w)),
+        shopItemsBought: this.shopState.getShopItems().map(item => item.bought),
+        monsterEssence: this.resources.getMonsterEssence(),
+        totalManualClicks: this.resources.getTotalManualClicks(),        loreHistory: this.loreHistory,      };
+      const dataStr = JSON.stringify(saveData);
+      localStorage.setItem('clickerGameSave', dataStr);
+    } catch (e) {
+      console.error('Failed to save to localStorage:', e);
+    }
+  }
+
+  private loadFromLocalStorage(): void {
+    try {
+      const dataStr = localStorage.getItem('clickerGameSave');
+      if (!dataStr) return;
+      const saveData: SaveData = JSON.parse(dataStr);
+      if (saveData.version !== 1) return;
+
+      this.resources.setClicks(saveData.clicks);
+      this.resources.setMana(saveData.mana);
+      this.workerState.setWorkersAvailable(saveData.workersAvailable);
+      this.workerState.setWorkers(saveData.workerIndicesOwned.map(index => saveData.workersAvailable[index]).filter(w => w != null));
+      this.shopState.setShopItemsBought(saveData.shopItemsBought);
+      this.resources.setMonsterEssence(saveData.monsterEssence);
+      this.resources.setTotalManualClicks(saveData.totalManualClicks);
+      this.loreHistory = saveData.loreHistory || [];
+    } catch (e) {
+      console.error('Failed to load from localStorage:', e);
+    }
+  }
+
   downloadSave(): void {
     const saveData: SaveData = {
       version: 1,
@@ -382,6 +441,7 @@ export class GameStateService {
       shopItemsBought: this.shopState.getShopItems().map(item => item.bought),
       monsterEssence: this.resources.getMonsterEssence(),
       totalManualClicks: this.resources.getTotalManualClicks(),
+      loreHistory: this.loreHistory,
     };
 
     const dataStr = JSON.stringify(saveData, null, 2);
@@ -417,6 +477,7 @@ export class GameStateService {
       this.shopState.setShopItemsBought(saveData.shopItemsBought);
       this.resources.setMonsterEssence(saveData.monsterEssence);
       this.resources.setTotalManualClicks(saveData.totalManualClicks);
+      this.loreHistory = saveData.loreHistory || [];
 
       return true;
     } catch (e) {

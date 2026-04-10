@@ -398,7 +398,6 @@ export class AppComponent implements OnInit, OnDestroy {
     return value < 10 ? `0${value}` : `${value}`;
   }
 
-/*
   exportSave(): void {
     this.gameState.downloadSave();
   }
@@ -419,5 +418,4 @@ export class AppComponent implements OnInit, OnDestroy {
     };
     reader.readAsText(file);
   }
-  */
 }

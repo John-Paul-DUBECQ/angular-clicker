@@ -604,6 +604,49 @@
   margin-top: 6px;
 }
 
+.settings-save-section {
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+}
+
+.settings-save-btn {
+  padding: 8px 16px;
+  background: #2a2a2a;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.12s ease-out;
+}
+
+.settings-save-btn:hover {
+  background: #3a3a3a;
+}
+
+.settings-import-label {
+  display: inline-block;
+  padding: 8px 16px;
+  background: #2a2a2a;
+  color: #e5e5e5;
+  border: 1px solid #444;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.12s ease-out;
+}
+
+.settings-import-label:hover {
+  background: #3a3a3a;
+}
+
+.settings-import-error {
+  color: #ff6b6b;
+  font-size: 0.8rem;
+  margin-top: 4px;
+}
+
 .settings-stat {
   display: flex;
   flex-direction: column;

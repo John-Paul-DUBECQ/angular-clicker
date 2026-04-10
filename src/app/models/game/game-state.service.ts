@@ -35,8 +35,12 @@ export interface WorkerInfoStats {
 export interface SaveData {
   version: number;
   clicks: number;
+  mana: number;
   workersAvailable: WorkerAutoData[];
   workerIndicesOwned: number[];
+  shopItemsBought: boolean[];
+  monsterEssence: number;
+  totalManualClicks: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -366,5 +370,57 @@ export class GameStateService {
    * Pour l'instant, laissée vide : la logique sera ajoutée plus tard.
    */
   goToAct2(): void {
+  }
+
+  downloadSave(): void {
+    const saveData: SaveData = {
+      version: 1,
+      clicks: this.resources.getClicks(),
+      mana: this.resources.getMana(),
+      workersAvailable: this.workerState.getWorkersAvailable(),
+      workerIndicesOwned: this.workerState.getWorkers().map(w => this.workerState.getWorkersAvailable().indexOf(w)),
+      shopItemsBought: this.shopState.getShopItems().map(item => item.bought),
+      monsterEssence: this.resources.getMonsterEssence(),
+      totalManualClicks: this.resources.getTotalManualClicks(),
+    };
+
+    const dataStr = JSON.stringify(saveData, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+
+    const now = new Date();
+
+    const pad = (n: number) => n.toString().padStart(2, '0');
+
+    const timestamp = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_`
+                    + `${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+
+    const exportFileDefaultName = `clicker-save-${timestamp}.json`;
+
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+  }
+
+  importSave(json: string): boolean {
+    try {
+      const saveData: SaveData = JSON.parse(json);
+      if (saveData.version !== 1) {
+        return false; // Version mismatch
+      }
+
+      // Load the data
+      this.resources.setClicks(saveData.clicks);
+      this.resources.setMana(saveData.mana);
+      this.workerState.setWorkersAvailable(saveData.workersAvailable);
+      this.workerState.setWorkers(saveData.workerIndicesOwned.map(index => saveData.workersAvailable[index]).filter(w => w != null));
+      this.shopState.setShopItemsBought(saveData.shopItemsBought);
+      this.resources.setMonsterEssence(saveData.monsterEssence);
+      this.resources.setTotalManualClicks(saveData.totalManualClicks);
+
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 }

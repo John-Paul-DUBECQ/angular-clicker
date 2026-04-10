@@ -25,6 +25,10 @@ export class ResourcesService {
     return this.clicks;
   }
 
+  setClicks(value: number): void {
+    this.clicks = Math.max(0, value);
+  }
+
   addClicks(amount: number): void {
     this.clicks = Math.max(0, this.clicks + amount);
   }
@@ -53,6 +57,10 @@ export class ResourcesService {
 
   getMana(): number {
     return this.mana;
+  }
+
+  setMana(value: number): void {
+    this.mana = Math.max(0, Math.min(this.maxMana, value));
   }
 
   getMaxMana(): number {
@@ -99,7 +107,15 @@ export class ResourcesService {
     return this.monsterEssence;
   }
 
+  setMonsterEssence(value: number): void {
+    this.monsterEssence = Math.max(0, value);
+  }
+
   addMonsterEssence(amount: number): void {
     this.monsterEssence = Math.max(0, this.monsterEssence + amount);
+  }
+
+  setTotalManualClicks(value: number): void {
+    this.totalManualClicks = Math.max(0, value);
   }
 }

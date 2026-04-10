@@ -194,6 +194,14 @@
             <span class="settings-stat__label">Essence</span>
             <span class="settings-stat__value">{{ formatResourceValue(game.monsterEssence != null ? game.monsterEssence : 0) }}</span>
           </div>
+          <div class="settings-save-section">
+            <button type="button" class="settings-save-btn" (click)="exportSave()">Exporter Sauvegarde</button>
+            <label class="settings-import-label">
+              <input type="file" (change)="importSave($event)" accept=".json" style="display: none;" />
+              Importer Sauvegarde
+            </label>
+            <div *ngIf="importError" class="settings-import-error">Erreur lors de l'importation : fichier invalide.</div>
+          </div>
         </div>
       </section>
 

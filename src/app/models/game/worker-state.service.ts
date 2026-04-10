@@ -44,8 +44,16 @@ export class WorkerStateService {
     return this.workersAvailable;
   }
 
+  setWorkersAvailable(workers: WorkerAutoData[]): void {
+    this.workersAvailable = workers;
+  }
+
   getWorkers(): WorkerAutoData[] {
     return this.workers;
+  }
+
+  setWorkers(workers: WorkerAutoData[]): void {
+    this.workers = workers;
   }
 
   initWorkers(): void {

@@ -18,6 +18,14 @@ export class ShopStateService {
     return this.shopItems;
   }
 
+  setShopItemsBought(bought: boolean[]): void {
+    this.shopItems.forEach((item, index) => {
+      if (index < bought.length) {
+        item.bought = bought[index];
+      }
+    });
+  }
+
   getShopMultiplierForWorker(workerIndex: number): number {
     return this.shopItems
       .filter((i) => i.bought && i.workerIndex === workerIndex)

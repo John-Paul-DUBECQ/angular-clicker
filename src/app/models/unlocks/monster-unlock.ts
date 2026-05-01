@@ -26,7 +26,7 @@ export const monsterUnlockDefinition: MonsterUnlockDefinition = {
   id: 'monster',
   name: 'Monstres',
   description: 'Un monstre apparaît à la place du clicker. Tue-le dans le temps imparti.',
-  imageUrl: 'assets/imgUpgrades/shadocks/shadock1.png',
+  imageUrl: 'assets/img/shadocks/shadock1.png',
   levelRequired: MONSTER_LEVEL_REQUIRED,
 };
 

@@ -310,6 +310,7 @@
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease-in-out;
+  transition: all 0.2s ease-in-out;
   -moz-user-select: none;
   -webkit-user-select: none;
   -ms-user-select: none;
@@ -391,6 +392,12 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  user-drag: none;
 }
 
 .monster-area__placeholder {
@@ -566,6 +573,7 @@
 
 .settings-dialog__content {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -679,6 +687,7 @@
 }
 
 .settings-section--lore {
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
@@ -693,7 +702,6 @@
 
 .settings-lore__list {
   flex: 0 0 220px;
-  max-height: 260px;
   overflow-y: auto;
   overflow-x: hidden;
   border-right: 1px solid rgba(255, 255, 255, 0.12);
@@ -730,9 +738,19 @@
 }
 
 .settings-lore__detail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2em;
   flex: 1;
-  max-height: 260px;
+  min-height: 0;
   overflow-y: auto;
+}
+
+.settings-lore__detail-image {
+  max-height: 200px;
+  max-width: 200px;
+  border: #fff solid 1px;
 }
 
 .settings-lore__detail-title {

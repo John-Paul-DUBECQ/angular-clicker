@@ -1,5 +1,6 @@
 import { WorkerUnlock } from './unlocks/worker-unlock.model';
 import { WORKER_DESCRIPTIONS_BY_LEVEL } from './lore/worker-lore';
+import { formatNumberValue } from '../pipes/format-number.pipe';
 
 export type WorkerType = 'auto' | 'click';
 
@@ -125,7 +126,7 @@ export function getWorkerBuyButtonText(
   workersAvailable: WorkerAutoData[]
 ): string {
   const price = getPrice(w);
-  const priceText = `Upgrade : ${price}`;
+  const priceText = `Upgrade : ${formatNumberValue(price)}`;
   
   // Vérifie la dépendance si elle existe
   if (w.requirePreviousWorker) {

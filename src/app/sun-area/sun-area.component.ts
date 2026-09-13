@@ -17,6 +17,8 @@ export class SunAreaComponent {
   @Input() sunSizeFactor = 1;
   /** Multiplicateur de dégâts du clic soleil (pour le tooltip). */
   @Input() sunDamageMultiplier: number | undefined;
+  /** Active le déplacement latéral borné dans la vue téléphone. */
+  @Input() mobileLayout = false;
   /** Émis après un clic sur le soleil pour que le parent rafraîchisse l'état. */
   @Output() clicked = new EventEmitter<void>();
 

@@ -193,7 +193,7 @@ export const WORKER_DESCRIPTIONS_BY_LEVEL: Record<string, Record<number, string>
     1: "Magichien est un Berger du Caucase. Son passé nous est encore inconnu. Sofia lui a donné un chapeau de sorcier en prétextant que qui de mieux que Magichien était légitime à le porter. En effet, comment pourrait-il convenir à quelqu'un d'autre ? Le chapeau est tout de même un peu grand, même pour le grand Magichien. Je pensais être son préféré mais au final son préféré est celui qui lui a donné à manger en dernier... C'est cependant avec Sofia qu'il passe la majorité du temps en faisant des siestes dans sa charrette; il doit lui être redevable pour le chapeau.",
   },
   Alchimiste: {
-    1: "Description au niveau 4 de l'alchimiste",
+    1: "",
     4: "Hélène nous a rejoint à Максимовка et s'y connait très bien en herbe médicinales. Bien que ses plantes n'aient été utilisé que pour la cuisine jusqu'ici, on ne sait à quoi ça pourrait servir dans le futur.",
   },
   'Géomètre': {

@@ -20,6 +20,8 @@ import Swal from 'sweetalert2';
 })
 export class AppComponent implements OnInit, OnDestroy {
   title = 'Clicker Game';
+  mobileScreen: 'game' | 'shop' | 'workers' | 'settings' = 'game';
+  mobileMenuVisible = false;
   private refreshInterval: ReturnType<typeof setInterval> | null = null;
   private vesselTickId: ReturnType<typeof setInterval> | null = null;
   /** Position left fluide (dérivée du temps) pour chaque vaisseau, mise à jour ~50 ms. */
@@ -397,6 +399,16 @@ export class AppComponent implements OnInit, OnDestroy {
 
   closeSettings(): void {
     this.settingsVisible = false;
+  }
+
+  setMobileScreen(screen: 'game' | 'shop' | 'workers' | 'settings'): void {
+    this.mobileScreen = screen;
+    this.mobileMenuVisible = false;
+  }
+
+  toggleMobileMenu(event?: MouseEvent): void {
+    event?.stopPropagation();
+    this.mobileMenuVisible = !this.mobileMenuVisible;
   }
 
   selectLore(index: number): void {

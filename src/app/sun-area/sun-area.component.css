@@ -52,6 +52,32 @@
   transform: translate(-50%, -50%);
 }
 
+/* Mobile : déplacement latéral contenu dans la zone centrale, sans modifier le PC. */
+.sun-area-wrapper--mobile {
+  --sun-side-padding: 8px;
+  width: 100%;
+  height: 100%;
+}
+
+.sun-area-wrapper--mobile .sun-orbit-track {
+  left: calc(var(--sun-size, 44px) / 2 + var(--sun-side-padding));
+  top: 50%;
+  animation: sun-lateral calc(var(--sun-orbit-duration, 8) * 1s) linear infinite;
+}
+
+.sun-area-wrapper--mobile .sun {
+  left: 0;
+}
+
+@keyframes sun-lateral {
+  from {
+    left: calc(var(--sun-size, 44px) / 2 + var(--sun-side-padding));
+  }
+  to {
+    left: calc(100% - var(--sun-size, 44px) / 2 - var(--sun-side-padding));
+  }
+}
+
 @keyframes sun-orbit {
   from {
     transform: translate(-50%, -50%) rotate(0deg);

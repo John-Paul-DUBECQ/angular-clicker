@@ -16,6 +16,7 @@ export class PowerAreaComponent {
   @Input() powerSelected!: Power;
   @Input() powerIndex!: number;
   @Input() manaCost: number | null = null;
+  @Input() baitCost = 0;
   @Input() canCast = false;
   /** Pourcentage de temps restant de l’effet (0–100) pour afficher la border en horloge. */
   @Input() effectRemainingPercent: number | null = null;

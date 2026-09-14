@@ -1,0 +1,101 @@
+.house-card {
+  display: flex;
+  gap: 0.7rem;
+  margin: 0.75rem 1rem 1rem;
+  padding: 0.65rem;
+  border: 1px solid #493d26;
+  background: linear-gradient(135deg, #211d16, #171717);
+  color: #eee;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.house-card--affordable {
+  border-color: #a9893d;
+}
+
+.house-card--affordable:hover {
+  transform: translateY(-1px);
+  border-color: #e8c547;
+}
+
+.house-card__image {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  align-self: center;
+  image-rendering: pixelated;
+}
+
+.house-card__body {
+  min-width: 0;
+  flex: 1;
+}
+
+.house-card__heading,
+.house-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.house-card h2 {
+  margin: 0;
+  color: #f0cf67;
+  font-size: 0.9rem;
+}
+
+.house-card__heading span,
+.house-card p {
+  color: #aaa;
+  font-size: 0.72rem;
+}
+
+.house-card p {
+  margin: 0.35rem 0 0.55rem;
+}
+
+.house-card__timer {
+  color: #e8c547 !important;
+  font-size: 0.68rem !important;
+}
+
+.house-card__costs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-bottom: 0.55rem;
+}
+
+.house-card__costs span {
+  padding: 0.2rem 0.3rem;
+  background: #30291b;
+  color: #d9c47a;
+  font-size: 0.65rem;
+}
+
+.house-card__costs .house-card__cost--missing {
+  color: #db8585;
+}
+
+.house-card__bonus {
+  color: #8fd18f;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.house-card button {
+  border: 1px solid #80652a;
+  padding: 0.35rem 0.5rem;
+  background: #30291b;
+  color: #fff3b0;
+  cursor: pointer;
+  font-size: 0.68rem;
+}
+
+.house-card button:disabled {
+  border-color: #444;
+  background: #242424;
+  color: #777;
+  cursor: not-allowed;
+}

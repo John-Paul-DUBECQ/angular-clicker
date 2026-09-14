@@ -24,12 +24,12 @@ export const listPower: Power[] = [
   {
     id: 'spawn-mob',
     name: 'Invocation',
-    description: 'Fait apparaître le prochain monstre immédiatement.',
+    description: 'Fait apparaître le prochain monstre immédiatement. Coûte 1 appât et 100 mana.',
     imageUrl: 'assets/img/swords/Sword1.png',
     doesAppearInGame: false,
     bought: false,
-    manaCost: 100,
-    cooldownSeconds: 600,
+    manaCost: 10,
+    cooldownSeconds: 0,
   },
   {
     id: 'monster-time',

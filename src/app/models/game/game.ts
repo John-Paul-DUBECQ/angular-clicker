@@ -5,6 +5,8 @@ import type { CurrentMonsterView } from "./monster-state.service";
 import type { ActiveVesselView } from "./vessel.service";
 import { LorePayload } from "../lore/lore-notification.service";
 import { EssenceShopItem } from "../essence-shop-item";
+import { House } from "../house";
+import { ResourceStock } from "../resource";
 
 /**
  * Vue agrégée du jeu pour l'UI. Les données réelles sont dans Resources, WorkerState, ShopState, PowerState.
@@ -59,6 +61,9 @@ export class Game {
     essenceShopUnlocked?: boolean;
     essenceShopItems?: EssenceShopItem[];
     essenceShopStats?: { spawnRate: number; essence: number; hp: number; time: number };
+    /** Maisons passives débloquées avec le shop d'essences. */
+    houses?: House[];
+    resources?: ResourceStock[];
     /** Vaisseaux débloqués (Géomètre). */
     vesselUnlocked?: boolean;
     /** Vaisseaux en cours de traversée (gauche → droite). */

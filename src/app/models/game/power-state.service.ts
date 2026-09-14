@@ -11,6 +11,8 @@ import { MONSTER_TIME_POWER_ID, monsterTimeEffect } from '../powers/effects/mons
 import { MonsterStateService } from './monster-state.service';
 import { WorkerStateService } from './worker-state.service';
 
+const SPAWN_MOB_BAIT_COST = 1;
+
 /** Registre des effets par id de pouvoir. Un fichier par power, enregistré ici. */
 const POWER_EFFECTS: Map<string, PowerEffect> = new Map([
   [DAMAGE_DOUBLE_POWER_ID, damageDoubleEffect],
@@ -78,6 +80,7 @@ export class PowerStateService {
         bought: true,
         isOnCooldown: onCooldown,
         cooldownRemainingSeconds: remaining,
+        baitCost: p.id === SPAWN_MOB_POWER_ID ? SPAWN_MOB_BAIT_COST : undefined,
       };
     });
   }
@@ -116,7 +119,12 @@ export class PowerStateService {
     const effect = POWER_EFFECTS.get(power.id);
     if (!effect) return false;
     const cost = effectiveManaCost ?? this.getEffectiveManaCost(power);
+    const baitCost = power.id === SPAWN_MOB_POWER_ID ? SPAWN_MOB_BAIT_COST : 0;
     if (!this.resources.canSpendMana(cost) || !this.resources.spendMana(cost)) return false;
+    if (baitCost > 0 && !this.resources.spendResources([{ resourceId: 'bait', amount: baitCost }])) {
+      this.resources.addMana(cost);
+      return false;
+    }
 
     const context = {
       setDamageBuff: (mult: number, durationSeconds: number) => {
@@ -144,10 +152,12 @@ export class PowerStateService {
       },
     };
     effect(context);
-    this.cooldownUntilByPowerId.set(
-      power.id,
-      Date.now() + (power.cooldownSeconds || 0) * 1000
-    );
+    if (power.cooldownSeconds > 0) {
+      this.cooldownUntilByPowerId.set(
+        power.id,
+        Date.now() + power.cooldownSeconds * 1000
+      );
+    }
     return true;
   }
 
@@ -198,7 +208,9 @@ export class PowerStateService {
     const power = this.powersAvailable[powerIndex];
     if (!POWER_EFFECTS.has(power.id)) return false;
     if (Date.now() < (this.cooldownUntilByPowerId.get(power.id) ?? 0)) return false;
-    return this.resources.canSpendMana(this.getEffectiveManaCost(power));
+    if (!this.resources.canSpendMana(this.getEffectiveManaCost(power))) return false;
+    return power.id !== SPAWN_MOB_POWER_ID
+      || this.resources.getResourceAmount('bait') >= SPAWN_MOB_BAIT_COST;
   }
 
   hasPowerEffect(powerIndex: number): boolean {
@@ -216,5 +228,10 @@ export class PowerStateService {
     if (powerIndex < 0 || powerIndex >= this.powersAvailable.length) return null;
     const power = this.powersAvailable[powerIndex];
     return this.getEffectiveManaCost(power);
+  }
+
+  getPowerBaitCost(powerIndex: number): number {
+    if (powerIndex < 0 || powerIndex >= this.powersAvailable.length) return 0;
+    return this.powersAvailable[powerIndex].id === SPAWN_MOB_POWER_ID ? SPAWN_MOB_BAIT_COST : 0;
   }
 }

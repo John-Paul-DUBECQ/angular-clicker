@@ -7,6 +7,8 @@ import { ShopItem } from './models/shop-item';
 import { WorkerAuto } from './models/worker-auto-model';
 import { Power } from './models/powers/power.model';
 import { EssenceShopItem } from './models/essence-shop-item';
+import { House } from './models/house';
+import { ResourceReward, ResourceStock } from './models/resource';
 import { formatNumberValue } from './pipes/format-number.pipe';
 import { MonsterRewardNotificationService } from './models/game/monster-reward-notification.service';
 import { VesselRewardNotificationService } from './models/game/vessel-reward-notification.service';
@@ -56,6 +58,10 @@ export class AppComponent implements OnInit, OnDestroy {
   powersAvailable: Power[] = [];
   private stableWorkersAvailable: WorkerAuto[] = [];
   private stableEssenceShopItems: EssenceShopItem[] = [];
+  private stableHouses: House[] = [];
+  private stableResources: ResourceStock[] = [];
+  resources: ResourceStock[] = [];
+  resourcesVisible = false;
   importError = false;
   private rewardSub: Subscription | null = null;
   private vesselRewardSub: Subscription | null = null;
@@ -135,12 +141,15 @@ export class AppComponent implements OnInit, OnDestroy {
     return this.vesselSmoothLeft[v.instanceId] != null ? this.vesselSmoothLeft[v.instanceId] : v.leftPercent;
   }
 
-  private showMonsterReward(reward: { gold: number; essence: number }): void {
+  private showMonsterReward(reward: { gold: number; essence: number; resources: ResourceReward[] }): void {
     const goldStr = formatNumberValue(reward.gold, 0);
     const essenceStr = formatNumberValue(reward.essence, 0);
+    const resourceLines = reward.resources
+      .map((resource) => `<p>+${formatNumberValue(resource.amount, 0)} ${this.getResourceName(resource.resourceId)}</p>`)
+      .join('');
     Swal.fire({
       title: 'Récompense !',
-      html: `<p>+${goldStr} clics</p><p>+${essenceStr} essence</p>`,
+      html: `<p>+${goldStr} clics</p><p>+${essenceStr} essence</p>${resourceLines}`,
       timer: 2000,
       timerProgressBar: true,
       showConfirmButton: false,
@@ -182,11 +191,15 @@ export class AppComponent implements OnInit, OnDestroy {
     this.workers = this.reuseViewItems(this.workers, state.workers);
     this.stableWorkersAvailable = this.reuseViewItems(this.stableWorkersAvailable, state.workersAvailable);
     this.stableEssenceShopItems = this.reuseViewItems(this.stableEssenceShopItems, state.essenceShopItems ?? []);
+    this.stableHouses = this.reuseViewItems(this.stableHouses, state.houses ?? []);
+    this.stableResources = this.reuseViewItems(this.stableResources, state.resources ?? []);
+    this.resources = this.stableResources;
     this.game = {
       ...state,
       workers: this.workers,
       workersAvailable: this.stableWorkersAvailable,
       essenceShopItems: this.stableEssenceShopItems,
+      houses: this.stableHouses,
     };
     this.workersAvailable = this.stableWorkersAvailable;
     this.powersAvailable = state.powersAvailable ?? [];
@@ -306,6 +319,21 @@ export class AppComponent implements OnInit, OnDestroy {
     this.refreshGameState();
   }
 
+  onHouseUpgraded(houseIndex: number): void {
+    if (this.gameState.buyHouse(houseIndex)) {
+      this.gameState.saveToLocalStorage();
+      this.refreshGameState();
+    }
+  }
+
+  getResourceName(resourceId: string): string {
+    return this.resources.find((resource) => resource.id === resourceId)?.name ?? resourceId;
+  }
+
+  toggleResources(): void {
+    this.resourcesVisible = !this.resourcesVisible;
+  }
+
   onPowerBought(): void {
     this.refreshGameState();
   }
@@ -316,6 +344,10 @@ export class AppComponent implements OnInit, OnDestroy {
 
   getPowerManaCost(powerIndex: number): number | null {
     return this.gameState.getPowerManaCost(powerIndex);
+  }
+
+  getPowerBaitCost(powerIndex: number): number {
+    return this.gameState.getPowerBaitCost(powerIndex);
   }
 
   onPowerCast(powerIndex: number): void {
@@ -336,6 +368,18 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   trackByEssenceShopEntry(_i: number, entry: { item: EssenceShopItem; index: number }): number {
+    return entry.index;
+  }
+
+  trackByHouse(_i: number, house: House): string {
+    return house.id;
+  }
+
+  trackByResource(_i: number, resource: ResourceStock): string {
+    return resource.id;
+  }
+
+  trackByHouseEntry(_i: number, entry: { house: House; index: number }): number {
     return entry.index;
   }
 

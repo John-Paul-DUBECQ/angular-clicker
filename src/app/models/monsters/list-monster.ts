@@ -10,6 +10,10 @@ export const listMonster: Monster[] = [
     lootMultiplier: 1,
     probabilityToSpawn: 100,
     acteUnlocked: 1,
+    drops: [
+      { resourceId: 'food', amount: 1 },
+      { resourceId: 'mosh-tooth', amount: 1 },
+    ],
   },
   {
     id: 'monster2',
@@ -20,6 +24,10 @@ export const listMonster: Monster[] = [
     lootMultiplier: 2,
     probabilityToSpawn: 1,
     acteUnlocked: 1,
+    drops: [
+      { resourceId: 'food', amount: 2 },
+      { resourceId: 'super-mosh-core', amount: 1 },
+    ],
   },{
     id: 'monster3',
     name: 'Gribouy',
@@ -29,6 +37,10 @@ export const listMonster: Monster[] = [
     lootMultiplier: 3,
     probabilityToSpawn: 20,
     acteUnlocked: 1,
+    drops: [
+      { resourceId: 'food', amount: 1 },
+      { resourceId: 'gribouy-ink', amount: 1 },
+    ],
   }
 ];
 

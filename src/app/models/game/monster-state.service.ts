@@ -7,6 +7,7 @@ import { ResourcesService } from './resources.service';
 import { WorkerStateService } from './worker-state.service';
 import { MonsterRewardNotificationService } from './monster-reward-notification.service';
 import { EssenceShopStateService } from './essence-shop-state.service';
+import { ResourceReward } from '../resource';
 
 /** Référence PV : baseProduction * ce multiplicateur (aléatoire autour). */
 const MONSTER_HP_BASE_SECONDS = 12;
@@ -161,7 +162,12 @@ export class MonsterStateService {
     ));
     this.resources.addMonsterEssence(essenceReward);
 
-    this.rewardNotify.notifyReward(totalGold, essenceReward);
+    const resourceRewards: ResourceReward[] = (monster?.drops ?? []).map((drop) => ({
+      resourceId: drop.resourceId,
+      amount: Math.max(1, Math.floor(drop.amount * lootMult)),
+    }));
+    resourceRewards.forEach((reward) => this.resources.addResource(reward.resourceId, reward.amount));
+    this.rewardNotify.notifyReward(totalGold, essenceReward, resourceRewards);
   }
 
   /** Tick : si monstre en cours → timeout ; sinon remplir la jauge rencontre et spawn à 100 %. */

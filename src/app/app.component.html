@@ -67,6 +67,7 @@
                 [powerSelected]="entry.power"
                 [powerIndex]="entry.index"
                 [manaCost]="getPowerManaCost(entry.index)"
+                [baitCost]="getPowerBaitCost(entry.index)"
                 [canCast]="getCanCastPower(entry.index)"
                 [effectRemainingPercent]="getEffectRemainingPercent(entry.power.id)"
                 (bought)="onPowerBought()"
@@ -75,6 +76,23 @@
           </ng-container>
         </div>
       </div>
+      <section class="houses-area" *ngIf="game.houses && game.houses.length > 0">
+        <div class="houses-area__header">
+          <h2>Maisons</h2>
+          <span>Passifs</span>
+        </div>
+        <ng-container *ngFor="let house of game.houses; let i = index; trackBy: trackByHouse">
+          <app-house-area
+            [house]="house"
+            [essence]="game.monsterEssence || 0"
+            [resources]="resources"
+            (upgraded)="onHouseUpgraded(i)">
+          </app-house-area>
+        </ng-container>
+        <button type="button" class="houses-area__resources-button" (click)="toggleResources()">
+          Voir toutes les ressources
+        </button>
+      </section>
     </div>
     
     <div class="column column-center">
@@ -251,6 +269,7 @@
                 [powerSelected]="entry.power"
                 [powerIndex]="entry.index"
                 [manaCost]="getPowerManaCost(entry.index)"
+                [baitCost]="getPowerBaitCost(entry.index)"
                 [canCast]="getCanCastPower(entry.index)"
                 [effectRemainingPercent]="getEffectRemainingPercent(entry.power.id)"
                 (bought)="onPowerBought()"
@@ -315,6 +334,24 @@
       <button type="button" [class.mobile-tab-bar__item--active]="mobileScreen === 'settings'" (click)="setMobileScreen('settings')"><span>⚙</span>Paramètres</button>
     </nav>
   </div>
+</div>
+
+<div class="resources-overlay" *ngIf="resourcesVisible" (click)="toggleResources()">
+  <section class="resources-dialog" (click)="$event.stopPropagation()">
+    <div class="resources-dialog__header">
+      <h2>Toutes les ressources</h2>
+      <button type="button" aria-label="Fermer" (click)="toggleResources()">✕</button>
+    </div>
+    <div class="resources-dialog__list">
+      <article class="resource-row" *ngFor="let resource of resources; trackBy: trackByResource">
+        <div>
+          <strong>{{ resource.name }}</strong>
+          <p>{{ resource.description }}</p>
+        </div>
+        <span>{{ resource.amount | formatNumber:0 }}</span>
+      </article>
+    </div>
+  </section>
 </div>
 
 <app-lore-message

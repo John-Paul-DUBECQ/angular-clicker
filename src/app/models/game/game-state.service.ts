@@ -22,6 +22,7 @@ import { getSmithLevel, getStreakStats, SMITH_WORKER_INDEX } from '../unlocks/st
 import { formatNumberValue } from '../../pipes/format-number.pipe';
 import { LorePayload } from '../lore/lore-notification.service';
 import { EssenceShopStateService } from './essence-shop-state.service';
+import { HouseStateService } from './house-state.service';
 
 const TICKS_PER_SECOND = 10;
 
@@ -43,6 +44,8 @@ export interface SaveData {
   shopItemsBought: boolean[];
   essenceShopItemsBought: boolean[];
   essenceShopLevels?: number[];
+  houseLevels?: number[];
+  resourceAmounts?: Record<string, number>;
   monsterEssence: number;
   totalManualClicks: number;
   loreHistory: LorePayload[];
@@ -61,6 +64,7 @@ export class GameStateService {
     private workerState: WorkerStateService,
     private shopState: ShopStateService,
     private essenceShopState: EssenceShopStateService,
+    private houseState: HouseStateService,
     private powerState: PowerStateService,
     private streakState: StreakStateService,
     private monsterState: MonsterStateService,
@@ -92,6 +96,9 @@ export class GameStateService {
       this.resources.tickManaRegen();
       this.streakState.tick(TICKS_PER_SECOND, workers, workersAvailable);
       this.monsterState.tick(workers, workersAvailable);
+      this.houseState.tick(1 / TICKS_PER_SECOND, () => {
+        this.resources.addResource('bait', 1);
+      });
       this.vesselState.tick(workers, workersAvailable);
     }, 1000 / TICKS_PER_SECOND);
   }
@@ -201,6 +208,8 @@ export class GameStateService {
       essenceShopUnlocked: architectLevel >= 1,
       essenceShopItems: this.essenceShopState.getItemsView(),
       essenceShopStats: this.essenceShopState.getStats(),
+      houses: architectLevel >= 1 ? this.houseState.getHousesView() : undefined,
+      resources: this.resources.getResourceStocks(),
       vesselUnlocked: isVesselUnlocked(workers, workersAvailable),
       activeVessels: this.vesselState.getActiveVesselsView(),
       acteActual: 1,
@@ -220,7 +229,8 @@ export class GameStateService {
       const minerLevel = miner?.level ?? 0;
       const { totalChance, totalMultiplier } = getCriticalHitStats(minerLevel);
       const shopChanceBonus = this.shopState.getUnlockBonus('critical-hit', 'chance');
-      if (Math.random() < totalChance + shopChanceBonus) {
+      const houseChanceBonus = this.houseState.getCriticalHitChanceBonus();
+      if (Math.random() < totalChance + shopChanceBonus + houseChanceBonus) {
         value *= totalMultiplier;
         this.showCriticalHit(value * valueMultiplier, clientX, clientY);
       }
@@ -277,7 +287,8 @@ export class GameStateService {
       const minerLevel = miner?.level ?? 0;
       const { totalChance, totalMultiplier } = getCriticalHitStats(minerLevel);
       const shopChanceBonus = this.shopState.getUnlockBonus('critical-hit', 'chance');
-      const chancePercent = (totalChance + shopChanceBonus) * 100;
+      const houseChanceBonus = this.houseState.getCriticalHitChanceBonus();
+      const chancePercent = (totalChance + shopChanceBonus + houseChanceBonus) * 100;
       lines.push(
         { label: 'Chance de coup critique', value: `${chancePercent.toFixed(1)} %` },
         { label: 'Dégâts critique', value: `×${totalMultiplier.toFixed(2)}` }
@@ -357,6 +368,10 @@ export class GameStateService {
     return this.essenceShopState.buy(itemIndex);
   }
 
+  buyHouse(houseIndex: number): boolean {
+    return this.houseState.buy(houseIndex);
+  }
+
   getCanBuyPower(price: number): boolean {
     return this.powerState.getCanBuyPower(price);
   }
@@ -368,7 +383,11 @@ export class GameStateService {
   getCanCastPower(powerIndex: number): boolean {
     if (this.powerState.isPowerOnCooldown(powerIndex)) return false;
     const cost = this.getPowerManaCost(powerIndex);
-    return cost != null && this.resources.canSpendMana(cost) && this.powerState.hasPowerEffect(powerIndex);
+    const baitCost = this.getPowerBaitCost(powerIndex);
+    return cost != null
+      && this.resources.canSpendMana(cost)
+      && (baitCost <= 0 || this.resources.getResourceAmount('bait') >= baitCost)
+      && this.powerState.hasPowerEffect(powerIndex);
   }
 
   getPowerManaCost(powerIndex: number): number | null {
@@ -378,6 +397,10 @@ export class GameStateService {
       this.powerState.getPowersAvailable()[powerIndex]?.id ?? ''
     );
     return Math.max(1, Math.floor(base * mult));
+  }
+
+  getPowerBaitCost(powerIndex: number): number {
+    return this.powerState.getPowerBaitCost(powerIndex);
   }
 
   castPower(powerIndex: number): void {
@@ -421,6 +444,8 @@ export class GameStateService {
         shopItemsBought: this.shopState.getShopItems().map(item => item.bought),
         essenceShopItemsBought: this.essenceShopState.getItems().map(item => item.bought),
         essenceShopLevels: this.essenceShopState.getLevels(),
+        houseLevels: this.houseState.getLevels(),
+        resourceAmounts: this.resources.getResourceAmounts(),
         monsterEssence: this.resources.getMonsterEssence(),
         totalManualClicks: this.resources.getTotalManualClicks(),        loreHistory: this.loreHistory,      };
       const dataStr = JSON.stringify(saveData);
@@ -447,6 +472,8 @@ export class GameStateService {
       } else {
         this.essenceShopState.setBought(saveData.essenceShopItemsBought || []);
       }
+      this.houseState.setLevels(saveData.houseLevels || []);
+      this.resources.setResourceAmounts(saveData.resourceAmounts);
       this.resources.setMonsterEssence(saveData.monsterEssence);
       this.resources.setTotalManualClicks(saveData.totalManualClicks);
       this.loreHistory = saveData.loreHistory || [];
@@ -465,6 +492,8 @@ export class GameStateService {
       shopItemsBought: this.shopState.getShopItems().map(item => item.bought),
       essenceShopItemsBought: this.essenceShopState.getItems().map(item => item.bought),
       essenceShopLevels: this.essenceShopState.getLevels(),
+      houseLevels: this.houseState.getLevels(),
+      resourceAmounts: this.resources.getResourceAmounts(),
       monsterEssence: this.resources.getMonsterEssence(),
       totalManualClicks: this.resources.getTotalManualClicks(),
       loreHistory: this.loreHistory,
@@ -506,6 +535,8 @@ export class GameStateService {
       } else {
         this.essenceShopState.setBought(saveData.essenceShopItemsBought || []);
       }
+      this.houseState.setLevels(saveData.houseLevels || []);
+      this.resources.setResourceAmounts(saveData.resourceAmounts);
       this.resources.setMonsterEssence(saveData.monsterEssence);
       this.resources.setTotalManualClicks(saveData.totalManualClicks);
       this.loreHistory = saveData.loreHistory || [];

@@ -12,6 +12,8 @@ export interface Power {
     isOnCooldown?: boolean;
     /** Renseigné par la vue : secondes restantes avant de pouvoir relancer. */
     cooldownRemainingSeconds?: number;
+    /** Coût en appâts, utilisé par Invocation. */
+    baitCost?: number;
   }
   
   

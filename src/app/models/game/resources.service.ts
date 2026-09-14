@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { RESOURCE_DEFINITIONS, ResourceCost, ResourceStock } from '../resource';
 
 export const DEFAULT_MAX_MANA = 600;
 /** Régénération de base par tick (10 ticks/s → 0.5 mana/s). */
@@ -18,6 +19,7 @@ export class ResourcesService {
   private maxMana = DEFAULT_MAX_MANA;
   private manaRegenPerTick = DEFAULT_MANA_REGEN_PER_TICK;
   private monsterEssence = 0;
+  private resourceAmounts: Record<string, number> = {};
   /** Nombre total de clics manuels sur la zone de clic (hors auto). */
   private totalManualClicks = 0;
 
@@ -113,6 +115,48 @@ export class ResourcesService {
 
   addMonsterEssence(amount: number): void {
     this.monsterEssence = Math.max(0, this.monsterEssence + amount);
+  }
+
+  spendMonsterEssence(amount: number, epsilon = 0.001): boolean {
+    if (this.monsterEssence < amount - epsilon) return false;
+    this.monsterEssence = Math.max(0, this.monsterEssence - amount);
+    return true;
+  }
+
+  getResourceAmount(resourceId: string): number {
+    return this.resourceAmounts[resourceId] ?? 0;
+  }
+
+  addResource(resourceId: string, amount: number): void {
+    this.resourceAmounts[resourceId] = Math.max(0, this.getResourceAmount(resourceId) + amount);
+  }
+
+  canSpendResources(costs: ResourceCost[]): boolean {
+    return costs.every((cost) => this.getResourceAmount(cost.resourceId) >= cost.amount);
+  }
+
+  spendResources(costs: ResourceCost[]): boolean {
+    if (!this.canSpendResources(costs)) return false;
+    costs.forEach((cost) => this.addResource(cost.resourceId, -cost.amount));
+    return true;
+  }
+
+  getResourceStocks(): ResourceStock[] {
+    return RESOURCE_DEFINITIONS.map((resource) => ({
+      ...resource,
+      amount: this.getResourceAmount(resource.id),
+    }));
+  }
+
+  getResourceAmounts(): Record<string, number> {
+    return { ...this.resourceAmounts };
+  }
+
+  setResourceAmounts(amounts: Record<string, number> | undefined): void {
+    this.resourceAmounts = {};
+    for (const resource of RESOURCE_DEFINITIONS) {
+      this.resourceAmounts[resource.id] = Math.max(0, amounts?.[resource.id] ?? 0);
+    }
   }
 
   setTotalManualClicks(value: number): void {

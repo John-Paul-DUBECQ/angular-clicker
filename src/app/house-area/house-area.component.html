@@ -1,0 +1,22 @@
+<article class="house-card" [class.house-card--affordable]="canBuy">
+  <img class="house-card__image" [src]="house.imageUrl" [alt]="house.name" />
+  <div class="house-card__body">
+    <div class="house-card__heading">
+      <h2>{{ house.name }}</h2>
+      <span>Niv. {{ house.level }}</span>
+    </div>
+    <p>{{ house.description }}</p>
+    <p class="house-card__timer" *ngIf="house.unlocked && house.baitIntervalSeconds">
+      Prochain appât dans {{ house.nextBaitInSeconds | number:'1.0-0' }} / {{ house.baitIntervalSeconds | number:'1.0-0' }} s
+    </p>
+    <div class="house-card__costs">
+      <span *ngFor="let cost of displayedCosts" [class.house-card__cost--missing]="getResourceAmount(cost.resourceId) < cost.amount">
+        {{ getResourceName(cost.resourceId) }} {{ cost.amount }} ({{ getResourceAmount(cost.resourceId) }})
+      </span>
+    </div>
+    <div class="house-card__footer">
+      <span class="house-card__bonus">+{{ house.level * house.bonusPerLevel * 100 | number:'1.0-0' }} %</span>
+      <button type="button" [disabled]="!canBuy" (click)="buy()">{{ actionLabel }}</button>
+    </div>
+  </div>
+</article>

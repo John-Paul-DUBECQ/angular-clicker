@@ -16,6 +16,7 @@ import { PowerAreaComponent } from './power-area/power-area.component';
 import { FormatNumberPipe } from './pipes/format-number.pipe';
 import { LoreMessageComponent } from './lore-message/lore-message.component';
 import { EssenceShopItemAreaComponent } from './essence-shop-item-area/essence-shop-item-area.component';
+import { HouseAreaComponent } from './house-area/house-area.component';
 
 @NgModule({
   declarations: [
@@ -27,6 +28,7 @@ import { EssenceShopItemAreaComponent } from './essence-shop-item-area/essence-s
     PowerAreaComponent,
     LoreMessageComponent,
     EssenceShopItemAreaComponent,
+    HouseAreaComponent,
   ],
   imports: [
     BrowserModule,

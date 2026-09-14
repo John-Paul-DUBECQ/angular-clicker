@@ -6,6 +6,7 @@ import type { ActiveVesselView } from './models/game/vessel.service';
 import { ShopItem } from './models/shop-item';
 import { WorkerAuto } from './models/worker-auto-model';
 import { Power } from './models/powers/power.model';
+import { EssenceShopItem } from './models/essence-shop-item';
 import { formatNumberValue } from './pipes/format-number.pipe';
 import { MonsterRewardNotificationService } from './models/game/monster-reward-notification.service';
 import { VesselRewardNotificationService } from './models/game/vessel-reward-notification.service';
@@ -22,6 +23,7 @@ export class AppComponent implements OnInit, OnDestroy {
   title = 'Clicker Game';
   mobileScreen: 'game' | 'shop' | 'workers' | 'settings' = 'game';
   mobileMenuVisible = false;
+  workerView: 'workers' | 'essenceShop' = 'workers';
   private refreshInterval: ReturnType<typeof setInterval> | null = null;
   private vesselTickId: ReturnType<typeof setInterval> | null = null;
   /** Position left fluide (dérivée du temps) pour chaque vaisseau, mise à jour ~50 ms. */
@@ -52,6 +54,8 @@ export class AppComponent implements OnInit, OnDestroy {
   workers: WorkerAuto[] = [];
   workersAvailable: WorkerAuto[] = [];
   powersAvailable: Power[] = [];
+  private stableWorkersAvailable: WorkerAuto[] = [];
+  private stableEssenceShopItems: EssenceShopItem[] = [];
   importError = false;
   private rewardSub: Subscription | null = null;
   private vesselRewardSub: Subscription | null = null;
@@ -175,10 +179,34 @@ export class AppComponent implements OnInit, OnDestroy {
 
   private refreshGameState(): void {
     const state = this.gameState.getState();
-    this.game = state;
-    this.workers = state.workers;
-    this.workersAvailable = state.workersAvailable;
+    this.workers = this.reuseViewItems(this.workers, state.workers);
+    this.stableWorkersAvailable = this.reuseViewItems(this.stableWorkersAvailable, state.workersAvailable);
+    this.stableEssenceShopItems = this.reuseViewItems(this.stableEssenceShopItems, state.essenceShopItems ?? []);
+    this.game = {
+      ...state,
+      workers: this.workers,
+      workersAvailable: this.stableWorkersAvailable,
+      essenceShopItems: this.stableEssenceShopItems,
+    };
+    this.workersAvailable = this.stableWorkersAvailable;
     this.powersAvailable = state.powersAvailable ?? [];
+  }
+
+  /** Conserve les objets de vue tant que leurs valeurs affichées restent identiques. */
+  private reuseViewItems<T extends object>(previous: T[], next: T[]): T[] {
+    return next.map((item, index) => {
+      const previousItem = previous[index];
+      if (!previousItem) return item;
+      const previousKeys = Object.keys(previousItem) as (keyof T)[];
+      const nextKeys = Object.keys(item) as (keyof T)[];
+      if (
+        previousKeys.length === nextKeys.length &&
+        previousKeys.every((key) => previousItem[key] === item[key])
+      ) {
+        return previousItem;
+      }
+      return item;
+    });
   }
 
   /** Ferme le popup de lore actuel. */
@@ -273,6 +301,11 @@ export class AppComponent implements OnInit, OnDestroy {
     this.refreshGameState();
   }
 
+  onEssenceShopItemBought(): void {
+    console.log('[EssenceShop] onEssenceShopItemBought');
+    this.refreshGameState();
+  }
+
   onPowerBought(): void {
     this.refreshGameState();
   }
@@ -299,6 +332,10 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   trackByShopEntry(_i: number, entry: { item: ShopItem; index: number }): number {
+    return entry.index;
+  }
+
+  trackByEssenceShopEntry(_i: number, entry: { item: EssenceShopItem; index: number }): number {
     return entry.index;
   }
 
@@ -358,6 +395,11 @@ export class AppComponent implements OnInit, OnDestroy {
     return formatNumberValue(value, 2);
   }
 
+  formatPercent(multiplier: number): string {
+    const percent = Math.round((multiplier - 1) * 100);
+    return `${percent >= 0 ? '+' : ''}${percent}%`;
+  }
+
   getEffectRemainingPercent(powerId: string): number | null {
     const pct = this.game.powerEffectRemainingPercent?.[powerId];
     return pct != null ? pct : null;
@@ -382,6 +424,14 @@ export class AppComponent implements OnInit, OnDestroy {
     return (this.game.shopItems ?? [])
       .map((item, index) => ({ item, index }))
       .filter((entry) => entry.item.bought);
+  }
+
+  get essenceShopItemsWithIndex(): { item: EssenceShopItem; index: number }[] {
+    return (this.game.essenceShopItems ?? []).map((item, index) => ({ item, index }));
+  }
+
+  setWorkerView(view: 'workers' | 'essenceShop'): void {
+    this.workerView = view;
   }
 
   get selectedLore(): LorePayload | null {

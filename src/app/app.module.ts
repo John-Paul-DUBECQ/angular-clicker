@@ -15,6 +15,7 @@ import { SunAreaComponent } from './sun-area/sun-area.component';
 import { PowerAreaComponent } from './power-area/power-area.component';
 import { FormatNumberPipe } from './pipes/format-number.pipe';
 import { LoreMessageComponent } from './lore-message/lore-message.component';
+import { EssenceShopItemAreaComponent } from './essence-shop-item-area/essence-shop-item-area.component';
 
 @NgModule({
   declarations: [
@@ -25,6 +26,7 @@ import { LoreMessageComponent } from './lore-message/lore-message.component';
     SunAreaComponent,
     PowerAreaComponent,
     LoreMessageComponent,
+    EssenceShopItemAreaComponent,
   ],
   imports: [
     BrowserModule,

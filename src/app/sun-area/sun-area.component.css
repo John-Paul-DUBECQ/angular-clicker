@@ -1,6 +1,6 @@
 /* Distance du centre (réutilisable pour d’éventuelles planètes). */
 .sun-area-wrapper {
-  --orbit-distance: 250px;
+  --orbit-distance: 145px;
   --orbit-width: 220px;
   --orbit-height: 220px;
   position: absolute;

@@ -21,6 +21,7 @@ import { getVesselUpgradeStats, isVesselUnlocked, VESSEL_WORKER_INDEX } from '..
 import { getSmithLevel, getStreakStats, SMITH_WORKER_INDEX } from '../unlocks/streak';
 import { formatNumberValue } from '../../pipes/format-number.pipe';
 import { LorePayload } from '../lore/lore-notification.service';
+import { EssenceShopStateService } from './essence-shop-state.service';
 
 const TICKS_PER_SECOND = 10;
 
@@ -40,6 +41,8 @@ export interface SaveData {
   workersAvailable: WorkerAutoData[];
   workerIndicesOwned: number[];
   shopItemsBought: boolean[];
+  essenceShopItemsBought: boolean[];
+  essenceShopLevels?: number[];
   monsterEssence: number;
   totalManualClicks: number;
   loreHistory: LorePayload[];
@@ -57,6 +60,7 @@ export class GameStateService {
     private resources: ResourcesService,
     private workerState: WorkerStateService,
     private shopState: ShopStateService,
+    private essenceShopState: EssenceShopStateService,
     private powerState: PowerStateService,
     private streakState: StreakStateService,
     private monsterState: MonsterStateService,
@@ -105,6 +109,7 @@ export class GameStateService {
       this.workerState.getCurrentClickValue(this.getShopMult) * damageMult;
     const getWorkerLevel = (i: number) => this.workerState.getWorkerLevel(i);
     const streakView = this.streakState.getView(workers, workersAvailable);
+    const architectLevel = this.workerState.getWorkerLevel(7) ?? 0;
 
     const damageBuffActive = this.powerState.isDamageBuffActive();
     const damageBuffEnd = this.powerState.getDamageBuffEndTime();
@@ -190,8 +195,12 @@ export class GameStateService {
         : undefined,
       monsterUnlocked: this.monsterState.isMonsterUnlocked(workers, workersAvailable),
       currentMonster: this.monsterState.getCurrentMonsterView(workers, workersAvailable),
+      queuedMonsterCount: this.monsterState.getQueuedMonsterCount(),
       encounterMeterPercent: this.monsterState.getEncounterMeterPercent(),
       monsterEssence: this.resources.getMonsterEssence(),
+      essenceShopUnlocked: architectLevel >= 1,
+      essenceShopItems: this.essenceShopState.getItemsView(),
+      essenceShopStats: this.essenceShopState.getStats(),
       vesselUnlocked: isVesselUnlocked(workers, workersAvailable),
       activeVessels: this.vesselState.getActiveVesselsView(),
       acteActual: 1,
@@ -340,6 +349,14 @@ export class GameStateService {
     this.shopState.buyShopItem(shopItemIndex);
   }
 
+  canBuyEssenceShopItem(itemIndex: number): boolean {
+    return this.essenceShopState.canBuyItem(itemIndex);
+  }
+
+  buyEssenceShopItem(itemIndex: number): boolean {
+    return this.essenceShopState.buy(itemIndex);
+  }
+
   getCanBuyPower(price: number): boolean {
     return this.powerState.getCanBuyPower(price);
   }
@@ -402,6 +419,8 @@ export class GameStateService {
         workersAvailable: this.workerState.getWorkersAvailable(),
         workerIndicesOwned: this.workerState.getWorkers().map(w => this.workerState.getWorkersAvailable().indexOf(w)),
         shopItemsBought: this.shopState.getShopItems().map(item => item.bought),
+        essenceShopItemsBought: this.essenceShopState.getItems().map(item => item.bought),
+        essenceShopLevels: this.essenceShopState.getLevels(),
         monsterEssence: this.resources.getMonsterEssence(),
         totalManualClicks: this.resources.getTotalManualClicks(),        loreHistory: this.loreHistory,      };
       const dataStr = JSON.stringify(saveData);
@@ -423,6 +442,11 @@ export class GameStateService {
       this.workerState.setWorkersAvailable(saveData.workersAvailable);
       this.workerState.setWorkers(saveData.workerIndicesOwned.map(index => saveData.workersAvailable[index]).filter(w => w != null));
       this.shopState.setShopItemsBought(saveData.shopItemsBought);
+      if (saveData.essenceShopLevels) {
+        this.essenceShopState.setLevels(saveData.essenceShopLevels);
+      } else {
+        this.essenceShopState.setBought(saveData.essenceShopItemsBought || []);
+      }
       this.resources.setMonsterEssence(saveData.monsterEssence);
       this.resources.setTotalManualClicks(saveData.totalManualClicks);
       this.loreHistory = saveData.loreHistory || [];
@@ -439,6 +463,8 @@ export class GameStateService {
       workersAvailable: this.workerState.getWorkersAvailable(),
       workerIndicesOwned: this.workerState.getWorkers().map(w => this.workerState.getWorkersAvailable().indexOf(w)),
       shopItemsBought: this.shopState.getShopItems().map(item => item.bought),
+      essenceShopItemsBought: this.essenceShopState.getItems().map(item => item.bought),
+      essenceShopLevels: this.essenceShopState.getLevels(),
       monsterEssence: this.resources.getMonsterEssence(),
       totalManualClicks: this.resources.getTotalManualClicks(),
       loreHistory: this.loreHistory,
@@ -475,6 +501,11 @@ export class GameStateService {
       this.workerState.setWorkersAvailable(saveData.workersAvailable);
       this.workerState.setWorkers(saveData.workerIndicesOwned.map(index => saveData.workersAvailable[index]).filter(w => w != null));
       this.shopState.setShopItemsBought(saveData.shopItemsBought);
+      if (saveData.essenceShopLevels) {
+        this.essenceShopState.setLevels(saveData.essenceShopLevels);
+      } else {
+        this.essenceShopState.setBought(saveData.essenceShopItemsBought || []);
+      }
       this.resources.setMonsterEssence(saveData.monsterEssence);
       this.resources.setTotalManualClicks(saveData.totalManualClicks);
       this.loreHistory = saveData.loreHistory || [];

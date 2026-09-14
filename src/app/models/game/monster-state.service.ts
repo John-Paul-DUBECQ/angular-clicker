@@ -6,6 +6,7 @@ import { isMonsterUnlocked, getLevelRequiredForMonster, MONSTER_WORKER_INDEX } f
 import { ResourcesService } from './resources.service';
 import { WorkerStateService } from './worker-state.service';
 import { MonsterRewardNotificationService } from './monster-reward-notification.service';
+import { EssenceShopStateService } from './essence-shop-state.service';
 
 /** Référence PV : baseProduction * ce multiplicateur (aléatoire autour). */
 const MONSTER_HP_BASE_SECONDS = 12;
@@ -59,11 +60,14 @@ export class MonsterStateService {
   private isBoss = false;
   /** Jauge de rencontre (0–100). Quand elle atteint 100 %, un monstre spawn. */
   private encounterMeter = 0;
+  /** Nombre de monstres demandés alors qu'un combat est déjà en cours. */
+  private queuedMonsterCount = 0;
 
   constructor(
     private resources: ResourcesService,
     private workerState: WorkerStateService,
-    private rewardNotify: MonsterRewardNotificationService
+    private rewardNotify: MonsterRewardNotificationService,
+    private essenceShopState: EssenceShopStateService
   ) {}
 
   /** True si la zone monstre est débloquée (Alchimiste niveau requis). */
@@ -83,16 +87,18 @@ export class MonsterStateService {
     this.isBoss = Math.random() < 1 / BOSS_CHANCE;
     const baseProduction = this.workerState.getBaseProductionPerSecond();
 
-    const hpMult = this.isBoss
+    const shopStats = this.essenceShopState.getStats();
+    const hpMult = (this.isBoss
       ? randomBetween(BOSS_HP_MULT_MIN, BOSS_HP_MULT_MAX)
-      : randomBetween(MONSTER_HP_MULT_MIN, MONSTER_HP_MULT_MAX);
+      : randomBetween(MONSTER_HP_MULT_MIN, MONSTER_HP_MULT_MAX)) * shopStats.hp;
     const hpBase = baseProduction * MONSTER_HP_BASE_SECONDS * hpMult * lootMult;
     this.maxHp = Math.max(1, Math.floor(hpBase));
     this.currentHp = this.maxHp;
 
-    this.timeLimitSeconds = this.isBoss
+    const baseTimeLimit = this.isBoss
       ? Math.floor(randomBetween(BOSS_TIME_MIN_SECONDS, BOSS_TIME_MAX_SECONDS))
       : Math.floor(randomBetween(MONSTER_TIME_LIMIT_MIN_SECONDS, MONSTER_TIME_LIMIT_MAX_SECONDS));
+    this.timeLimitSeconds = Math.max(1, Math.floor(baseTimeLimit * shopStats.time));
     this.timeLimitMs = this.timeLimitSeconds * 1000;
     this.currentMonsterId = monster.id;
     this.spawnTime = Date.now();
@@ -125,7 +131,7 @@ export class MonsterStateService {
       const remainingSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
       this.onMonsterKill(remainingSeconds);
       this.currentMonsterId = null;
-      this.encounterMeter = 0;
+      if (!this.spawnQueuedMonster(workers, workersAvailable)) this.encounterMeter = 0;
       return true;
     }
     return false;
@@ -150,7 +156,9 @@ export class MonsterStateService {
     this.resources.addClicks(totalGold);
 
     const essenceBase = MONSTER_ESSENCE_BASE * Math.min(encounterDifficulty / 2, 2) * lootMult;
-    const essenceReward = Math.max(0, Math.floor(essenceBase * difficultyTime));
+    const essenceReward = Math.max(0, Math.floor(
+      essenceBase * difficultyTime * this.essenceShopState.getEssenceMultiplier()
+    ));
     this.resources.addMonsterEssence(essenceReward);
 
     this.rewardNotify.notifyReward(totalGold, essenceReward);
@@ -162,21 +170,26 @@ export class MonsterStateService {
       const remaining = this.spawnTime + this.timeLimitMs - Date.now();
       if (remaining <= 0) {
         this.currentMonsterId = null;
-        this.encounterMeter = 0;
+        if (!this.spawnQueuedMonster(workers, workersAvailable)) this.encounterMeter = 0;
       }
       return;
     }
     if (!this.isMonsterUnlocked(workers, workersAvailable)) return;
-    this.encounterMeter = Math.min(100, this.encounterMeter + 100 / (ENCOUNTER_FILL_SECONDS * TICKS_PER_SECOND));
+    const spawnRate = this.essenceShopState.getSpawnRateMultiplier();
+    this.encounterMeter = Math.min(100, this.encounterMeter + (100 * spawnRate) / (ENCOUNTER_FILL_SECONDS * TICKS_PER_SECOND));
     if (this.encounterMeter >= 100) {
       this.encounterMeter = 0;
       this.spawnMonsterInternal(workers, workersAvailable);
     }
   }
 
-  /** Force le spawn du prochain mob (tue l’actuel sans récompense et en fait apparaître un nouveau). */
-  forceSpawnNext(workers: WorkerAutoData[], workersAvailable: WorkerAutoData[]): void {
-    this.currentMonsterId = null;
+  /** Met un mob en attente si un combat est en cours, sinon le fait apparaître immédiatement. */
+  forceSpawnNext(workers: WorkerAutoData[], workersAvailable: WorkerAutoData[], seconds = 0): void {
+    if (this.currentMonsterId != null) {
+      this.queuedMonsterCount += 1;
+      this.addTimeToCurrentMonster(seconds);
+      return;
+    }
     this.encounterMeter = 100;
     this.tick(workers, workersAvailable);
   }
@@ -212,6 +225,21 @@ export class MonsterStateService {
 
   hasCurrentMonster(): boolean {
     return this.currentMonsterId != null;
+  }
+
+  getQueuedMonsterCount(): number {
+    return this.queuedMonsterCount;
+  }
+
+  private spawnQueuedMonster(
+    workers: WorkerAutoData[],
+    workersAvailable: WorkerAutoData[]
+  ): boolean {
+    if (this.queuedMonsterCount <= 0 || !this.isMonsterUnlocked(workers, workersAvailable)) return false;
+    this.spawnMonsterInternal(workers, workersAvailable);
+    if (this.currentMonsterId == null) return false;
+    this.queuedMonsterCount -= 1;
+    return true;
   }
 }
 

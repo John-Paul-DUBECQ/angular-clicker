@@ -4,6 +4,7 @@ import { Power } from "../powers/power.model";
 import type { CurrentMonsterView } from "./monster-state.service";
 import type { ActiveVesselView } from "./vessel.service";
 import { LorePayload } from "../lore/lore-notification.service";
+import { EssenceShopItem } from "../essence-shop-item";
 
 /**
  * Vue agrégée du jeu pour l'UI. Les données réelles sont dans Resources, WorkerState, ShopState, PowerState.
@@ -48,10 +49,16 @@ export class Game {
     monsterUnlocked?: boolean;
     /** Monstre actuel à la place du clicker (PV, temps restant). */
     currentMonster?: CurrentMonsterView | null;
+    /** Nombre de monstres en attente derrière le monstre actuel. */
+    queuedMonsterCount?: number;
     /** Jauge rencontre 0–100 : plus c’est haut, plus le cercle s’assombrit (prochain mob proche). */
     encounterMeterPercent?: number;
     /** Essence / âmes (récompense mob, plus si tué à la dernière seconde). */
     monsterEssence?: number;
+    /** Shop d'essences disponible après le déblocage de l'Architecte. */
+    essenceShopUnlocked?: boolean;
+    essenceShopItems?: EssenceShopItem[];
+    essenceShopStats?: { spawnRate: number; essence: number; hp: number; time: number };
     /** Vaisseaux débloqués (Géomètre). */
     vesselUnlocked?: boolean;
     /** Vaisseaux en cours de traversée (gauche → droite). */

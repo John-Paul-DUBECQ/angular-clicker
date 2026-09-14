@@ -1,0 +1,45 @@
+<article class="essence-shop-item" [class.essence-shop-item--bought]="item.bought">
+	<div
+		#itemRef
+		class="essence-shop-item__icon"
+		[class.essence-shop-item__icon--can-buy]="canBuy"
+		(click)="buyItem()"
+		(mouseenter)="onMouseEnter()"
+		(mouseleave)="onMouseLeave()"
+	>
+		<img *ngIf="item.imageUrl" [src]="item.imageUrl" [alt]="item.name" />
+		<span *ngIf="!item.imageUrl">{{ item.name.charAt(0) }}</span>
+	</div>
+
+	<div class="essence-shop-item__content">
+		<div class="essence-shop-item__heading">
+			<strong>{{ item.name }}</strong>
+			<span>Niv. {{ item.level }}</span>
+		</div>
+		<p>{{ item.description }}</p>
+		<small *ngFor="let effect of effects; let last = last">
+			{{ effect.label }} {{ effect.percent }}<span *ngIf="!last">, </span>
+		</small>
+	</div>
+
+	<button
+		type="button"
+		class="essence-shop-item__buy"
+		[class.essence-shop-item__buy--disabled]="!canBuy"
+		[disabled]="!canBuy"
+		(click)="buyItem()">
+		{{ item.price | formatNumber:0 }} essence
+	</button>
+</article>
+
+<div
+	*ngIf="popupVisible && popupStyle"
+	class="essence-shop-item-popup essence-shop-item-popup--fixed"
+	[ngStyle]="popupStyle">
+	<div class="essence-shop-item-popup__header">
+		<strong>{{ item.name }}</strong>
+		<span>Niv. {{ item.level }}</span>
+	</div>
+	<p>{{ item.description }}</p>
+	<small>{{ item.bought ? 'Effet actif.' : 'Clique pour acheter.' }}</small>
+</div>

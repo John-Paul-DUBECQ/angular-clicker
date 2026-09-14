@@ -62,9 +62,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  padding: 0.35rem 0.75rem;
   background: #1a1a1a;
-  border-bottom: 1px solid #444;
 }
 
 .monster-gauge__left {
@@ -202,6 +200,7 @@
   align-items: center;
   justify-content: flex-start;
   min-height: 0;
+  overflow: hidden;
 }
 
 .column-center__main {
@@ -272,6 +271,118 @@
 
 .resources-bar__settings-btn:active {
   transform: scale(0.94);
+}
+
+.worker-section-tabs {
+  display: flex;
+  background: #151515;
+  border-bottom: 1px solid #444;
+}
+
+.worker-section-tabs button {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 7px;
+  border: 1px solid #464646;
+  border-bottom: 0;
+  background: #242424;
+  color: #aaa;
+  cursor: pointer;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.worker-section-tabs button:hover {
+  color: #fff;
+  background: #303030;
+}
+
+.worker-section-tabs__item--active {
+  border-color: #80652a !important;
+  background: #30291b !important;
+  color: #fff3b0 !important;
+}
+
+.essence-shop-panel {
+  position: relative;
+  z-index: 1;
+  padding: 12px;
+  background: #211d16;
+  border-bottom: 1px solid #80652a;
+}
+
+.essence-shop-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  color: #e8c547;
+}
+
+.essence-shop-panel__header h2,
+.essence-shop-panel__header p {
+  margin: 0;
+}
+
+.essence-shop-panel__header h2 {
+  font-size: 1rem;
+}
+
+.essence-shop-panel__header p {
+  margin-top: 3px;
+  color: #bdb6a4;
+  font-size: 0.72rem;
+}
+
+.essence-shop-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  margin: 10px 0;
+}
+
+.essence-shop-summary span {
+  padding: 6px 4px;
+  background: #30291b;
+  color: #bdb6a4;
+  font-size: 0.68rem;
+  text-align: center;
+}
+
+.essence-shop-summary b {
+  display: block;
+  margin-top: 2px;
+  color: #fff3b0;
+  font-size: 0.78rem;
+}
+
+.essence-shop-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.essence-shop-list .essence-shop-item {
+  padding: 8px;
+  gap: 8px;
+}
+
+.essence-shop-list .essence-shop-item__icon {
+  width: 34px;
+  height: 34px;
+  flex-basis: 34px;
+  font-size: 1rem;
+}
+
+.essence-shop-list .essence-shop-item p {
+  font-size: 0.7rem;
+}
+
+.essence-shop-list .essence-shop-item button {
+  min-width: 72px;
+  padding: 7px 6px;
+  font-size: 0.72rem;
 }
 
 .workers-title {
@@ -945,6 +1056,7 @@
     flex-shrink: 0;
     width: 100%;
     height: 48px;
+    overflow: hidden;
   }
 
   .mobile-mana {
@@ -984,6 +1096,31 @@
   .mobile-items-list,
   .mobile-workers-list {
     flex-direction: column;
+  }
+
+  .worker-section-tabs {
+    margin: -4px 0 14px;
+    gap: 6px;
+    overflow-x: auto;
+  }
+
+  .worker-section-tabs button {
+    flex: 0 0 auto;
+    padding: 9px 12px;
+    border: 1px solid #4a4a4a;
+    background: #1d1d1d;
+    color: #aaa;
+    font-size: 0.8rem;
+  }
+
+  .worker-section-tabs__item--active {
+    border-color: #e8c547 !important;
+    color: #fff3b0 !important;
+    background: #3b321b !important;
+  }
+
+  .essence-shop-panel {
+    margin-bottom: 14px;
   }
 
   .mobile-settings-stats {

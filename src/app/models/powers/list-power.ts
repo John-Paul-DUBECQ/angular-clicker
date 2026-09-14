@@ -23,13 +23,13 @@ export const listPower: Power[] = [
   },
   {
     id: 'spawn-mob',
-    name: 'Spawn mob',
+    name: 'Invocation',
     description: 'Fait apparaître le prochain monstre immédiatement.',
     imageUrl: 'assets/img/swords/Sword1.png',
     doesAppearInGame: false,
     bought: false,
     manaCost: 100,
-    cooldownSeconds: 60,
+    cooldownSeconds: 600,
   },
   {
     id: 'monster-time',

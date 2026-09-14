@@ -1,4 +1,45 @@
 <div class="app-wrapper">
+  <ng-template #workerSectionMenu>
+    <nav class="worker-section-tabs" *ngIf="game.essenceShopUnlocked" aria-label="Section des personnages">
+      <button
+        type="button"
+        [class.worker-section-tabs__item--active]="workerView === 'workers'"
+        (click)="setWorkerView('workers')">
+        Personnages
+      </button>
+      <button
+        type="button"
+        [class.worker-section-tabs__item--active]="workerView === 'essenceShop'"
+        (click)="setWorkerView('essenceShop')">
+        Shop d’essences
+      </button>
+    </nav>
+    <section class="essence-shop-panel" *ngIf="game.essenceShopUnlocked && workerView === 'essenceShop'">
+      <div class="essence-shop-panel__header">
+        <div>
+          <h2>Shop d’essences</h2>
+          <p>Modifie les monstres, sans limite de niveau.</p>
+        </div>
+        <strong>{{ formatResourceValue(game.monsterEssence != null ? game.monsterEssence : 0) }}</strong>
+      </div>
+      <div class="essence-shop-summary">
+        <span>Apparition <b>{{ formatPercent(game.essenceShopStats?.spawnRate || 1) }}</b></span>
+        <span>PV <b>{{ formatPercent(game.essenceShopStats?.hp || 1) }}</b></span>
+        <span>Temps <b>{{ formatPercent(game.essenceShopStats?.time || 1) }}</b></span>
+        <span>Essence <b>{{ formatPercent(game.essenceShopStats?.essence || 1) }}</b></span>
+      </div>
+      <div class="essence-shop-list">
+        <ng-container *ngFor="let entry of essenceShopItemsWithIndex; trackBy: trackByEssenceShopEntry">
+          <app-essence-shop-item-area
+            [item]="entry.item"
+            [itemIndex]="entry.index"
+            (bought)="onEssenceShopItemBought()">
+          </app-essence-shop-item-area>
+        </ng-container>
+      </div>
+    </section>
+  </ng-template>
+
   <div class="app-layout">
     <div class="column column-left">
       <div class="shop-items-list">
@@ -60,22 +101,22 @@
             [style.width.%]="streakBarPercent">
           </div>
         </div>
-      </div>
-      <div class="monster-gauge" *ngIf="game.monsterUnlocked">
-        <div class="monster-gauge__left">
-          <span class="monster-gauge__label">{{ game.currentMonster ? 'Combat !' : 'Prochain mob' }}</span>
-        </div>
-        <div
-          class="monster-gauge__darkness-circle"
-          [style.--encounter-pct]="game.encounterMeterPercent != null ? game.encounterMeterPercent : 0"
-          title="Plus c'est sombre, plus le monstre est proche">
+        <div class="monster-gauge" *ngIf="game.monsterUnlocked">
+          <div class="monster-gauge__left">
+            <span class="monster-gauge__label">{{ game.currentMonster ? 'Combat !' : 'Prochain mob :' }}</span>
+          </div>
+          <div
+            class="monster-gauge__darkness-circle"
+            [style.--encounter-pct]="game.encounterMeterPercent != null ? game.encounterMeterPercent : 0"
+            title="Plus c'est sombre, plus le monstre est proche">
+          </div>
         </div>
       </div>
       <div class="column-center__main">
         <div class="monster-title" *ngIf="game.currentMonster">
           <p class="monster-title__name">
             <span class="monster-title__boss" *ngIf="game.currentMonster.isBoss">DANGER BOSS</span>
-            Nom du mob : {{ game.currentMonster.name }}
+            Nom du mob : {{ game.currentMonster.name }}<span *ngIf="game.queuedMonsterCount && game.queuedMonsterCount > 0"> + {{ game.queuedMonsterCount }}</span>
           </p>
           <p class="monster-title__hp">{{ formatMonsterHp(game.currentMonster.currentHp) }} HP</p>
         </div>
@@ -137,7 +178,8 @@
           </button>
         </div>
       </div>
-      <div class="workers-list">
+      <ng-container *ngTemplateOutlet="workerSectionMenu"></ng-container>
+      <div class="workers-list" *ngIf="workerView === 'workers' || !game.essenceShopUnlocked">
         <ng-container class="worker-area" *ngFor="let worker of workersAvailable; let i = index; trackBy: trackByIndex" >
           <app-worker-area
             *ngIf="worker.doesAppearInGame"
@@ -233,7 +275,8 @@
 
       <section class="mobile-screen" *ngIf="mobileScreen === 'workers'">
         <h1 class="mobile-screen__title">Personnages</h1>
-        <div class="mobile-workers-list">
+        <ng-container *ngTemplateOutlet="workerSectionMenu"></ng-container>
+        <div class="mobile-workers-list" *ngIf="workerView === 'workers'">
           <ng-container *ngFor="let worker of workersAvailable; let i = index; trackBy: trackByIndex">
             <app-worker-area *ngIf="worker.doesAppearInGame" [workerSelected]="worker" [workerIndex]="i" [workersAvailable]="workersAvailable" [clicks]="game.clicks" (upgraded)="onWorkerUpgraded()"></app-worker-area>
           </ng-container>

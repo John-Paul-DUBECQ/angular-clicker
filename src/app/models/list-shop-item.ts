@@ -34,7 +34,6 @@ export const listShopItem: Array<ShopItem> = [
     value: 1.5,
     workerIndex: 0,
     unlockMethod: requireAll(requireBought('shop-sword-training'), requireWorkerLevel(0, 25)),
-    requiredWorkerLevelForUnlock: { workerIndex: 0, level: 25 }, 
    },{ 
     id: 'shop-sword-calcaire',
     name: 'Epée en calcaire',
@@ -46,7 +45,6 @@ export const listShopItem: Array<ShopItem> = [
     value: 1.2,
     workerIndex: 0,
     unlockMethod: requireAll(requireBought('shop-sword-tempered'), requireWorkerLevel(0, 50)),
-    requiredWorkerLevelForUnlock: { workerIndex: 0, level: 50 },
   },{ 
     id: 'shop-sword-frangipane',
     name: 'Epée en frangipane',
@@ -58,7 +56,6 @@ export const listShopItem: Array<ShopItem> = [
     value: 1.5,
     workerIndex: 0,
     unlockMethod: requireAll(requireBought('shop-sword-training'), requireWorkerLevel(1, 10)),
-    requiredWorkerLevelForUnlock: { workerIndex: 1, level: 10 },
   },
   {
     name: 'FourcheLangue',
@@ -148,7 +145,6 @@ export const listShopItem: Array<ShopItem> = [
     bought: false,
     value: 1,
     unlockMethod: requireWorkerLevel(5, 1),
-    requiredWorkerLevelForUnlock: { workerIndex: 5, level: 1 },
     powerId: 'power',
     powerManaFactor: 0.9,
   },
@@ -162,7 +158,6 @@ export const listShopItem: Array<ShopItem> = [
     bought: false,
     value: 1,
     unlockMethod: requireWorkerLevel(5, 5),
-    requiredWorkerLevelForUnlock: { workerIndex: 5, level: 5 },
     manaMaxBonus: 300,
   },
   {
@@ -175,7 +170,6 @@ export const listShopItem: Array<ShopItem> = [
     bought: false,
     value: 1,
     unlockMethod: requireWorkerLevel(5, 10),
-    requiredWorkerLevelForUnlock: { workerIndex: 5, level: 10 },
     manaRegenBonus: 0.05,
   },
   {
@@ -188,7 +182,6 @@ export const listShopItem: Array<ShopItem> = [
     bought: false,
     value: 1,
     unlockMethod: requireWorkerLevel(2, 1),
-    requiredWorkerLevelForUnlock: { workerIndex: 2, level: 1 },
     unlockUpgrade: { unlockId: 'critical-hit', type: 'chance', value: 0.01 },
   },
   {
@@ -201,7 +194,6 @@ export const listShopItem: Array<ShopItem> = [
     bought: false,
     value: 2,
     unlockMethod: requireAll(requireBought('shop-critical-chance'), requireWorkerLevel(2, 30)),
-    requiredWorkerLevelForUnlock: { workerIndex: 2, level: 30 },
     unlockUpgrade: { unlockId: 'critical-hit', type: 'chance', value: 0.02 },
   },
 ];

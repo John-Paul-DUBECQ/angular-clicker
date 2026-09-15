@@ -51,4 +51,24 @@ export const RESOURCE_DEFINITIONS: GameResource[] = [
     name: 'Encre de Gribouy',
     description: 'Une encre épaisse aux propriétés étranges.',
   },
+  {
+    id: 'sea-food',
+    name: 'Fruit de mer',
+    description: '',
+  },
+  {
+    id: 'mermaid-tail',
+    name: 'Queue de Sirène',
+    description: '',
+  },
+  {
+    id: 'shell',
+    name: 'Coquille',
+    description: '',
+  },
+  {
+    id: 'bulb',
+    name: 'Ampoule',
+    description: '',
+  }
 ];

@@ -1,20 +1,10 @@
 import { WorkerAutoData } from "../worker-auto-model";
 import { WorkerUnlock } from "./worker-unlock.model";
+import { UnlockContext, UnlockMethod } from './unlock-method';
 
 export const MONSTER_WORKER_INDEX = 6;
 
 export const MONSTER_LEVEL_REQUIRED = 1;
-
-/** Niveau du worker (Alchimiste) à partir duquel chaque monstre peut apparaître. */
-export const MONSTER_LEVELS_BY_MONSTER_ID: Record<string, number> = {
-  monster1: 1,
-  monster2: 5,
-  monster3: 10,
-};
-
-export function getLevelRequiredForMonster(monsterId: string): number | undefined {
-  return MONSTER_LEVELS_BY_MONSTER_ID[monsterId];
-}
 
 export interface MonsterUnlockDefinition extends WorkerUnlock {
   /** Bonus dégâts vs monstres (pour plus tard). */
@@ -28,6 +18,7 @@ export const monsterUnlockDefinition: MonsterUnlockDefinition = {
   description: 'Un monstre apparaît à la place du clicker. Tue-le dans le temps imparti.',
   imageUrl: 'assets/img/shadocks/shadock1.png',
   levelRequired: MONSTER_LEVEL_REQUIRED,
+  unlockMethod: UnlockMethod.workerLevel(MONSTER_WORKER_INDEX, MONSTER_LEVEL_REQUIRED),
 };
 
 export const MONSTER_UPGRADES: MonsterUnlockDefinition[] = [
@@ -41,5 +32,9 @@ export function isMonsterUnlocked(
   if (MONSTER_WORKER_INDEX < 0 || MONSTER_WORKER_INDEX >= workersAvailable.length) return false;
   const w = workersAvailable[MONSTER_WORKER_INDEX];
   if (!w || !workers.includes(w)) return false;
-  return w.level >= MONSTER_LEVEL_REQUIRED;
+  const context: UnlockContext = {
+    clicks: 0,
+    getWorkerLevel: (workerIndex) => workersAvailable[workerIndex]?.level ?? null,
+  };
+  return monsterUnlockDefinition.unlockMethod?.isUnlocked(context) ?? false;
 }

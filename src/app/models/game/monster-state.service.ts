@@ -2,7 +2,8 @@ import { Injectable } from '@angular/core';
 import { WorkerAutoData } from '../worker-auto-model';
 import { Monster } from '../monsters/monster.model';
 import { listMonster } from '../monsters/list-monster';
-import { isMonsterUnlocked, getLevelRequiredForMonster, MONSTER_WORKER_INDEX } from '../unlocks/monster-unlock';
+import { isMonsterUnlocked, MONSTER_WORKER_INDEX } from '../unlocks/monster-unlock';
+import { UnlockContext } from '../unlocks/unlock-method';
 import { ResourcesService } from './resources.service';
 import { WorkerStateService } from './worker-state.service';
 import { MonsterRewardNotificationService } from './monster-reward-notification.service';
@@ -105,11 +106,14 @@ export class MonsterStateService {
     this.spawnTime = Date.now();
   }
 
-  /** Tire un monstre parmi ceux débloqués pour ce niveau, pondéré par probabilityToSpawn (ex. 100 vs 1 → ~100 Mosh, ~1 Super-Mosh sur 101 spawns). */
+  /** Tire un monstre parmi ceux débloqués, pondéré par probabilityToSpawn. */
   private pickMonsterForLevel(workerLevel: number): Monster | null {
+    const context: UnlockContext = {
+      clicks: 0,
+      getWorkerLevel: (workerIndex) => workerIndex === MONSTER_WORKER_INDEX ? workerLevel : null,
+    };
     const eligible = listMonster.filter((m) => {
-      const required = getLevelRequiredForMonster(m.id);
-      return required != null && workerLevel >= required;
+      return m.unlockMethod?.isUnlocked(context) ?? false;
     });
     if (eligible.length === 0) return null;
     if (eligible.length === 1) return eligible[0];

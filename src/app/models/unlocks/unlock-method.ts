@@ -11,6 +11,11 @@ export interface UnlockContext {
 
 export type UnlockPredicate = (context: UnlockContext) => boolean;
 
+export interface WorkerLevelRequirement {
+  workerIndex: number;
+  level: number;
+}
+
 /**
  * Règle de déblocage composable.
  * Les fabriques statiques couvrent les règles connues et `all`/`any` permettent
@@ -19,7 +24,8 @@ export type UnlockPredicate = (context: UnlockContext) => boolean;
 export class UnlockMethod {
   private constructor(
     private readonly predicate: UnlockPredicate,
-    readonly description?: string
+    readonly description?: string,
+    private readonly workerLevelRequirements: WorkerLevelRequirement[] = []
   ) {}
 
   isUnlocked(context: UnlockContext): boolean {
@@ -34,14 +40,26 @@ export class UnlockMethod {
     return UnlockMethod.any(this, ...methods);
   }
 
-  static custom(predicate: UnlockPredicate, description?: string): UnlockMethod {
-    return new UnlockMethod(predicate, description);
+  getWorkerLevelRequirement(workerIndex: number): number | undefined {
+    const levels = this.workerLevelRequirements
+      .filter((requirement) => requirement.workerIndex === workerIndex)
+      .map((requirement) => requirement.level);
+    return levels.length > 0 ? Math.max(...levels) : undefined;
+  }
+
+  static custom(
+    predicate: UnlockPredicate,
+    description?: string,
+    workerLevelRequirements: WorkerLevelRequirement[] = []
+  ): UnlockMethod {
+    return new UnlockMethod(predicate, description, workerLevelRequirements);
   }
 
   static workerLevel(workerIndex: number, level: number): UnlockMethod {
     return UnlockMethod.custom(
       (context) => (context.getWorkerLevel(workerIndex) ?? 0) >= level,
-      `Niveau ${level} du worker ${workerIndex}`
+      `Niveau ${level} du worker ${workerIndex}`,
+      [{ workerIndex, level }]
     );
   }
 
@@ -91,14 +109,22 @@ export class UnlockMethod {
   static all(...methods: UnlockMethod[]): UnlockMethod {
     return UnlockMethod.custom(
       (context) => methods.every((method) => method.isUnlocked(context)),
-      methods.map((method) => method.description).filter(Boolean).join(' et ')
+      methods.map((method) => method.description).filter(Boolean).join(' et '),
+      methods.reduce(
+        (requirements, method) => requirements.concat(method.workerLevelRequirements),
+        [] as WorkerLevelRequirement[]
+      )
     );
   }
 
   static any(...methods: UnlockMethod[]): UnlockMethod {
     return UnlockMethod.custom(
       (context) => methods.some((method) => method.isUnlocked(context)),
-      methods.map((method) => method.description).filter(Boolean).join(' ou ')
+      methods.map((method) => method.description).filter(Boolean).join(' ou '),
+      methods.reduce(
+        (requirements, method) => requirements.concat(method.workerLevelRequirements),
+        [] as WorkerLevelRequirement[]
+      )
     );
   }
 }

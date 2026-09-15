@@ -34,8 +34,6 @@ export interface ShopItem {
   * pour construire un UnlockMethod.
    */
   unlockMethod?: UnlockMethod;
-  /** Alias temporaire pour les modèles existants ; préférer unlockMethod. */
-  unlockCondition?: ShopUnlockCondition;
   /** Amélioration de pouvoir : réduit le coût en mana (ex: 0.9 = -10%). Un seul type d'effet power pour l'instant. */
   powerId?: string;
   powerManaFactor?: number;
@@ -45,11 +43,6 @@ export interface ShopItem {
   manaRegenBonus?: number;
   /** Amélioration d'un unlock (ex: coup critique, streak). */
   unlockUpgrade?: { unlockId: string; type: string; value: number };
-  /**
-   * Si défini, cet item apparaît dans "Prochains paliers" pour ce worker à ce niveau.
-  * Doit correspondre à la condition requireWorkerLevel utilisée dans unlockMethod.
-   */
-  requiredWorkerLevelForUnlock?: { workerIndex: number; level: number };
 }
 
 /** Règle de base : l'item est visible à partir de la moitié du prix. */
@@ -66,8 +59,7 @@ export function getDoesAppearInShop(item: ShopItem, ctx: ShopUnlockContext): boo
     return true;
   }
   if (ctx.clicks < Math.floor(item.price * BASE_VISIBILITY_CLICKS_RATIO)) return false;
-  const unlockMethod = item.unlockMethod ?? item.unlockCondition;
-  if (unlockMethod != null && !unlockMethod.isUnlocked(ctx)) return false;
+  if (item.unlockMethod != null && !item.unlockMethod.isUnlocked(ctx)) return false;
   item.doesAppearInGame = true;
   return true;
 }
@@ -106,8 +98,7 @@ export function requireAny(...conditions: ShopUnlockCondition[]): ShopUnlockCond
 }
 
 /**
- * Paliers "déblocage d'item shop" pour un worker : items dont requiredWorkerLevelForUnlock
- * correspond à ce worker et niveau > currentLevel. Pour affichage dans "Prochains paliers".
+ * Paliers "déblocage d'item shop" dérivés de la condition unlockMethod.
  */
 export function getUpcomingShopItemUnlockTiers(
   workerIndex: number,
@@ -117,12 +108,11 @@ export function getUpcomingShopItemUnlockTiers(
   return items
     .filter(
       (item) =>
-        item.requiredWorkerLevelForUnlock != null &&
-        item.requiredWorkerLevelForUnlock.workerIndex === workerIndex &&
-        item.requiredWorkerLevelForUnlock.level > currentLevel
+        item.unlockMethod?.getWorkerLevelRequirement(workerIndex) != null &&
+        item.unlockMethod.getWorkerLevelRequirement(workerIndex)! > currentLevel
     )
     .map((item) => {
-      const { level } = item.requiredWorkerLevelForUnlock!;
+      const level = item.unlockMethod!.getWorkerLevelRequirement(workerIndex)!;
       return {
         id: `shop-item-${item.id ?? item.name}`,
         name: item.name,

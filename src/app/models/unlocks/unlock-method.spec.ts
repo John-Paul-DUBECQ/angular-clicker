@@ -29,4 +29,14 @@ describe('UnlockMethod', () => {
     expect(UnlockMethod.any(UnlockMethod.minClicks(101), UnlockMethod.houseLevel('mine', 3))
       .isUnlocked(context)).toBeTrue();
   });
+
+  it('conserve le niveau worker pour les paliers affiches', () => {
+    const method = UnlockMethod.all(
+      UnlockMethod.shopItemBought('training'),
+      UnlockMethod.workerLevel(2, 10)
+    );
+
+    expect(method.getWorkerLevelRequirement(2)).toBe(10);
+    expect(method.getWorkerLevelRequirement(1)).toBeUndefined();
+  });
 });

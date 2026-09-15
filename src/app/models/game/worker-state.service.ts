@@ -21,6 +21,7 @@ import { houseUnlockDefinition } from '../unlocks/house-unlock';
 import { ResourcesService } from './resources.service';
 import { LoreNotificationService } from '../lore/lore-notification.service';
 import { WORKER_LORE_BY_NAME, WORKER_LORE_BY_LEVEL } from '../lore/worker-lore';
+import { attachDefaultWorkerUnlockMethods } from '../unlocks/worker-unlock.model';
 
 export type GetShopMultiplierForWorker = (workerIndex: number) => number;
 
@@ -71,6 +72,7 @@ export class WorkerStateService {
       createAutoWorker('Architecte', 100000, 1.45, 5500000, 1.57, undefined, 1, [], { workerIndex: 7, minLevel: 10 }),
       createAutoWorker('Explorateur', 40000000000000, 1.50, 1000000000000000, 1.63, undefined, 1, [], { workerIndex: 8, minLevel: 10 }),
     ];
+    attachDefaultWorkerUnlockMethods(this.workersAvailable);
     this.workers = [];
   }
 

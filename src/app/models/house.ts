@@ -1,3 +1,5 @@
+import { UnlockMethod } from './unlocks/unlock-method';
+
 export interface House {
   id: string;
   name: string;
@@ -13,4 +15,6 @@ export interface House {
   maxLevel?: number;
   baitIntervalSeconds?: number;
   nextBaitInSeconds?: number;
+  /** Conditions cumulables nécessaires pour débloquer la maison. */
+  unlockMethod?: UnlockMethod;
 }

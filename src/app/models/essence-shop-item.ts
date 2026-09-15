@@ -1,3 +1,5 @@
+import { UnlockMethod } from './unlocks/unlock-method';
+
 export interface EssenceShopItem {
   id: string;
   name: string;
@@ -11,6 +13,8 @@ export interface EssenceShopItem {
   level: number;
   imageUrl?: string;
   bought: boolean;
+  /** Conditions cumulables nécessaires pour afficher/acheter l'item. */
+  unlockMethod?: UnlockMethod;
 }
 
 export type EssenceShopEffectType =

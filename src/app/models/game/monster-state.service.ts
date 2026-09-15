@@ -164,8 +164,8 @@ export class MonsterStateService {
 
     const resourceRewards: ResourceReward[] = (monster?.drops ?? []).map((drop) => ({
       resourceId: drop.resourceId,
-      amount: Math.max(1, Math.floor(drop.amount * lootMult)),
-    }));
+      amount: Math.floor(drop.amount) * lootMult + (Math.random() < (drop.amount % 1) ? lootMult : 0),  
+  }));
     resourceRewards.forEach((reward) => this.resources.addResource(reward.resourceId, reward.amount));
     this.rewardNotify.notifyReward(totalGold, essenceReward, resourceRewards);
   }

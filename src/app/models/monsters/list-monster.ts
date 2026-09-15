@@ -13,6 +13,7 @@ export const listMonster: Monster[] = [
     drops: [
       { resourceId: 'food', amount: 1 },
       { resourceId: 'mosh-tooth', amount: 1 },
+      { resourceId: 'mosh-tail', amount: 1/10 },
     ],
   },
   {

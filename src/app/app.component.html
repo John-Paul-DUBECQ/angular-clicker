@@ -79,7 +79,6 @@
       <section class="houses-area" *ngIf="game.houses && game.houses.length > 0">
         <div class="houses-area__header">
           <h2>Maisons</h2>
-          <span>Passifs</span>
         </div>
         <ng-container *ngFor="let house of game.houses; let i = index; trackBy: trackByHouse">
           <app-house-area

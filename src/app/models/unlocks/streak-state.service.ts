@@ -19,6 +19,18 @@ export class StreakStateService {
 
   constructor(private powerState: PowerStateService) {}
 
+  getSaveState(): { barCurrent: number; phase: StreakPhase } {
+    return { barCurrent: this.barCurrent, phase: this.phase };
+  }
+
+  setSaveState(state: { barCurrent?: number; phase?: StreakPhase } | undefined): void {
+    if (!state) return;
+    if (state.barCurrent != null && Number.isFinite(state.barCurrent)) {
+      this.barCurrent = Math.max(0, state.barCurrent);
+    }
+    if (state.phase === 'filling' || state.phase === 'active') this.phase = state.phase;
+  }
+
   private getWeaknessModifiers(): { comboMultiplier: number; speedMultiplier: number } | undefined {
     const combo = this.powerState.getWeaknessComboMultiplier();
     const speed = this.powerState.getWeaknessSpeedMultiplier();

@@ -3,19 +3,19 @@
   gap: 0.7rem;
   margin: 0.75rem 1rem 1rem;
   padding: 0.65rem;
-  border: 1px solid #493d26;
-  background: linear-gradient(135deg, #211d16, #171717);
+  border: 1px solid #264932;
+  background: linear-gradient(135deg, #0b110e, #171717);
   color: #eee;
   transition: border-color 0.15s ease, transform 0.15s ease;
 }
 
 .house-card--affordable {
-  border-color: #a9893d;
+  border-color: #3da96a;
 }
 
 .house-card--affordable:hover {
   transform: translateY(-1px);
-  border-color: #e8c547;
+  border-color: #47e88f;
 }
 
 .house-card__image {
@@ -41,7 +41,7 @@
 
 .house-card h2 {
   margin: 0;
-  color: #f0cf67;
+  color: #67f089;
   font-size: 0.9rem;
 }
 
@@ -56,7 +56,7 @@
 }
 
 .house-card__timer {
-  color: #e8c547 !important;
+  color: #47e898 !important;
   font-size: 0.68rem !important;
 }
 
@@ -69,8 +69,8 @@
 
 .house-card__costs span {
   padding: 0.2rem 0.3rem;
-  background: #30291b;
-  color: #d9c47a;
+  background: #132219;
+  color: #7ad996;
   font-size: 0.65rem;
 }
 
@@ -85,10 +85,10 @@
 }
 
 .house-card button {
-  border: 1px solid #80652a;
+  border: 1px solid #2a8038;
   padding: 0.35rem 0.5rem;
-  background: #30291b;
-  color: #fff3b0;
+  background: #1b301b;
+  color: #b7ffb0;
   cursor: pointer;
   font-size: 0.68rem;
 }

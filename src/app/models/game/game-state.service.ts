@@ -45,6 +45,9 @@ export interface SaveData {
   essenceShopItemsBought: boolean[];
   essenceShopLevels?: number[];
   houseLevels?: number[];
+  baitCooldownSeconds?: number;
+  powerCooldowns?: Record<string, number>;
+  streakState?: { barCurrent?: number; phase?: 'filling' | 'active' };
   resourceAmounts?: Record<string, number>;
   monsterEssence: number;
   totalManualClicks: number;
@@ -117,6 +120,7 @@ export class GameStateService {
     const getWorkerLevel = (i: number) => this.workerState.getWorkerLevel(i);
     const streakView = this.streakState.getView(workers, workersAvailable);
     const architectLevel = this.workerState.getWorkerLevel(7) ?? 0;
+    const farmerLevel = this.workerState.getWorkerLevel(1) ?? 0;
 
     const damageBuffActive = this.powerState.isDamageBuffActive();
     const damageBuffEnd = this.powerState.getDamageBuffEndTime();
@@ -208,7 +212,7 @@ export class GameStateService {
       essenceShopUnlocked: architectLevel >= 1,
       essenceShopItems: this.essenceShopState.getItemsView(),
       essenceShopStats: this.essenceShopState.getStats(),
-      houses: architectLevel >= 1 ? this.houseState.getHousesView() : undefined,
+      houses: farmerLevel >= 100 ? this.houseState.getHousesView() : undefined,
       resources: this.resources.getResourceStocks(),
       vesselUnlocked: isVesselUnlocked(workers, workersAvailable),
       activeVessels: this.vesselState.getActiveVesselsView(),
@@ -445,6 +449,9 @@ export class GameStateService {
         essenceShopItemsBought: this.essenceShopState.getItems().map(item => item.bought),
         essenceShopLevels: this.essenceShopState.getLevels(),
         houseLevels: this.houseState.getLevels(),
+        baitCooldownSeconds: this.houseState.getBaitCooldownSeconds(),
+        powerCooldowns: this.powerState.getCooldowns(),
+        streakState: this.streakState.getSaveState(),
         resourceAmounts: this.resources.getResourceAmounts(),
         monsterEssence: this.resources.getMonsterEssence(),
         totalManualClicks: this.resources.getTotalManualClicks(),        loreHistory: this.loreHistory,      };
@@ -472,7 +479,9 @@ export class GameStateService {
       } else {
         this.essenceShopState.setBought(saveData.essenceShopItemsBought || []);
       }
-      this.houseState.setLevels(saveData.houseLevels || []);
+      this.houseState.setLevels(saveData.houseLevels || [], saveData.baitCooldownSeconds);
+      this.powerState.setCooldowns(saveData.powerCooldowns);
+      this.streakState.setSaveState(saveData.streakState);
       this.resources.setResourceAmounts(saveData.resourceAmounts);
       this.resources.setMonsterEssence(saveData.monsterEssence);
       this.resources.setTotalManualClicks(saveData.totalManualClicks);
@@ -493,6 +502,9 @@ export class GameStateService {
       essenceShopItemsBought: this.essenceShopState.getItems().map(item => item.bought),
       essenceShopLevels: this.essenceShopState.getLevels(),
       houseLevels: this.houseState.getLevels(),
+      baitCooldownSeconds: this.houseState.getBaitCooldownSeconds(),
+      powerCooldowns: this.powerState.getCooldowns(),
+      streakState: this.streakState.getSaveState(),
       resourceAmounts: this.resources.getResourceAmounts(),
       monsterEssence: this.resources.getMonsterEssence(),
       totalManualClicks: this.resources.getTotalManualClicks(),
@@ -535,7 +547,9 @@ export class GameStateService {
       } else {
         this.essenceShopState.setBought(saveData.essenceShopItemsBought || []);
       }
-      this.houseState.setLevels(saveData.houseLevels || []);
+      this.houseState.setLevels(saveData.houseLevels || [], saveData.baitCooldownSeconds);
+      this.powerState.setCooldowns(saveData.powerCooldowns);
+      this.streakState.setSaveState(saveData.streakState);
       this.resources.setResourceAmounts(saveData.resourceAmounts);
       this.resources.setMonsterEssence(saveData.monsterEssence);
       this.resources.setTotalManualClicks(saveData.totalManualClicks);

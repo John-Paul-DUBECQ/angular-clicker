@@ -95,6 +95,10 @@ export class HouseStateService {
     }
   }
 
+  getBaitCooldownSeconds(): number | undefined {
+    return this.houses.find((house) => house.id === BAIT_HOUSE_ID)?.nextBaitInSeconds;
+  }
+
   canBuy(index: number): boolean {
     const house = this.houses[index];
     if (!house) return false;
@@ -127,6 +131,9 @@ export class HouseStateService {
     const costs = this.getCostsForNextLevel(house);
     if (!this.resources.spendMonsterEssence(price) || !this.resources.spendResources(costs)) return false;
     house.level += 1;
+    if (house.id === BAIT_HOUSE_ID && house.nextBaitInSeconds != null) {
+      house.nextBaitInSeconds = Math.min(house.nextBaitInSeconds, this.getBaitIntervalSeconds(house));
+    }
     return true;
   }
 
@@ -134,12 +141,14 @@ export class HouseStateService {
     return this.houses.map((house) => house.level);
   }
 
-  setLevels(levels: number[]): void {
+  setLevels(levels: number[], baitCooldownSeconds?: number): void {
     this.houses.forEach((house, index) => {
       house.level = Math.max(0, Math.floor(levels[index] ?? 0));
       if (house.id === BAIT_HOUSE_ID) {
         house.unlocked = house.level > 0;
-        house.nextBaitInSeconds = this.getBaitIntervalSeconds(house);
+        house.nextBaitInSeconds = baitCooldownSeconds != null
+          ? Math.max(0, Math.min(baitCooldownSeconds, this.getBaitIntervalSeconds(house)))
+          : this.getBaitIntervalSeconds(house);
       }
     });
   }

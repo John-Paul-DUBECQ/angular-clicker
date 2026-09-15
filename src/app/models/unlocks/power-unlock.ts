@@ -10,7 +10,7 @@ export const POWER_LEVEL_REQUIRED = 1;
 export const POWER_LEVELS_BY_POWER_ID: Record<string, number> = {
   power: 1,
   weakness: 9,
-  'spawn-mob': 0,
+  'spawn-mob': 1,
   'monster-time': 5,
 };
 

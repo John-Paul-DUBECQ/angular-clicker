@@ -608,7 +608,7 @@
 }
 
 .houses-area__header h2 {
-  color: #e8c547;
+  color: #47e88f;
   font-size: 0.95rem;
 }
 
@@ -1289,16 +1289,16 @@
   width: calc(100% - 2rem);
   margin: 0 1rem 1rem;
   padding: 0.45rem;
-  border: 1px solid #493d26;
+  border: 1px solid #26492f;
   background: transparent;
-  color: #d9c47a;
+  color: #7ad987;
   cursor: pointer;
   font-size: 0.7rem;
 }
 
 .houses-area__resources-button:hover {
-  border-color: #e8c547;
-  color: #fff3b0;
+  border-color: #47e85c;
+  color: #b0ffb4;
 }
 
 .resources-overlay {

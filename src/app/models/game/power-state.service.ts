@@ -234,4 +234,22 @@ export class PowerStateService {
     if (powerIndex < 0 || powerIndex >= this.powersAvailable.length) return 0;
     return this.powersAvailable[powerIndex].id === SPAWN_MOB_POWER_ID ? SPAWN_MOB_BAIT_COST : 0;
   }
+
+  getCooldowns(): Record<string, number> {
+    const now = Date.now();
+    return Array.from(this.cooldownUntilByPowerId.entries()).reduce((cooldowns, [powerId, until]) => {
+      const remaining = Math.max(0, (until - now) / 1000);
+      if (remaining > 0) cooldowns[powerId] = remaining;
+      return cooldowns;
+    }, {} as Record<string, number>);
+  }
+
+  setCooldowns(cooldowns: Record<string, number> | undefined): void {
+    this.cooldownUntilByPowerId.clear();
+    if (!cooldowns) return;
+    const now = Date.now();
+    Object.entries(cooldowns).forEach(([powerId, remaining]) => {
+      if (remaining > 0) this.cooldownUntilByPowerId.set(powerId, now + remaining * 1000);
+    });
+  }
 }

@@ -3,6 +3,7 @@ import { WorkerAuto, WorkerAutoData, calculateClicksPerSecondForWorker, getClick
 import { GameStateService, WorkerInfoStats } from '../models/game/game-state.service';
 import { WorkerUnlock } from '../models/unlocks/worker-unlock.model';
 import { getUpcomingPowerUnlockTiers, POWER_WORKER_INDEX } from '../models/unlocks/power-unlock';
+import { houseUnlockDefinition } from '../models/unlocks/house-unlock';
 import { getUpcomingShopItemUnlockTiers } from '../models/shop-item';
 import { listShopItem } from '../models/list-shop-item';
 
@@ -93,8 +94,12 @@ export class WorkerAreaComponent {
     );
     const fromPowerTiers =
       this.workerIndex === POWER_WORKER_INDEX ? getUpcomingPowerUnlockTiers(level) : [];
+    const fromHouseTier =
+      this.workerIndex === 1 && level < (houseUnlockDefinition.levelRequired ?? 0)
+        ? [houseUnlockDefinition]
+        : [];
     const fromShopItems = getUpcomingShopItemUnlockTiers(this.workerIndex, level, listShopItem);
-    const merged = [...fromUnlocks, ...fromPowerTiers, ...fromShopItems].sort(
+    const merged = [...fromUnlocks, ...fromPowerTiers, ...fromHouseTier, ...fromShopItems].sort(
       (a, b) => (a.levelRequired ?? 0) - (b.levelRequired ?? 0)
     );
     return merged.slice(0, this.NEXT_UNLOCKS_MAX);

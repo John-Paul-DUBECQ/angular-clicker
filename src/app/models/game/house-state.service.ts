@@ -18,14 +18,14 @@ const BAIT_HOUSE_MIN_INTERVAL_SECONDS = 80;
 const BAIT_HOUSE_MAX_LEVEL = Math.floor(
   (BAIT_HOUSE_BASE_INTERVAL_SECONDS - BAIT_HOUSE_MIN_INTERVAL_SECONDS) / BAIT_HOUSE_INTERVAL_STEP_SECONDS
 );
-const BAIT_HOUSE_UNLOCK_PRICE = 1;
+const BAIT_HOUSE_UNLOCK_PRICE = 5;
 const BAIT_HOUSE_UNLOCK_COSTS: ResourceCost[] = [
-  { resourceId: 'food', amount: 0 },
-  { resourceId: 'mosh-tooth', amount: 0 },
+  { resourceId: 'food', amount: 5 },
+  { resourceId: 'mosh-tooth', amount: 2 },
 ];
 const BAIT_HOUSE_UPGRADE_COSTS: ResourceCost[] = [
-  { resourceId: 'food', amount: 0 },
-  { resourceId: 'mosh-tooth', amount: 0 },
+  { resourceId: 'food', amount: 1 },
+  { resourceId: 'mosh-tooth', amount: 2  },
 ];
 
 @Injectable({ providedIn: 'root' })

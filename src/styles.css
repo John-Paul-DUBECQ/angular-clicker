@@ -8,6 +8,7 @@ body {
 }
 
 /* Popup coup critique : à la position du clic, ne bloque pas les clics, monte légèrement */
+.damage-popup,
 .critical-hit-popup {
   position: fixed;
   transform: translate(-50%, -50%);
@@ -19,10 +20,10 @@ body {
   white-space: nowrap;
   pointer-events: none;
   z-index: 9999;
-  animation: critical-hit-float 1s ease-out forwards;
+  animation: damage-float 1s ease-out forwards;
 }
 
-@keyframes critical-hit-float {
+@keyframes damage-float {
   from {
     opacity: 1;
     transform: translate(-50%, -50%);

@@ -64,6 +64,7 @@ export class MonsterStateService {
   private encounterMeter = 0;
   /** Nombre de monstres demandés alors qu'un combat est déjà en cours. */
   private queuedMonsterCount = 0;
+  private killCounts: Record<string, number> = {};
 
   constructor(
     private resources: ResourcesService,
@@ -147,6 +148,9 @@ export class MonsterStateService {
    */
   private onMonsterKill(remainingSeconds: number): void {
     const monster = listMonster.find((m) => m.id === this.currentMonsterId);
+    if (this.currentMonsterId != null) {
+      this.killCounts[this.currentMonsterId] = (this.killCounts[this.currentMonsterId] ?? 0) + 1;
+    }
     const lootMult = Math.max(0.1, monster?.lootMultiplier ?? 1);
 
     const baseProduction = this.workerState.getBaseProductionPerSecond();
@@ -172,6 +176,14 @@ export class MonsterStateService {
   }));
     resourceRewards.forEach((reward) => this.resources.addResource(reward.resourceId, reward.amount));
     this.rewardNotify.notifyReward(totalGold, essenceReward, resourceRewards);
+  }
+
+  getKillCounts(): Record<string, number> {
+    return { ...this.killCounts };
+  }
+
+  setKillCounts(killCounts: Record<string, number> | undefined): void {
+    this.killCounts = { ...(killCounts ?? {}) };
   }
 
   /** Tick : si monstre en cours → timeout ; sinon remplir la jauge rencontre et spawn à 100 %. */

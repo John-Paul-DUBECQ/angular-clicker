@@ -298,9 +298,9 @@
 }
 
 .worker-section-tabs__item--active {
-  border-color: #80652a !important;
-  background: #30291b !important;
-  color: #fff3b0 !important;
+  border-color: #777777 !important;
+  background: #131313 !important;
+  color: #ffffff !important;
 }
 
 .essence-shop-panel {
@@ -719,6 +719,40 @@
   gap: 16px;
 }
 
+.settings-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.settings-tabs button {
+  border: 1px solid #333333;
+  border-bottom: 2px solid transparent;
+  border-radius: 4px 4px 0 0;
+  background: #080808;
+  color: #a8a8a8;
+  cursor: pointer;
+  padding: 8px 10px;
+  font-size: 0.78rem;
+  transition: background 0.12s ease-out, border-color 0.12s ease-out, color 0.12s ease-out;
+}
+
+.settings-tabs button:hover {
+  background: #171717;
+  border-color: #555555;
+  color: #ffffff;
+}
+
+.settings-tabs__item--active,
+.settings-tabs button[aria-selected="true"] {
+  background: #101018;
+  border-color: #818183;
+  border-bottom-color: #e1e1e4;
+  color: #ffffff;
+}
+
 .settings-section {
   border-top: 1px solid rgba(255, 255, 255, 0.12);
   padding-top: 10px;
@@ -825,12 +859,6 @@
   margin-top: 4px;
 }
 
-.settings-section--lore {
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
 .settings-lore {
   display: flex;
   flex-direction: row;
@@ -900,7 +928,7 @@
 
 .settings-lore__detail-text {
   white-space: pre-line;
-  margin: 0;
+  margin: 12px;
   font-size: 0.9rem;
   line-height: 1.5;
 }
@@ -1370,4 +1398,74 @@
 .resource-row > span {
   color: #8fd18f;
   font-weight: 700;
+}
+
+.settings-resource-list,
+.settings-bestiary {
+  display: grid;
+  gap: 8px;
+}
+
+.settings-resource-row,
+.settings-bestiary__item {
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.settings-resource-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.settings-resource-row p,
+.settings-bestiary__item p {
+  margin: 4px 0 0;
+  color: #aaa;
+  font-size: 0.8rem;
+}
+
+.settings-resource-row > span,
+.settings-bestiary__heading span {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.settings-bestiary__heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.settings-bestiary__meta {
+  color: #c9c9c9;
+  font-size: 0.78rem;
+  margin-top: 8px;
+}
+
+.settings-bestiary__drops {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.settings-bestiary__drops span,
+.settings-bestiary__drops em {
+  padding: 3px 7px;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 0.75rem;
+  font-style: normal;
+}
+
+.settings-option {
+  display: block;
+  margin-top: 14px;
+  color: #e5e5e5;
+  cursor: pointer;
+}
+
+.settings-option input {
+  margin-right: 8px;
 }

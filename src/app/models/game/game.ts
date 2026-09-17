@@ -71,4 +71,10 @@ export class Game {
     acteActual!: number; // à quel acte le jeu est actuellement (commence à 1)
     /** Historique des lores vus. */
     loreHistory?: LorePayload[];
+    /** Nombre de monstres vaincus, par identifiant. */
+    monsterKillCounts?: Record<string, number>;
+    /** Affiche les dégâts de clic dans la zone de jeu. */
+    showDamageNumbers?: boolean;
+    /** Affiche les dégâts des coups critiques dans la zone de jeu. */
+    showCriticalHitNumbers?: boolean;
 }

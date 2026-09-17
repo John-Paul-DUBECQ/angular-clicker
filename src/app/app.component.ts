@@ -14,6 +14,8 @@ import { MonsterRewardNotificationService } from './models/game/monster-reward-n
 import { VesselRewardNotificationService } from './models/game/vessel-reward-notification.service';
 import type { VesselReward } from './models/game/vessel-reward-notification.service';
 import { LoreNotificationService, LorePayload } from './models/lore/lore-notification.service';
+import { listMonster } from './models/monsters/list-monster';
+import { Monster } from './models/monsters/monster.model';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -33,6 +35,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
   /** Popup paramètres / récap global. */
   settingsVisible = false;
+  settingsTab: 'items' | 'lore' | 'resources' | 'bestiary' | 'stats' | 'options' = 'items';
 
   /** Timestamp du début de la session (ms). */
   private sessionStartTime = Date.now();
@@ -470,6 +473,40 @@ export class AppComponent implements OnInit, OnDestroy {
       .filter((entry) => entry.item.bought);
   }
 
+  get bestiaryMonsters(): Monster[] {
+    return listMonster;
+  }
+
+  getMonsterKillCount(monsterId: string): number {
+    return this.game.monsterKillCounts?.[monsterId] ?? 0;
+  }
+
+  get totalMonsterKills(): number {
+    return Object.values(this.game.monsterKillCounts ?? {}).reduce((total, count) => total + count, 0);
+  }
+
+  getMonsterDropName(resourceId: string): string {
+    return this.getResourceName(resourceId);
+  }
+
+  isMonsterKnown(monster: Monster): boolean {
+    return (this.game.monsterKillCounts?.[monster.id] ?? 0) > 0 || monster.doesAppearInGame;
+  }
+
+  setSettingsTab(tab: 'items' | 'lore' | 'resources' | 'bestiary' | 'stats' | 'options'): void {
+    this.settingsTab = tab;
+  }
+
+  setShowDamageNumbers(value: boolean): void {
+    this.gameState.setShowDamageNumbers(value);
+    this.refreshGameState();
+  }
+
+  setShowCriticalHitNumbers(value: boolean): void {
+    this.gameState.setShowCriticalHitNumbers(value);
+    this.refreshGameState();
+  }
+
   get essenceShopItemsWithIndex(): { item: EssenceShopItem; index: number }[] {
     return (this.game.essenceShopItems ?? []).map((item, index) => ({ item, index }));
   }
@@ -489,6 +526,7 @@ export class AppComponent implements OnInit, OnDestroy {
   openSettings(event?: MouseEvent): void {
     event?.stopPropagation();
     this.settingsVisible = true;
+    this.settingsTab = 'items';
   }
 
   closeSettings(): void {

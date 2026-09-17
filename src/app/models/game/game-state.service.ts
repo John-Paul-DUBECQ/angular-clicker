@@ -23,6 +23,8 @@ import { formatNumberValue } from '../../pipes/format-number.pipe';
 import { LorePayload } from '../lore/lore-notification.service';
 import { EssenceShopStateService } from './essence-shop-state.service';
 import { HouseStateService } from './house-state.service';
+import { listMonster } from '../monsters/list-monster';
+import { Monster } from '../monsters/monster.model';
 
 const TICKS_PER_SECOND = 10;
 
@@ -52,6 +54,9 @@ export interface SaveData {
   monsterEssence: number;
   totalManualClicks: number;
   loreHistory: LorePayload[];
+  monsterKillCounts?: Record<string, number>;
+  showDamageNumbers?: boolean;
+  showCriticalHitNumbers?: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -61,6 +66,8 @@ export class GameStateService {
   private saveIntervalId: ReturnType<typeof setInterval> | null = null;
 
   private loreHistory: LorePayload[] = [];
+  private showDamageNumbers = false;
+  private showCriticalHitNumbers = true;
 
   constructor(
     private resources: ResourcesService,
@@ -218,6 +225,9 @@ export class GameStateService {
       activeVessels: this.vesselState.getActiveVesselsView(),
       acteActual: 1,
       loreHistory: this.loreHistory,
+      monsterKillCounts: this.monsterState.getKillCounts(),
+      showDamageNumbers: this.showDamageNumbers,
+      showCriticalHitNumbers: this.showCriticalHitNumbers,
     };
   }
 
@@ -228,6 +238,7 @@ export class GameStateService {
     let value = this.workerState.getCurrentClickValue(this.getShopMult);
     value *= this.powerState.getDamageMultiplier();
 
+    let criticalHit = false;
     if (isCriticalHitUnlocked(workers, workersAvailable)) {
       const miner = workersAvailable[MINER_WORKER_INDEX];
       const minerLevel = miner?.level ?? 0;
@@ -236,7 +247,10 @@ export class GameStateService {
       const houseChanceBonus = this.houseState.getCriticalHitChanceBonus();
       if (Math.random() < totalChance + shopChanceBonus + houseChanceBonus) {
         value *= totalMultiplier;
-        this.showCriticalHit(value * valueMultiplier, clientX, clientY);
+        criticalHit = true;
+        if (this.showCriticalHitNumbers) {
+          this.showCriticalHit(value * valueMultiplier, clientX, clientY);
+        }
       }
     }
 
@@ -244,11 +258,17 @@ export class GameStateService {
     value *= this.streakState.getMultiplier(workers, workersAvailable);
 
     if (this.monsterState.isMonsterUnlocked(workers, workersAvailable) && this.monsterState.hasCurrentMonster()) {
+      if (this.showDamageNumbers && !criticalHit) {
+        this.showDamage(value * valueMultiplier, clientX, clientY);
+      }
       this.monsterState.dealDamage(value * valueMultiplier, workers, workersAvailable);
       this.resources.addManaOnClick(0.5);
       return;
     }
 
+    if (this.showDamageNumbers && !criticalHit) {
+      this.showDamage(value * valueMultiplier, clientX, clientY);
+    }
     this.resources.addClicks(value * valueMultiplier);
     this.resources.addManaOnClick(0.5);
   }
@@ -263,10 +283,14 @@ export class GameStateService {
   }
 
   showCriticalHit(value: number, clientX?: number, clientY?: number): void {
+    this.showDamage(value, clientX, clientY, 'critical-hit-popup');
+  }
+
+  private showDamage(value: number, clientX?: number, clientY?: number, className = 'damage-popup'): void {
     const x = clientX ?? window.innerWidth / 2;
     const y = clientY ?? window.innerHeight / 2;
     const criticalHitPopup = document.createElement('div');
-    criticalHitPopup.className = 'critical-hit-popup';
+    criticalHitPopup.className = className;
     criticalHitPopup.innerHTML = formatNumberValue(value, 2);
     criticalHitPopup.style.left = `${x}px`;
     criticalHitPopup.style.top = `${y}px`;
@@ -430,6 +454,20 @@ export class GameStateService {
     this.loreHistory.push(lore);
   }
 
+  setShowDamageNumbers(value: boolean): void {
+    this.showDamageNumbers = value;
+    this.saveToLocalStorage();
+  }
+
+  setShowCriticalHitNumbers(value: boolean): void {
+    this.showCriticalHitNumbers = value;
+    this.saveToLocalStorage();
+  }
+
+  getMonsterDefinitions(): Monster[] {
+    return listMonster;
+  }
+
   private startAutoSave(): void {
     if (this.saveIntervalId != null) return;
     this.saveIntervalId = setInterval(() => {
@@ -454,7 +492,12 @@ export class GameStateService {
         streakState: this.streakState.getSaveState(),
         resourceAmounts: this.resources.getResourceAmounts(),
         monsterEssence: this.resources.getMonsterEssence(),
-        totalManualClicks: this.resources.getTotalManualClicks(),        loreHistory: this.loreHistory,      };
+        totalManualClicks: this.resources.getTotalManualClicks(),
+        loreHistory: this.loreHistory,
+        monsterKillCounts: this.monsterState.getKillCounts(),
+        showDamageNumbers: this.showDamageNumbers,
+        showCriticalHitNumbers: this.showCriticalHitNumbers,
+      };
       const dataStr = JSON.stringify(saveData);
       localStorage.setItem('clickerGameSave', dataStr);
     } catch (e) {
@@ -486,6 +529,9 @@ export class GameStateService {
       this.resources.setMonsterEssence(saveData.monsterEssence);
       this.resources.setTotalManualClicks(saveData.totalManualClicks);
       this.loreHistory = saveData.loreHistory || [];
+      this.monsterState.setKillCounts(saveData.monsterKillCounts);
+      this.showDamageNumbers = saveData.showDamageNumbers ?? false;
+      this.showCriticalHitNumbers = saveData.showCriticalHitNumbers ?? true;
     } catch (e) {
       console.error('Failed to load from localStorage:', e);
     }
@@ -509,6 +555,9 @@ export class GameStateService {
       monsterEssence: this.resources.getMonsterEssence(),
       totalManualClicks: this.resources.getTotalManualClicks(),
       loreHistory: this.loreHistory,
+      monsterKillCounts: this.monsterState.getKillCounts(),
+      showDamageNumbers: this.showDamageNumbers,
+      showCriticalHitNumbers: this.showCriticalHitNumbers,
     };
 
     const dataStr = JSON.stringify(saveData, null, 2);
@@ -554,6 +603,9 @@ export class GameStateService {
       this.resources.setMonsterEssence(saveData.monsterEssence);
       this.resources.setTotalManualClicks(saveData.totalManualClicks);
       this.loreHistory = saveData.loreHistory || [];
+      this.monsterState.setKillCounts(saveData.monsterKillCounts);
+      this.showDamageNumbers = saveData.showDamageNumbers ?? false;
+      this.showCriticalHitNumbers = saveData.showCriticalHitNumbers ?? true;
 
       return true;
     } catch (e) {

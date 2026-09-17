@@ -105,7 +105,7 @@
           [title]="v.name"
           (mousedown)="onVesselClick(v.instanceId); $event.stopPropagation(); $event.preventDefault()">
           <img *ngIf="v.imageUrl" [src]="v.imageUrl" [alt]="v.name" class="vessel-lane__img" />
-          <span *ngIf="!v.imageUrl" class="vessel-lane__placeholder">{{ v.name?.charAt(0) }}</span>
+          <span *ngIf="!v.imageUrl" class="vessel-lane__placeholder">{{ v.name.charAt(0) }}</span>
         </div>
       </div>
       <div class="streak-bar" *ngIf="game.streakUnlocked">
@@ -183,7 +183,7 @@
 
     <div class="column column-right">
       <div class="resources-bar" >
-        <div class="resources-bar__item" title="Essence de mob (plus si tué à la dernière seconde)">
+        <div class="resources-bar__item">
           <span class="resources-bar__label">Essence</span>
           <span class="resources-bar__value">{{ formatResourceValue(game.monsterEssence != null ? game.monsterEssence : 0) }}</span>
           <button
@@ -246,7 +246,7 @@
           <div *ngIf="!game.monsterUnlocked || !game.currentMonster" id="click-area" (click)="click($event)"></div>
           <div *ngIf="game.monsterUnlocked && game.currentMonster" id="monster-area" class="monster-area" (click)="click($event)">
             <img *ngIf="game.currentMonster.imageUrl" [src]="game.currentMonster.imageUrl" [alt]="game.currentMonster.name" class="monster-area__img" />
-            <span *ngIf="!game.currentMonster.imageUrl" class="monster-area__placeholder">{{ game.currentMonster.name?.charAt(0) }}</span>
+            <span *ngIf="!game.currentMonster.imageUrl" class="monster-area__placeholder">{{ game.currentMonster.name.charAt(0) }}</span>
             <div class="monster-area__hp-track"><div class="monster-area__hp-fill" [style.width.%]="getMonsterHpPercent()"></div></div>
             <div class="monster-area__timer">{{ game.currentMonster.remainingSeconds }}s</div>
           </div>
@@ -378,34 +378,17 @@
       </button>
     </div>
 
-    <div class="settings-dialog__content">
-      <section class="settings-section">
-        <h3 class="settings-section__title">Stats</h3>
-        <div class="settings-stats-row">
-          <div class="settings-stat">
-            <span class="settings-stat__label">Temps de jeu</span>
-            <span class="settings-stat__value">{{ playTimeLabel }}</span>
-          </div>
-          <div class="settings-stat">
-            <span class="settings-stat__label">Clics (zone)</span>
-            <span class="settings-stat__value">{{ totalManualClicks | formatNumber:0 }}</span>
-          </div>
-          <div class="settings-stat">
-            <span class="settings-stat__label">Essence</span>
-            <span class="settings-stat__value">{{ formatResourceValue(game.monsterEssence != null ? game.monsterEssence : 0) }}</span>
-          </div>
-          <div class="settings-save-section">
-            <button type="button" class="settings-save-btn" (click)="exportSave()">Exporter Sauvegarde</button>
-            <label class="settings-import-label">
-              <input type="file" (change)="importSave($event)" accept=".json" style="display: none;" />
-              Importer Sauvegarde
-            </label>
-            <div *ngIf="importError" class="settings-import-error">Erreur lors de l'importation : fichier invalide.</div>
-          </div>
-        </div>
-      </section>
+    <nav class="settings-tabs" role="tablist" aria-label="Sections des paramètres">
+      <button type="button" role="tab" [attr.aria-selected]="settingsTab === 'items'" [class.settings-tabs__item--active]="settingsTab === 'items'" (click)="setSettingsTab('items')">Objets achetés</button>
+      <button type="button" role="tab" [attr.aria-selected]="settingsTab === 'lore'" [class.settings-tabs__item--active]="settingsTab === 'lore'" (click)="setSettingsTab('lore')">Lore</button>
+      <button type="button" role="tab" [attr.aria-selected]="settingsTab === 'resources'" [class.settings-tabs__item--active]="settingsTab === 'resources'" (click)="setSettingsTab('resources')">Ressources</button>
+      <button type="button" role="tab" [attr.aria-selected]="settingsTab === 'bestiary'" [class.settings-tabs__item--active]="settingsTab === 'bestiary'" (click)="setSettingsTab('bestiary')">Bestiaire</button>
+      <button type="button" role="tab" [attr.aria-selected]="settingsTab === 'stats'" [class.settings-tabs__item--active]="settingsTab === 'stats'" (click)="setSettingsTab('stats')">Statistiques</button>
+      <button type="button" role="tab" [attr.aria-selected]="settingsTab === 'options'" [class.settings-tabs__item--active]="settingsTab === 'options'" (click)="setSettingsTab('options')">Options</button>
+    </nav>
 
-      <section class="settings-section">
+    <div class="settings-dialog__content">
+      <section class="settings-section" *ngIf="settingsTab === 'items'">
         <h3 class="settings-section__title">Items achetés</h3>
         <div class="settings-items-grid" *ngIf="boughtShopItemsWithIndex.length > 0; else noItems">
           <ng-container *ngFor="let entry of boughtShopItemsWithIndex; trackBy: trackByShopEntry">
@@ -423,7 +406,7 @@
         </ng-template>
       </section>
 
-      <section class="settings-section settings-section--lore">
+      <section class="settings-section settings-section--lore" *ngIf="settingsTab === 'lore'">
         <h3 class="settings-section__title">Lore déjà vu</h3>
         <div class="settings-lore">
           <div class="settings-lore__list" *ngIf="loreHistory.length > 0; else noLore">
@@ -450,6 +433,55 @@
             <img class="settings-lore__detail-image" src={{selectedLore.imageUrl}}/>
           </div>
         </div>
+      </section>
+
+      <section class="settings-section" *ngIf="settingsTab === 'resources'">
+        <h3 class="settings-section__title">Liste des ressources</h3>
+        <div class="settings-resource-list">
+          <article class="settings-resource-row" *ngFor="let resource of resources; trackBy: trackByResource">
+            <div><strong>{{ resource.name }}</strong><p>{{ resource.description }}</p></div>
+            <span>{{ resource.amount | formatNumber:0 }}</span>
+          </article>
+        </div>
+      </section>
+
+      <section class="settings-section" *ngIf="settingsTab === 'bestiary'">
+        <h3 class="settings-section__title">Bestiaire</h3>
+        <div class="settings-bestiary">
+          <article class="settings-bestiary__item" *ngFor="let monster of bestiaryMonsters">
+            <div class="settings-bestiary__heading">
+              <strong>{{ monster.name }}</strong>
+              <span>{{ getMonsterKillCount(monster.id) }} victoire(s)</span>
+            </div>
+            <p>{{ monster.description }}</p>
+            <div class="settings-bestiary__meta">Apparition : {{ monster.probabilityToSpawn || 0 }}%</div>
+            <div class="settings-bestiary__drops">
+              <span *ngFor="let drop of monster.drops">{{ getMonsterDropName(drop.resourceId) }} ×{{ drop.amount }}</span>
+              <em *ngIf="!monster.drops || monster.drops.length === 0">Aucun drop connu</em>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="settings-section" *ngIf="settingsTab === 'stats'">
+        <h3 class="settings-section__title">Statistiques</h3>
+        <div class="settings-stats-row">
+          <div class="settings-stat"><span class="settings-stat__label">Temps de jeu</span><span class="settings-stat__value">{{ playTimeLabel }}</span></div>
+          <div class="settings-stat"><span class="settings-stat__label">Clics (zone)</span><span class="settings-stat__value">{{ totalManualClicks | formatNumber:0 }}</span></div>
+          <div class="settings-stat"><span class="settings-stat__label">Essence</span><span class="settings-stat__value">{{ formatResourceValue(game.monsterEssence != null ? game.monsterEssence : 0) }}</span></div>
+          <div class="settings-stat"><span class="settings-stat__label">Monstres vaincus</span><span class="settings-stat__value">{{ totalMonsterKills | formatNumber:0 }}</span></div>
+        </div>
+      </section>
+
+      <section class="settings-section" *ngIf="settingsTab === 'options'">
+        <h3 class="settings-section__title">Options</h3>
+        <div class="settings-save-section">
+          <button type="button" class="settings-save-btn" (click)="exportSave()">Exporter la sauvegarde</button>
+          <label class="settings-import-label"><input type="file" (change)="importSave($event)" accept=".json" style="display: none;" />Importer la sauvegarde</label>
+        </div>
+        <div *ngIf="importError" class="settings-import-error">Erreur lors de l'importation : fichier invalide.</div>
+        <label class="settings-option"><input type="checkbox" [checked]="game.showDamageNumbers" (change)="setShowDamageNumbers($any($event.target).checked)" /> Afficher les dégâts à chaque clic</label>
+        <label class="settings-option"><input type="checkbox" [checked]="game.showCriticalHitNumbers" (change)="setShowCriticalHitNumbers($any($event.target).checked)" /> Afficher les coups critiques</label>
       </section>
     </div>
   </div>

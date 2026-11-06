@@ -9,6 +9,8 @@ import { WorkerStateService } from './worker-state.service';
 import { MonsterRewardNotificationService } from './monster-reward-notification.service';
 import { EssenceShopStateService } from './essence-shop-state.service';
 import { ResourceReward } from '../resource';
+import { listPlannedCombat } from '../monsters/list-planned-combat';
+import { PlannedCombat, PlannedCombatView } from '../monsters/planned-combat.model';
 
 /** Référence PV : baseProduction * ce multiplicateur (aléatoire autour). */
 const MONSTER_HP_BASE_SECONDS = 12;
@@ -65,6 +67,9 @@ export class MonsterStateService {
   /** Nombre de monstres demandés alors qu'un combat est déjà en cours. */
   private queuedMonsterCount = 0;
   private killCounts: Record<string, number> = {};
+  private plannedCombatWins: Record<string, number> = {};
+  private plannedCombatCooldownEnds: Record<string, number> = {};
+  private currentPlannedCombatId: string | null = null;
 
   constructor(
     private resources: ResourcesService,
@@ -107,6 +112,48 @@ export class MonsterStateService {
     this.spawnTime = Date.now();
   }
 
+  getPlannedCombats(workers: WorkerAutoData[], workersAvailable: WorkerAutoData[]): PlannedCombatView[] {
+    return listPlannedCombat.map((combat) => ({
+      ...combat,
+      unlocked: this.isPlannedCombatUnlocked(combat, workers, workersAvailable),
+      wins: this.plannedCombatWins[combat.id] ?? 0,
+      cooldownRemainingSeconds: Math.max(
+        0,
+        Math.ceil(((this.plannedCombatCooldownEnds[combat.id] ?? 0) - Date.now()) / 1000)
+      ),
+    }));
+  }
+
+  startPlannedCombat(id: string, workers: WorkerAutoData[], workersAvailable: WorkerAutoData[]): boolean {
+    if (this.currentMonsterId != null) return false;
+    const combat = listPlannedCombat.find((entry) => entry.id === id);
+    if (!combat || !this.isPlannedCombatUnlocked(combat, workers, workersAvailable)) return false;
+    if ((this.plannedCombatCooldownEnds[combat.id] ?? 0) > Date.now()) return false;
+
+    this.currentPlannedCombatId = combat.id;
+    this.currentMonsterId = combat.id;
+    this.currentHp = combat.maxHp;
+    this.maxHp = combat.maxHp;
+    this.timeLimitSeconds = combat.timeLimitSeconds;
+    this.timeLimitMs = combat.timeLimitSeconds * 1000;
+    this.isBoss = true;
+    this.spawnTime = Date.now();
+    return true;
+  }
+
+  private isPlannedCombatUnlocked(
+    combat: PlannedCombat,
+    workers: WorkerAutoData[],
+    workersAvailable: WorkerAutoData[]
+  ): boolean {
+    const context: UnlockContext = {
+      clicks: 0,
+      getWorkerLevel: (workerIndex) => workersAvailable[workerIndex]?.level ?? workers[workerIndex]?.level ?? null,
+      getPlannedCombatWins: (combatId) => this.plannedCombatWins[combatId] ?? 0,
+    };
+    return combat.unlockMethod?.isUnlocked(context) ?? true;
+  }
+
   /** Tire un monstre parmi ceux débloqués, pondéré par probabilityToSpawn. */
   private pickMonsterForLevel(workerLevel: number): Monster | null {
     const context: UnlockContext = {
@@ -137,6 +184,7 @@ export class MonsterStateService {
       const remainingSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
       this.onMonsterKill(remainingSeconds);
       this.currentMonsterId = null;
+      this.currentPlannedCombatId = null;
       if (!this.spawnQueuedMonster(workers, workersAvailable)) this.encounterMeter = 0;
       return true;
     }
@@ -147,6 +195,10 @@ export class MonsterStateService {
    * Récompense : or + essence + 50 % des gains équivalents ; tout scale avec lootMultiplier du monstre.
    */
   private onMonsterKill(remainingSeconds: number): void {
+    if (this.currentPlannedCombatId != null) {
+      this.onPlannedCombatKill(this.currentPlannedCombatId);
+      return;
+    }
     const monster = listMonster.find((m) => m.id === this.currentMonsterId);
     if (this.currentMonsterId != null) {
       this.killCounts[this.currentMonsterId] = (this.killCounts[this.currentMonsterId] ?? 0) + 1;
@@ -178,6 +230,23 @@ export class MonsterStateService {
     this.rewardNotify.notifyReward(totalGold, essenceReward, resourceRewards);
   }
 
+  private onPlannedCombatKill(combatId: string): void {
+    const combat = listPlannedCombat.find((entry) => entry.id === combatId);
+    if (!combat) return;
+    const reward = (this.plannedCombatWins[combatId] ?? 0) === 0
+      ? combat.firstReward
+      : combat.repeatReward;
+    this.plannedCombatWins[combatId] = (this.plannedCombatWins[combatId] ?? 0) + 1;
+    this.plannedCombatCooldownEnds[combatId] = Date.now() + combat.cooldownSeconds * 1000;
+    const clicks = Math.max(0, reward.clicks ?? 0);
+    const essence = Math.max(0, reward.essence ?? 0);
+    const resources = (reward.resources ?? []).map((entry) => ({ ...entry }));
+    this.resources.addClicks(clicks);
+    this.resources.addMonsterEssence(essence);
+    resources.forEach((reward) => this.resources.addResource(reward.resourceId, reward.amount));
+    this.rewardNotify.notifyReward(clicks, essence, resources);
+  }
+
   getKillCounts(): Record<string, number> {
     return { ...this.killCounts };
   }
@@ -186,12 +255,29 @@ export class MonsterStateService {
     this.killCounts = { ...(killCounts ?? {}) };
   }
 
+  getPlannedCombatWins(): Record<string, number> {
+    return { ...this.plannedCombatWins };
+  }
+
+  setPlannedCombatWins(wins: Record<string, number> | undefined): void {
+    this.plannedCombatWins = { ...(wins ?? {}) };
+  }
+
+  getPlannedCombatCooldownEnds(): Record<string, number> {
+    return { ...this.plannedCombatCooldownEnds };
+  }
+
+  setPlannedCombatCooldownEnds(cooldownEnds: Record<string, number> | undefined): void {
+    this.plannedCombatCooldownEnds = { ...(cooldownEnds ?? {}) };
+  }
+
   /** Tick : si monstre en cours → timeout ; sinon remplir la jauge rencontre et spawn à 100 %. */
   tick(workers: WorkerAutoData[], workersAvailable: WorkerAutoData[]): void {
     if (this.currentMonsterId != null) {
       const remaining = this.spawnTime + this.timeLimitMs - Date.now();
       if (remaining <= 0) {
         this.currentMonsterId = null;
+        this.currentPlannedCombatId = null;
         if (!this.spawnQueuedMonster(workers, workersAvailable)) this.encounterMeter = 0;
       }
       return;
@@ -230,7 +316,12 @@ export class MonsterStateService {
 
   getCurrentMonsterView(workers: WorkerAutoData[], workersAvailable: WorkerAutoData[]): CurrentMonsterView | null {
     if (this.currentMonsterId == null) return null;
-    const monster = listMonster.find((m) => m.id === this.currentMonsterId);
+    const plannedCombat = this.currentPlannedCombatId == null
+      ? null
+      : listPlannedCombat.find((combat) => combat.id === this.currentPlannedCombatId);
+    const monster = plannedCombat == null
+      ? listMonster.find((m) => m.id === this.currentMonsterId)
+      : plannedCombat;
     if (!monster) return null;
     const remaining = Math.max(0, this.spawnTime + this.timeLimitMs - Date.now());
     return {
@@ -241,7 +332,7 @@ export class MonsterStateService {
       maxHp: this.maxHp,
       timeLimitSeconds: this.timeLimitSeconds,
       remainingSeconds: Math.ceil(remaining / 1000),
-      isBoss: this.isBoss,
+      isBoss: plannedCombat != null || this.isBoss,
     };
   }
 
@@ -264,4 +355,3 @@ export class MonsterStateService {
     return true;
   }
 }
-

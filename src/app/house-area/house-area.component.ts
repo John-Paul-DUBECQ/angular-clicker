@@ -33,7 +33,10 @@ export class HouseAreaComponent {
   }
 
   get actionLabel(): string {
-    if (!this.house.unlocked) return `Déverrouiller · ${this.house.unlockPrice ?? 0} essence`;
+    if (!this.house.unlocked) {
+      const unlockPrice = this.house.unlockPrice ?? 0;
+      return unlockPrice > 0 ? `Déverrouiller · ${unlockPrice} essence` : 'Déverrouiller';
+    }
     if (this.house.maxLevel != null && this.house.level >= this.house.maxLevel) return 'Niveau maximum';
     return `Améliorer · ${this.house.price} essence`;
   }

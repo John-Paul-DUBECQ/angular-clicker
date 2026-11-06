@@ -1,4 +1,5 @@
 import { Monster } from '../../monsters/monster.model';
+import { ResourceReward } from '../../resource';
 
 /** Type de récompense au clic sur un vaisseau. */
 export type VesselRewardType = 'clicks' | 'tempBonus' | 'spawnMonster';
@@ -20,6 +21,8 @@ export interface Vessel {
   rewardValue?: number;
   /** Chance 0–1 de faire apparaître un mob spécial au clic (pour rewardType 'spawnMonster'). */
   probabilityToSpawnMonster?: number;
+  /** Ressource propre au vaisseau, obtenue lorsqu'on clique dessus. */
+  resourceReward?: ResourceReward[];
   /** Monstre à faire spawner (optionnel, sinon spawn normal). */
   monster?: Monster | null;
   acteUnlocked?: number; // à quel acte le vaisseau est débloqué

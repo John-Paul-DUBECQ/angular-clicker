@@ -70,5 +70,20 @@ export const RESOURCE_DEFINITIONS: GameResource[] = [
     id: 'bulb',
     name: 'Ampoule',
     description: '',
+  },
+  {
+    id: 'cargo-scrap',
+    name: 'Ferraille de cargo',
+    description: 'Des pièces récupérées à bord des cargos.',
+  },
+  {
+    id: 'warship-cell',
+    name: 'Cellule de vaisseau',
+    description: 'Une cellule énergétique récupérée sur les vaisseaux de guerre.',
+  },
+  {
+    id: 'hunter-beacon',
+    name: 'Balise de chasseur',
+    description: 'Une balise récupérée sur les chasseurs.',
   }
 ];

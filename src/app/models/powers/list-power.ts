@@ -30,6 +30,7 @@ export const listPower: Power[] = [
     bought: false,
     manaCost: 10,
     cooldownSeconds: 0,
+    baitCost: 1,
   },
   {
     id: 'monster-time',
@@ -41,5 +42,15 @@ export const listPower: Power[] = [
     manaCost: 200,
     cooldownSeconds: 90,
   },
+  {
+    id: 'vessel-rush',
+    name: 'Rafale stellaire',
+    description: 'Fait apparaître 10 vaisseaux en 3 secondes. Coûte 10 appâts et 100 mana.',
+    imageUrl: 'assets/img/Machine/Ship1.png',
+    doesAppearInGame: false,
+    bought: false,
+    manaCost: 100,
+    cooldownSeconds: 0,
+    baitCost: 0,
+  },
 ];
-

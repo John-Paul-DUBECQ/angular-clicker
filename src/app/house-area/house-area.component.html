@@ -6,6 +6,9 @@
       <span>Niv. {{ house.level }}</span>
     </div>
     <p>{{ house.description }}</p>
+    <p *ngIf="house.vesselRushVesselCount != null && house.vesselRushDurationSeconds != null">
+      Rafale actuelle : {{ house.vesselRushVesselCount }} vaisseaux sur {{ house.vesselRushDurationSeconds }} s.
+    </p>
     <p class="house-card__timer" *ngIf="house.unlocked && house.baitIntervalSeconds">
       Prochain appât dans {{ house.nextBaitInSeconds | number:'1.0-0' }} / {{ house.baitIntervalSeconds | number:'1.0-0' }} s
     </p>
@@ -15,7 +18,7 @@
       </span>
     </div>
     <div class="house-card__footer">
-      <span class="house-card__bonus">+{{ house.level * house.bonusPerLevel * 100 | number:'1.0-0' }} %</span>
+      <span class="house-card__bonus" *ngIf="house.bonusPerLevel > 0">+{{ house.level * house.bonusPerLevel * 100 | number:'1.0-0' }} %</span>
       <button type="button" [disabled]="!canBuy" (click)="buy()">{{ actionLabel }}</button>
     </div>
   </div>

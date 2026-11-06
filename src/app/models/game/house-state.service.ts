@@ -2,6 +2,10 @@ import { Injectable } from '@angular/core';
 import { House } from '../house';
 import { ResourcesService } from './resources.service';
 import { ResourceCost } from '../resource';
+import {
+  VESSEL_RUSH_BASE_COUNT,
+  VESSEL_RUSH_BASE_DURATION_SECONDS,
+} from '../powers/effects/vessel-rush-effect';
 
 const CRITICAL_HOUSE_ID = 'critical-house';
 const CRITICAL_HOUSE_BASE_PRICE = 10;
@@ -26,6 +30,20 @@ const BAIT_HOUSE_UNLOCK_COSTS: ResourceCost[] = [
 const BAIT_HOUSE_UPGRADE_COSTS: ResourceCost[] = [
   { resourceId: 'food', amount: 1 },
   { resourceId: 'mosh-tooth', amount: 2  },
+];
+const VESSEL_RUSH_HOUSE_ID = 'vessel-rush-house';
+const VESSEL_RUSH_HOUSE_VESSELS_PER_LEVEL = 2;
+const VESSEL_RUSH_HOUSE_DURATION_PER_LEVEL_SECONDS = 1;
+const VESSEL_RUSH_HOUSE_MAX_LEVEL = 10;
+const VESSEL_RUSH_HOUSE_UNLOCK_COSTS: ResourceCost[] = [
+  { resourceId: 'cargo-scrap', amount: 5 },
+  { resourceId: 'warship-cell', amount: 3 },
+  { resourceId: 'hunter-beacon', amount: 2 },
+];
+const VESSEL_RUSH_HOUSE_UPGRADE_COSTS: ResourceCost[] = [
+  { resourceId: 'cargo-scrap', amount: 2 },
+  { resourceId: 'warship-cell', amount: 1 },
+  { resourceId: 'hunter-beacon', amount: 1 },
 ];
 
 @Injectable({ providedIn: 'root' })
@@ -58,6 +76,20 @@ export class HouseStateService {
       baitIntervalSeconds: BAIT_HOUSE_BASE_INTERVAL_SECONDS,
       nextBaitInSeconds: BAIT_HOUSE_BASE_INTERVAL_SECONDS,
     },
+    {
+      id: VESSEL_RUSH_HOUSE_ID,
+      name: 'Observatoire des Vaisseaux',
+      description: '+2 vaisseaux et +1 seconde à la Rafale stellaire par niveau.',
+      imageUrl: 'assets/img/House/House1.png',
+      level: 0,
+      bonusPerLevel: 0,
+      price: 5,
+      costs: VESSEL_RUSH_HOUSE_UPGRADE_COSTS,
+      unlockPrice: 0,
+      unlockCosts: VESSEL_RUSH_HOUSE_UNLOCK_COSTS,
+      unlocked: false,
+      maxLevel: VESSEL_RUSH_HOUSE_MAX_LEVEL,
+    },
   ];
 
   constructor(private resources: ResourcesService) {}
@@ -77,7 +109,22 @@ export class HouseStateService {
         ? this.getBaitIntervalSeconds(house)
         : house.baitIntervalSeconds,
       nextBaitInSeconds: house.nextBaitInSeconds,
+      vesselRushVesselCount: house.id === VESSEL_RUSH_HOUSE_ID
+        ? this.getVesselRushVesselCount(house)
+        : undefined,
+      vesselRushDurationSeconds: house.id === VESSEL_RUSH_HOUSE_ID
+        ? this.getVesselRushDurationSeconds(house)
+        : undefined,
     }));
+  }
+
+  getVesselRushBonuses(): { vesselCount: number; durationSeconds: number } {
+    const house = this.houses.find((item) => item.id === VESSEL_RUSH_HOUSE_ID);
+    const level = house?.unlocked ? house.level : 0;
+    return {
+      vesselCount: level * VESSEL_RUSH_HOUSE_VESSELS_PER_LEVEL,
+      durationSeconds: level * VESSEL_RUSH_HOUSE_DURATION_PER_LEVEL_SECONDS,
+    };
   }
 
   getCriticalHitChanceBonus(): number {
@@ -149,6 +196,8 @@ export class HouseStateService {
         house.nextBaitInSeconds = baitCooldownSeconds != null
           ? Math.max(0, Math.min(baitCooldownSeconds, this.getBaitIntervalSeconds(house)))
           : this.getBaitIntervalSeconds(house);
+      } else if (house.id === VESSEL_RUSH_HOUSE_ID) {
+        house.unlocked = house.level > 0;
       }
     });
   }
@@ -169,5 +218,14 @@ export class HouseStateService {
       BAIT_HOUSE_MIN_INTERVAL_SECONDS,
       BAIT_HOUSE_BASE_INTERVAL_SECONDS - Math.max(0, house.level - 1) * BAIT_HOUSE_INTERVAL_STEP_SECONDS
     );
+  }
+
+  private getVesselRushVesselCount(house: House): number {
+    return VESSEL_RUSH_BASE_COUNT + house.level * VESSEL_RUSH_HOUSE_VESSELS_PER_LEVEL;
+  }
+
+  private getVesselRushDurationSeconds(house: House): number {
+    return VESSEL_RUSH_BASE_DURATION_SECONDS
+      + house.level * VESSEL_RUSH_HOUSE_DURATION_PER_LEVEL_SECONDS;
   }
 }

@@ -13,6 +13,8 @@ export interface PowerCastContext {
   spawnMonster(): void;
   /** Ajoute des secondes au temps imparti du combat en cours. */
   addMonsterTime(seconds: number): void;
+  /** Fait apparaître une vague de vaisseaux pendant la durée indiquée. */
+  summonVessels(count: number, durationSeconds: number): void;
 }
 
 /** Fonction d'effet d'un sort : exécutée quand le joueur lance le sort (après paiement du mana). */

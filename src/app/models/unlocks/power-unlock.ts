@@ -12,6 +12,7 @@ export const POWER_LEVELS_BY_POWER_ID: Record<string, number> = {
   weakness: 9,
   'spawn-mob': 1,
   'monster-time': 5,
+  'vessel-rush': 1,
 };
 
 export function getLevelRequiredForPower(powerId: string): number | undefined {
@@ -131,4 +132,3 @@ export function getUpcomingPowerUnlockTiers(magicienLevel: number): WorkerUnlock
     })
     .sort((a, b) => (a.levelRequired ?? 0) - (b.levelRequired ?? 0));
 }
-

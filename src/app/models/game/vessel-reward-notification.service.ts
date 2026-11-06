@@ -1,9 +1,12 @@
 import { Injectable } from '@angular/core';
 import { Subject } from 'rxjs';
+import { ResourceReward } from '../resource';
 
 export interface VesselReward {
   /** Or gagné (clics). */
   gold?: number;
+  /** Ressources obtenues en cliquant sur le vaisseau. */
+  resources?: ResourceReward[];
   /** Message (buff, spawn mob, etc.). */
   message?: string;
 }

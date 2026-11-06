@@ -55,6 +55,8 @@ export interface SaveData {
   totalManualClicks: number;
   loreHistory: LorePayload[];
   monsterKillCounts?: Record<string, number>;
+  plannedCombatWins?: Record<string, number>;
+  plannedCombatCooldownEnds?: Record<string, number>;
   showDamageNumbers?: boolean;
   showCriticalHitNumbers?: boolean;
 }
@@ -99,7 +101,9 @@ export class GameStateService {
       const autoPerTick =
         (baseAutoPerSecond * streakMult * damageMult) / TICKS_PER_SECOND;
       if (this.monsterState.hasCurrentMonster()) {
-        this.monsterState.dealDamage(autoPerTick, workers, workersAvailable);
+        if (this.monsterState.dealDamage(autoPerTick, workers, workersAvailable)) {
+          this.saveToLocalStorage();
+        }
       } else {
         this.resources.addClicks(autoPerTick);
       }
@@ -128,6 +132,7 @@ export class GameStateService {
     const streakView = this.streakState.getView(workers, workersAvailable);
     const architectLevel = this.workerState.getWorkerLevel(7) ?? 0;
     const farmerLevel = this.workerState.getWorkerLevel(1) ?? 0;
+    const vesselUnlocked = isVesselUnlocked(workers, workersAvailable);
 
     const damageBuffActive = this.powerState.isDamageBuffActive();
     const damageBuffEnd = this.powerState.getDamageBuffEndTime();
@@ -219,9 +224,10 @@ export class GameStateService {
       essenceShopUnlocked: architectLevel >= 1,
       essenceShopItems: this.essenceShopState.getItemsView(),
       essenceShopStats: this.essenceShopState.getStats(),
-      houses: farmerLevel >= 100 ? this.houseState.getHousesView() : undefined,
+      houses: farmerLevel >= 100 || vesselUnlocked ? this.houseState.getHousesView() : undefined,
       resources: this.resources.getResourceStocks(),
-      vesselUnlocked: isVesselUnlocked(workers, workersAvailable),
+      plannedCombats: this.monsterState.getPlannedCombats(workers, workersAvailable),
+      vesselUnlocked,
       activeVessels: this.vesselState.getActiveVesselsView(),
       acteActual: 1,
       loreHistory: this.loreHistory,
@@ -261,7 +267,9 @@ export class GameStateService {
       if (this.showDamageNumbers && !criticalHit) {
         this.showDamage(value * valueMultiplier, clientX, clientY);
       }
-      this.monsterState.dealDamage(value * valueMultiplier, workers, workersAvailable);
+      if (this.monsterState.dealDamage(value * valueMultiplier, workers, workersAvailable)) {
+        this.saveToLocalStorage();
+      }
       this.resources.addManaOnClick(0.5);
       return;
     }
@@ -433,13 +441,29 @@ export class GameStateService {
 
   castPower(powerIndex: number): void {
     const cost = this.getPowerManaCost(powerIndex);
-    this.powerState.castPower(powerIndex, cost ?? undefined);
+    const bonuses = this.houseState.getVesselRushBonuses();
+    this.powerState.castPower(
+      powerIndex,
+      cost ?? undefined,
+      (count, durationSeconds) => this.vesselState.summonVesselRush(
+        count + bonuses.vesselCount,
+        durationSeconds + bonuses.durationSeconds
+      )
+    );
   }
 
   clickVessel(instanceId: string): void {
     const workers = this.workerState.getWorkers();
     const workersAvailable = this.workerState.getWorkersAvailable();
     this.vesselState.clickVessel(instanceId, workers, workersAvailable);
+  }
+
+  startPlannedCombat(combatId: string): boolean {
+    const workers = this.workerState.getWorkers();
+    const workersAvailable = this.workerState.getWorkersAvailable();
+    const started = this.monsterState.startPlannedCombat(combatId, workers, workersAvailable);
+    if (started) this.saveToLocalStorage();
+    return started;
   }
 
   /**
@@ -495,6 +519,8 @@ export class GameStateService {
         totalManualClicks: this.resources.getTotalManualClicks(),
         loreHistory: this.loreHistory,
         monsterKillCounts: this.monsterState.getKillCounts(),
+        plannedCombatWins: this.monsterState.getPlannedCombatWins(),
+        plannedCombatCooldownEnds: this.monsterState.getPlannedCombatCooldownEnds(),
         showDamageNumbers: this.showDamageNumbers,
         showCriticalHitNumbers: this.showCriticalHitNumbers,
       };
@@ -530,6 +556,8 @@ export class GameStateService {
       this.resources.setTotalManualClicks(saveData.totalManualClicks);
       this.loreHistory = saveData.loreHistory || [];
       this.monsterState.setKillCounts(saveData.monsterKillCounts);
+      this.monsterState.setPlannedCombatWins(saveData.plannedCombatWins);
+      this.monsterState.setPlannedCombatCooldownEnds(saveData.plannedCombatCooldownEnds);
       this.showDamageNumbers = saveData.showDamageNumbers ?? false;
       this.showCriticalHitNumbers = saveData.showCriticalHitNumbers ?? true;
     } catch (e) {
@@ -556,6 +584,8 @@ export class GameStateService {
       totalManualClicks: this.resources.getTotalManualClicks(),
       loreHistory: this.loreHistory,
       monsterKillCounts: this.monsterState.getKillCounts(),
+      plannedCombatWins: this.monsterState.getPlannedCombatWins(),
+      plannedCombatCooldownEnds: this.monsterState.getPlannedCombatCooldownEnds(),
       showDamageNumbers: this.showDamageNumbers,
       showCriticalHitNumbers: this.showCriticalHitNumbers,
     };
@@ -604,6 +634,8 @@ export class GameStateService {
       this.resources.setTotalManualClicks(saveData.totalManualClicks);
       this.loreHistory = saveData.loreHistory || [];
       this.monsterState.setKillCounts(saveData.monsterKillCounts);
+      this.monsterState.setPlannedCombatWins(saveData.plannedCombatWins);
+      this.monsterState.setPlannedCombatCooldownEnds(saveData.plannedCombatCooldownEnds);
       this.showDamageNumbers = saveData.showDamageNumbers ?? false;
       this.showCriticalHitNumbers = saveData.showCriticalHitNumbers ?? true;
 

@@ -13,6 +13,12 @@
         (click)="setWorkerView('essenceShop')">
         Shop d’essences
       </button>
+      <button
+        type="button"
+        [class.worker-section-tabs__item--active]="workerView === 'boss'"
+        (click)="setWorkerView('boss')">
+        Boss
+      </button>
     </nav>
     <section class="essence-shop-panel" *ngIf="game.essenceShopUnlocked && workerView === 'essenceShop'">
       <div class="essence-shop-panel__header">
@@ -36,6 +42,47 @@
             (bought)="onEssenceShopItemBought()">
           </app-essence-shop-item-area>
         </ng-container>
+      </div>
+    </section>
+    <section class="planned-combat-panel" *ngIf="game.monsterUnlocked && workerView === 'boss'">
+      <div class="planned-combat-panel__header">
+        <div>
+          <h2>Combats prévus</h2>
+          <p>Des affrontements fixes, avec une récompense garantie.</p>
+        </div>
+      </div>
+      <div class="planned-combat-list">
+        <article class="planned-combat" *ngFor="let combat of game.plannedCombats">
+          <div class="planned-combat__heading">
+            <strong>{{ combat.name }}</strong>
+            <span *ngIf="combat.unlocked">{{ combat.wins }} victoire(s)</span>
+            <span *ngIf="!combat.unlocked">Verrouillé</span>
+          </div>
+          <p>{{ combat.description }}</p>
+          <div class="planned-combat__meta">{{ formatMonsterHp(combat.maxHp) }} PV fixes · {{ combat.timeLimitSeconds }}s</div>
+          <div class="planned-combat__meta" *ngIf="combat.cooldownRemainingSeconds > 0">
+            Relance possible dans {{ formatCooldown(combat.cooldownRemainingSeconds) }}
+          </div>
+          <div class="planned-combat__rewards">
+            <div class="planned-combat__reward" *ngIf="combat.wins === 0; else repeatReward">
+              <strong>Première victoire</strong>
+              <span *ngIf="combat.firstReward.clicks">+{{ formatResourceValue(combat.firstReward.clicks) }} clics</span>
+              <span *ngIf="combat.firstReward.essence">+{{ formatResourceValue(combat.firstReward.essence) }} essence</span>
+              <span *ngFor="let reward of combat.firstReward.resources">+{{ formatResourceValue(reward.amount) }} {{ getResourceName(reward.resourceId) }}</span>
+            </div>
+            <ng-template #repeatReward>
+              <div class="planned-combat__reward">
+                <strong>Victoire suivante</strong>
+                <span *ngIf="combat.repeatReward.clicks">+{{ formatResourceValue(combat.repeatReward.clicks) }} clics</span>
+                <span *ngIf="combat.repeatReward.essence">+{{ formatResourceValue(combat.repeatReward.essence) }} essence</span>
+                <span *ngFor="let reward of combat.repeatReward.resources">+{{ formatResourceValue(reward.amount) }} {{ getResourceName(reward.resourceId) }}</span>
+              </div>
+            </ng-template>
+          </div>
+          <button type="button" [disabled]="!combat.unlocked || !!game.currentMonster || combat.cooldownRemainingSeconds > 0" (click)="startPlannedCombat(combat.id)">
+            {{ game.currentMonster ? 'Combat en cours' : (combat.cooldownRemainingSeconds > 0 ? 'En recharge...' : 'Lancer le combat') }}
+          </button>
+        </article>
       </div>
     </section>
   </ng-template>

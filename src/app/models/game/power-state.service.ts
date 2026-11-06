@@ -10,8 +10,8 @@ import { SPAWN_MOB_POWER_ID, spawnMobEffect } from '../powers/effects/spawn-mob-
 import { MONSTER_TIME_POWER_ID, monsterTimeEffect } from '../powers/effects/monster-time-effect';
 import { MonsterStateService } from './monster-state.service';
 import { WorkerStateService } from './worker-state.service';
-
-const SPAWN_MOB_BAIT_COST = 1;
+import { isVesselUnlocked } from '../unlocks/vessel';
+import { VESSEL_RUSH_POWER_ID, vesselRushEffect } from '../powers/effects/vessel-rush-effect';
 
 /** Registre des effets par id de pouvoir. Un fichier par power, enregistré ici. */
 const POWER_EFFECTS: Map<string, PowerEffect> = new Map([
@@ -19,6 +19,7 @@ const POWER_EFFECTS: Map<string, PowerEffect> = new Map([
   [WEAKNESS_POWER_ID, weaknessPowerEffect],
   [SPAWN_MOB_POWER_ID, spawnMobEffect],
   [MONSTER_TIME_POWER_ID, monsterTimeEffect],
+  [VESSEL_RUSH_POWER_ID, vesselRushEffect],
 ]);
 
 @Injectable({ providedIn: 'root' })
@@ -64,6 +65,7 @@ export class PowerStateService {
     const workers = this.workerState.getWorkers();
     const workersAvailable = this.workerState.getWorkersAvailable();
     const monsterUnlocked = this.monsterState.isMonsterUnlocked(workers, workersAvailable);
+    const vesselsUnlocked = isVesselUnlocked(workers, workersAvailable);
     return this.powersAvailable.map((p) => {
       const until = this.cooldownUntilByPowerId.get(p.id) ?? 0;
       const onCooldown = now < until;
@@ -75,12 +77,13 @@ export class PowerStateService {
           clicks,
           powerWorkerLevel,
           getLevelRequiredForPower(p.id),
-          monsterUnlocked
+          monsterUnlocked,
+          vesselsUnlocked
         ),
         bought: true,
         isOnCooldown: onCooldown,
         cooldownRemainingSeconds: remaining,
-        baitCost: p.id === SPAWN_MOB_POWER_ID ? SPAWN_MOB_BAIT_COST : undefined,
+        baitCost: p.baitCost,
       };
     });
   }
@@ -112,14 +115,18 @@ export class PowerStateService {
   }
 
   /** Lance le sort à l'index donné. effectiveManaCost si fourni (ex. après réduction shop), sinon base. */
-  castPower(powerIndex: number, effectiveManaCost?: number): boolean {
+  castPower(
+    powerIndex: number,
+    effectiveManaCost: number | undefined,
+    summonVessels: (count: number, durationSeconds: number) => void
+  ): boolean {
     if (powerIndex < 0 || powerIndex >= this.powersAvailable.length) return false;
     const power = this.powersAvailable[powerIndex];
     if (this.isPowerOnCooldown(powerIndex)) return false;
     const effect = POWER_EFFECTS.get(power.id);
     if (!effect) return false;
     const cost = effectiveManaCost ?? this.getEffectiveManaCost(power);
-    const baitCost = power.id === SPAWN_MOB_POWER_ID ? SPAWN_MOB_BAIT_COST : 0;
+    const baitCost = power.baitCost ?? 0;
     if (!this.resources.canSpendMana(cost) || !this.resources.spendMana(cost)) return false;
     if (baitCost > 0 && !this.resources.spendResources([{ resourceId: 'bait', amount: baitCost }])) {
       this.resources.addMana(cost);
@@ -150,6 +157,7 @@ export class PowerStateService {
       addMonsterTime: (seconds: number) => {
         this.monsterState.addTimeToCurrentMonster(seconds);
       },
+      summonVessels,
     };
     effect(context);
     if (power.cooldownSeconds > 0) {
@@ -209,8 +217,7 @@ export class PowerStateService {
     if (!POWER_EFFECTS.has(power.id)) return false;
     if (Date.now() < (this.cooldownUntilByPowerId.get(power.id) ?? 0)) return false;
     if (!this.resources.canSpendMana(this.getEffectiveManaCost(power))) return false;
-    return power.id !== SPAWN_MOB_POWER_ID
-      || this.resources.getResourceAmount('bait') >= SPAWN_MOB_BAIT_COST;
+    return this.resources.getResourceAmount('bait') >= (power.baitCost ?? 0);
   }
 
   hasPowerEffect(powerIndex: number): boolean {
@@ -232,7 +239,7 @@ export class PowerStateService {
 
   getPowerBaitCost(powerIndex: number): number {
     if (powerIndex < 0 || powerIndex >= this.powersAvailable.length) return 0;
-    return this.powersAvailable[powerIndex].id === SPAWN_MOB_POWER_ID ? SPAWN_MOB_BAIT_COST : 0;
+    return this.powersAvailable[powerIndex].baitCost ?? 0;
   }
 
   getCooldowns(): Record<string, number> {

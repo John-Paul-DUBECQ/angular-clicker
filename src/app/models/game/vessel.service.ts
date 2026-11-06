@@ -36,10 +36,19 @@ interface ActiveVessel {
   topPercent: number;
 }
 
+interface ScheduledVesselRush {
+  count: number;
+  durationMs: number;
+  startedAt: number;
+  spawned: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class VesselService {
   private activeVessels: ActiveVessel[] = [];
   private nextSpawnAt = Date.now() + 5000;
+  private nextInstanceId = 0;
+  private scheduledVesselRushes: ScheduledVesselRush[] = [];
 
   constructor(
     private resources: ResourcesService,
@@ -53,6 +62,7 @@ export class VesselService {
   tick(workers: WorkerAutoData[], workersAvailable: WorkerAutoData[]): void {
     const now = Date.now();
 
+    this.processVesselRushes(now);
     this.activeVessels = this.activeVessels.filter((a) => {
       const speed = a.vessel.speed ?? VESSEL_DEFAULT_SPEED;
       const leftPercent = ((now - a.spawnTime) / 1000) * speed;
@@ -83,7 +93,7 @@ export class VesselService {
           ? 5 + Math.random() * 35
           : 60 + Math.random() * 35;
         this.activeVessels.push({
-          instanceId: `${v.id}-${now}`,
+          instanceId: `${v.id}-${now}-${this.nextInstanceId++}`,
           vessel: v,
           leftPercent: 0,
           spawnTime: now,
@@ -93,6 +103,30 @@ export class VesselService {
       }
       r -= w;
     }
+  }
+
+  /** Fait apparaître une vague de vaisseaux répartie sur la durée indiquée. */
+  summonVesselRush(count: number, durationSeconds: number): void {
+    const vesselCount = Math.max(0, Math.floor(count));
+    if (vesselCount === 0) return;
+    this.scheduledVesselRushes.push({
+      count: vesselCount,
+      durationMs: Math.max(1, durationSeconds * 1000),
+      startedAt: Date.now(),
+      spawned: 0,
+    });
+  }
+
+  private processVesselRushes(now: number): void {
+    this.scheduledVesselRushes = this.scheduledVesselRushes.filter((rush) => {
+      const progress = Math.min(1, (now - rush.startedAt) / rush.durationMs);
+      const due = progress >= 1 ? rush.count : Math.floor(progress * rush.count);
+      while (rush.spawned < due) {
+        this.spawnVessel();
+        rush.spawned += 1;
+      }
+      return rush.spawned < rush.count;
+    });
   }
 
   /** Clic sur un vaisseau : applique la récompense et le retire. Retourne true si un vaisseau a été touché. */
@@ -108,20 +142,26 @@ export class VesselService {
 
     const v = active.vessel;
     const { rewardMultiplier } = getVesselUpgradeStats(workers, workersAvailable);
+    const resources = (v.resourceReward ?? []).map((reward) => ({
+      ...reward,
+      amount: Math.max(1, Math.floor(reward.amount * rewardMultiplier)),
+    }));
+    resources.forEach((reward) => this.resources.addResource(reward.resourceId, reward.amount));
+    const notification: { gold?: number; resources: typeof resources; message?: string } = { resources };
     switch (v.rewardType) {
       case 'clicks': {
         const base = this.workerState.getBaseProductionPerSecond();
         const mult = 0.65 + Math.random() * 0.7;
         const amount = Math.max(1, Math.floor(base * (v.rewardValue ?? 10) * mult * rewardMultiplier));
         this.resources.addClicks(amount);
-        this.vesselRewardNotify.notifyReward({ gold: amount });
+        notification.gold = amount;
         break;
       }
       case 'tempBonus': {
         const durationBase = v.rewardValue ?? 30;
         const duration = Math.max(1, Math.floor(durationBase * rewardMultiplier));
         this.powerState.applyDamageBuff(2, duration);
-        this.vesselRewardNotify.notifyReward({ message: `Dégâts x2 pendant ${duration} s` });
+        notification.message = `Dégâts x2 pendant ${duration} s`;
         break;
       }
       case 'spawnMonster': {
@@ -129,12 +169,13 @@ export class VesselService {
           const chance = v.probabilityToSpawnMonster ?? 1;
           if (Math.random() < chance) {
             this.monsterState.forceSpawnNext(workers, workersAvailable);
-            this.vesselRewardNotify.notifyReward({ message: 'Un monstre apparaît !' });
+            notification.message = 'Un monstre apparaît !';
           }
         }
         break;
       }
     }
+    this.vesselRewardNotify.notifyReward(notification);
     return true;
   }
 

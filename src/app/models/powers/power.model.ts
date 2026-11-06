@@ -12,27 +12,32 @@ export interface Power {
     isOnCooldown?: boolean;
     /** Renseigné par la vue : secondes restantes avant de pouvoir relancer. */
     cooldownRemainingSeconds?: number;
-    /** Coût en appâts, utilisé par Invocation. */
+    /** Coût en appâts, utilisé par les sorts qui invoquent des créatures ou vaisseaux. */
     baitCost?: number;
   }
   
   
   /** IDs des pouvoirs qui n’apparaissent que si l’Alchimiste (zone mob) est débloqué. */
   const POWER_IDS_REQUIRING_MONSTER = ['spawn-mob', 'monster-time'];
+  const POWER_IDS_REQUIRING_VESSELS = ['vessel-rush'];
 
   /**
    * Un pouvoir apparaît si :
    * - niveau Magicien >= levelRequired pour ce pouvoir,
-   * - et si c’est un pouvoir mob (spawn-mob, monster-time), l’Alchimiste doit être débloqué.
+   * - les sorts mob nécessitent l’Alchimiste; Rafale stellaire nécessite les vaisseaux.
    */
   export function getPowerDoesAppearInGame(
     power: Power,
     _clicks: number,
     powerWorkerLevel?: number,
     levelRequiredForPower?: number,
-    monsterUnlocked?: boolean
+    monsterUnlocked?: boolean,
+    vesselsUnlocked?: boolean
   ): boolean {
     if (POWER_IDS_REQUIRING_MONSTER.includes(power.id) && !monsterUnlocked) {
+      return false;
+    }
+    if (POWER_IDS_REQUIRING_VESSELS.includes(power.id) && !vesselsUnlocked) {
       return false;
     }
     if (levelRequiredForPower != null && powerWorkerLevel != null) {

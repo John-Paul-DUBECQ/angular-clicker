@@ -7,6 +7,7 @@ export interface UnlockContext {
   getEssenceShopItemLevel?: (itemId: string) => number;
   getHouseLevel?: (houseId: string) => number;
   getPowerBought?: (powerId: string) => boolean;
+  getPlannedCombatWins?: (combatId: string) => number;
 }
 
 export type UnlockPredicate = (context: UnlockContext) => boolean;
@@ -103,6 +104,13 @@ export class UnlockMethod {
     return UnlockMethod.custom(
       (context) => context.getPowerBought ? context.getPowerBought(powerId) : false,
       `Pouvoir ${powerId}`
+    );
+  }
+
+  static plannedCombatCompleted(combatId: string, wins = 1): UnlockMethod {
+    return UnlockMethod.custom(
+      (context) => (context.getPlannedCombatWins ? context.getPlannedCombatWins(combatId) : 0) >= wins,
+      `Victoire du combat ${combatId}`
     );
   }
 

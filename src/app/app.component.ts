@@ -25,9 +25,9 @@ import Swal from 'sweetalert2';
 })
 export class AppComponent implements OnInit, OnDestroy {
   title = 'Clicker Game';
-  mobileScreen: 'game' | 'shop' | 'workers' | 'settings' = 'game';
+  mobileScreen: 'game' | 'shop' | 'workers' | 'combat' | 'settings' = 'game';
   mobileMenuVisible = false;
-  workerView: 'workers' | 'essenceShop' = 'workers';
+  workerView: 'workers' | 'essenceShop' | 'boss' = 'workers';
   private refreshInterval: ReturnType<typeof setInterval> | null = null;
   private vesselTickId: ReturnType<typeof setInterval> | null = null;
   /** Position left fluide (dérivée du temps) pour chaque vaisseau, mise à jour ~50 ms. */
@@ -170,6 +170,9 @@ export class AppComponent implements OnInit, OnDestroy {
     if (reward.gold != null && reward.gold > 0) {
       parts.push(`<p>+${formatNumberValue(reward.gold, 0)} clics</p>`);
     }
+    (reward.resources ?? []).forEach((resource) => {
+      parts.push(`<p>+${formatNumberValue(resource.amount, 0)} ${this.getResourceName(resource.resourceId)}</p>`);
+    });
     if (reward.message) {
       parts.push(`<p>${reward.message}</p>`);
     }
@@ -358,6 +361,12 @@ export class AppComponent implements OnInit, OnDestroy {
     this.refreshGameState();
   }
 
+  startPlannedCombat(combatId: string): void {
+    if (this.gameState.startPlannedCombat(combatId)) {
+      this.refreshGameState();
+    }
+  }
+
   trackByIndex(index: number, _worker: WorkerAuto): number {
     return index;
   }
@@ -430,6 +439,12 @@ export class AppComponent implements OnInit, OnDestroy {
 
   formatMonsterHp(value: number): string {
     return formatNumberValue(value, 2);
+  }
+
+  formatCooldown(seconds: number): string {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   }
 
   getMonsterHpPercent(): number {
@@ -511,7 +526,7 @@ export class AppComponent implements OnInit, OnDestroy {
     return (this.game.essenceShopItems ?? []).map((item, index) => ({ item, index }));
   }
 
-  setWorkerView(view: 'workers' | 'essenceShop'): void {
+  setWorkerView(view: 'workers' | 'essenceShop' | 'boss'): void {
     this.workerView = view;
   }
 
@@ -533,7 +548,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.settingsVisible = false;
   }
 
-  setMobileScreen(screen: 'game' | 'shop' | 'workers' | 'settings'): void {
+  setMobileScreen(screen: 'game' | 'shop' | 'workers' | 'combat' | 'settings'): void {
     this.mobileScreen = screen;
     this.mobileMenuVisible = false;
   }

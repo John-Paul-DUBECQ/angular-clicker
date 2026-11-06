@@ -9,6 +9,7 @@ describe('UnlockMethod', () => {
     getEssenceShopItemLevel: (itemId) => itemId === 'bait' ? 2 : 0,
     getHouseLevel: (houseId) => houseId === 'mine' ? 3 : 0,
     getPowerBought: (powerId) => powerId === 'fire',
+    getPlannedCombatWins: (combatId) => combatId === 'first-combat' ? 1 : 0,
   };
 
   it('évalue les moyens d’unlock principaux', () => {
@@ -28,6 +29,12 @@ describe('UnlockMethod', () => {
     expect(workerAndShop.isUnlocked(context)).toBeTrue();
     expect(UnlockMethod.any(UnlockMethod.minClicks(101), UnlockMethod.houseLevel('mine', 3))
       .isUnlocked(context)).toBeTrue();
+  });
+
+  it('débloque un combat après sa victoire précédente', () => {
+    expect(UnlockMethod.plannedCombatCompleted('first-combat').isUnlocked(context)).toBeTrue();
+    expect(UnlockMethod.plannedCombatCompleted('first-combat', 2).isUnlocked(context)).toBeFalse();
+    expect(UnlockMethod.plannedCombatCompleted('unknown-combat').isUnlocked(context)).toBeFalse();
   });
 
   it('conserve le niveau worker pour les paliers affiches', () => {

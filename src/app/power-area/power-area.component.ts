@@ -1,6 +1,5 @@
 import { Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
 import { Power } from '../models/powers/power.model';
-import { GameStateService } from '../models/game/game-state.service';
 
 const POPUP_OFFSET = 12;
 const POPUP_VIEWPORT_MARGIN = 12;
@@ -28,13 +27,10 @@ export class PowerAreaComponent {
   popupVisible = false;
   popupStyle: { left: string; top: string } | null = null;
 
-  constructor(private gameState: GameStateService) {}
-
   onSlotClick(event: MouseEvent): void {
     event.preventDefault();
     event.stopPropagation();
     if (this.canCast) {
-      this.gameState.castPower(this.powerIndex);
       this.cast.emit(this.powerIndex);
     }
     this.togglePopup();

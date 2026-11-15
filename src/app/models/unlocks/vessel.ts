@@ -35,6 +35,20 @@ export const vesselUnlockDefinition: VesselUnlockDefinition = {
 
 export const VESSEL_UPGRADES: VesselUnlockDefinition[] = [
   {
+    id: 'vessel-reward-house',
+    name: 'Hangar de ravitaillement',
+    description: 'Débloque une maison qui augmente les récompenses et la fréquence des vaisseaux.',
+    imageUrl: 'assets/img/House/House1.png',
+    levelRequired: 20,
+  },
+  {
+    id: 'vessel-rush-house',
+    name: 'Observatoire des Vaisseaux',
+    description: 'Débloque une maison qui améliore le sort Rafale stellaire.',
+    imageUrl: 'assets/img/House/House1.png',
+    levelRequired: 25,
+  },
+  {
     id: 'vessel-spawn-1',
     name: 'Plus de vaisseaux',
     description: 'Les vaisseaux apparaissent plus souvent.',

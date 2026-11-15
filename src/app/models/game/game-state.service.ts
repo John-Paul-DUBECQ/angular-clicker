@@ -185,7 +185,7 @@ export class GameStateService {
       clickValue,
       valueAutoPerSecond,
       shopItems: this.shopState.getShopItemsView(getWorkerLevel),
-      powersAvailable: this.powerState.getPowersAvailableView(powerWorkerLevel),
+      powersAvailable: this.powerState.getPowersAvailableView(),
       sunUnlocked: isSunUnlocked(workers, workersAvailable),
       sunDamageMultiplier: (() => {
         if (!isSunUnlocked(workers, workersAvailable)) return undefined;
@@ -224,7 +224,9 @@ export class GameStateService {
       essenceShopUnlocked: architectLevel >= 1,
       essenceShopItems: this.essenceShopState.getItemsView(),
       essenceShopStats: this.essenceShopState.getStats(),
-      houses: farmerLevel >= 100 || vesselUnlocked ? this.houseState.getHousesView() : undefined,
+      houses: farmerLevel >= 100 || vesselUnlocked
+        ? this.houseState.getHousesView(workersAvailable[ VESSEL_WORKER_INDEX]?.level ?? 0)
+        : undefined,
       resources: this.resources.getResourceStocks(),
       plannedCombats: this.monsterState.getPlannedCombats(workers, workersAvailable),
       vesselUnlocked,
@@ -405,7 +407,8 @@ export class GameStateService {
   }
 
   buyHouse(houseIndex: number): boolean {
-    return this.houseState.buy(houseIndex);
+    const geometerLevel = this.workerState.getWorkerLevel(VESSEL_WORKER_INDEX) ?? 0;
+    return this.houseState.buy(houseIndex, geometerLevel);
   }
 
   getCanBuyPower(price: number): boolean {

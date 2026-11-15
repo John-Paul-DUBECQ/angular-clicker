@@ -31,6 +31,20 @@ export const listMonster: Monster[] = [
       { resourceId: 'food', amount: 2 },
       { resourceId: 'super-mosh-core', amount: 1 },
     ],
+  },
+  {
+    id: 'monster8',
+    name: 'Sac Poubelle Sama',
+    description: 'Sac Poubelle Sama est une poubelle, il est très difficile à tuer.',
+    imageUrl: 'assets/img/shadocks/sac-poubelle-sama.png',
+    doesAppearInGame: false,
+    unlockMethod: UnlockMethod.workerLevel(MONSTER_WORKER_INDEX, 5),
+    lootMultiplier: 3,
+    probabilityToSpawn: 15,
+    drops: [
+      { resourceId: 'food', amount: 0.5 },
+      { resourceId: 'détritus', amount: 1 },
+    ],
   },{
     id: 'monster3',
     name: 'Gribouy',

@@ -8,9 +8,10 @@ import { WorkerStateService } from './worker-state.service';
 import { PowerStateService } from './power-state.service';
 import { MonsterStateService } from './monster-state.service';
 import { VesselRewardNotificationService } from './vessel-reward-notification.service';
+import { HouseStateService } from './house-state.service';
 
-const VESSEL_SPAWN_INTERVAL_MS_MIN = 40000;
-const VESSEL_SPAWN_INTERVAL_MS_MAX = 120000;
+const VESSEL_SPAWN_INTERVAL_MS_MIN = 50000;
+const VESSEL_SPAWN_INTERVAL_MS_MAX = 140000;
 const VESSEL_DEFAULT_SPEED = 25; // % largeur / seconde
 const TICKS_PER_SECOND = 10;
 
@@ -55,7 +56,8 @@ export class VesselService {
     private workerState: WorkerStateService,
     private powerState: PowerStateService,
     private monsterState: MonsterStateService,
-    private vesselRewardNotify: VesselRewardNotificationService
+    private vesselRewardNotify: VesselRewardNotificationService,
+    private houseState: HouseStateService
   ) {}
 
   /** Tick : retirer les vaisseaux sortis (position = temps), en faire spawn si débloqué. */
@@ -73,9 +75,11 @@ export class VesselService {
     if (!isVesselUnlocked(workers, workersAvailable)) return;
     if (now < this.nextSpawnAt) return;
     const { spawnIntervalFactor } = getVesselUpgradeStats(workers, workersAvailable);
+    const houseBonuses = this.houseState.getVesselUpgradeBonuses();
     const intervalMs =
       (VESSEL_SPAWN_INTERVAL_MS_MIN + Math.random() * (VESSEL_SPAWN_INTERVAL_MS_MAX - VESSEL_SPAWN_INTERVAL_MS_MIN)) *
-      spawnIntervalFactor;
+      spawnIntervalFactor *
+      houseBonuses.spawnIntervalFactor;
     this.nextSpawnAt = now + intervalMs;
     this.spawnVessel();
   }
@@ -141,7 +145,9 @@ export class VesselService {
     this.activeVessels.splice(index, 1);
 
     const v = active.vessel;
-    const { rewardMultiplier } = getVesselUpgradeStats(workers, workersAvailable);
+    const { rewardMultiplier: geometerRewardMultiplier } = getVesselUpgradeStats(workers, workersAvailable);
+    const houseBonuses = this.houseState.getVesselUpgradeBonuses();
+    const rewardMultiplier = geometerRewardMultiplier * houseBonuses.rewardMultiplier;
     const resources = (v.resourceReward ?? []).map((reward) => ({
       ...reward,
       amount: Math.max(1, Math.floor(reward.amount * rewardMultiplier)),

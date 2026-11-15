@@ -132,7 +132,7 @@
             [house]="house"
             [essence]="game.monsterEssence || 0"
             [resources]="resources"
-            (upgraded)="onHouseUpgraded(i)">
+            (upgraded)="onHouseUpgraded(house.houseIndex != null ? house.houseIndex : i)">
           </app-house-area>
         </ng-container>
         <button type="button" class="houses-area__resources-button" (click)="toggleResources()">

@@ -5,6 +5,7 @@ import { ResourcesService } from './resources.service';
 import { VesselRewardNotificationService } from './vessel-reward-notification.service';
 import { VesselService } from './vessel.service';
 import { WorkerStateService } from './worker-state.service';
+import { HouseStateService } from './house-state.service';
 
 describe('VesselService', () => {
   let service: VesselService;
@@ -20,6 +21,7 @@ describe('VesselService', () => {
         { provide: PowerStateService, useValue: {} },
         { provide: MonsterStateService, useValue: {} },
         { provide: VesselRewardNotificationService, useValue: {} },
+        { provide: HouseStateService, useValue: { getVesselUpgradeBonuses: () => ({ rewardMultiplier: 1, spawnIntervalFactor: 1 }) } },
       ],
     });
     service = TestBed.inject(VesselService);

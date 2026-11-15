@@ -17,6 +17,9 @@ export interface House {
   nextBaitInSeconds?: number;
   vesselRushVesselCount?: number;
   vesselRushDurationSeconds?: number;
+  vesselRewardMultiplier?: number;
+  vesselSpawnIntervalFactor?: number;
+  houseIndex?: number;
   /** Conditions cumulables nécessaires pour débloquer la maison. */
   unlockMethod?: UnlockMethod;
 }

@@ -9,6 +9,10 @@
     <p *ngIf="house.vesselRushVesselCount != null && house.vesselRushDurationSeconds != null">
       Rafale actuelle : {{ house.vesselRushVesselCount }} vaisseaux sur {{ house.vesselRushDurationSeconds }} s.
     </p>
+    <p *ngIf="house.vesselRewardMultiplier != null && house.vesselSpawnIntervalFactor != null">
+      Récompenses ×{{ house.vesselRewardMultiplier | number:'1.2-2' }} ·
+      intervalle réduit de {{ (1 - house.vesselSpawnIntervalFactor) * 100 | number:'1.0-0' }} %.
+    </p>
     <p class="house-card__timer" *ngIf="house.unlocked && house.baitIntervalSeconds">
       Prochain appât dans {{ house.nextBaitInSeconds | number:'1.0-0' }} / {{ house.baitIntervalSeconds | number:'1.0-0' }} s
     </p>

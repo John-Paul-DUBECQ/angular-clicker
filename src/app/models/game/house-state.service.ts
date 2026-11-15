@@ -6,6 +6,8 @@ import {
   VESSEL_RUSH_BASE_COUNT,
   VESSEL_RUSH_BASE_DURATION_SECONDS,
 } from '../powers/effects/vessel-rush-effect';
+import { UnlockMethod } from '../unlocks/unlock-method';
+import { VESSEL_WORKER_INDEX } from '../unlocks/vessel';
 
 const CRITICAL_HOUSE_ID = 'critical-house';
 const CRITICAL_HOUSE_BASE_PRICE = 10;
@@ -45,6 +47,19 @@ const VESSEL_RUSH_HOUSE_UPGRADE_COSTS: ResourceCost[] = [
   { resourceId: 'warship-cell', amount: 1 },
   { resourceId: 'hunter-beacon', amount: 1 },
 ];
+const VESSEL_REWARD_HOUSE_ID = 'vessel-reward-house';
+const VESSEL_REWARD_HOUSE_UNLOCK_COSTS: ResourceCost[] = [
+  { resourceId: 'cargo-scrap', amount: 3 },
+  { resourceId: 'warship-cell', amount: 2 },
+  { resourceId: 'hunter-beacon', amount: 1 },
+];
+const VESSEL_REWARD_HOUSE_UPGRADE_COSTS: ResourceCost[] = [
+  { resourceId: 'cargo-scrap', amount: 2 },
+  { resourceId: 'warship-cell', amount: 1 },
+];
+const VESSEL_REWARD_MULTIPLIER_PER_LEVEL = 1.1;
+const VESSEL_SPAWN_INTERVAL_FACTOR_PER_LEVEL = 0.9;
+const VESSEL_REWARD_HOUSE_MAX_LEVEL = 10;
 
 @Injectable({ providedIn: 'root' })
 export class HouseStateService {
@@ -89,14 +104,34 @@ export class HouseStateService {
       unlockCosts: VESSEL_RUSH_HOUSE_UNLOCK_COSTS,
       unlocked: false,
       maxLevel: VESSEL_RUSH_HOUSE_MAX_LEVEL,
+      unlockMethod: UnlockMethod.workerLevel(VESSEL_WORKER_INDEX, 25),
+    },
+    {
+      id: VESSEL_REWARD_HOUSE_ID,
+      name: 'Hangar de ravitaillement',
+      description: '+10 % aux récompenses et vaisseaux 10 % plus fréquents par niveau.',
+      imageUrl: 'assets/img/House/House1.png',
+      level: 0,
+      bonusPerLevel: 0,
+      price: 5,
+      costs: VESSEL_REWARD_HOUSE_UPGRADE_COSTS,
+      unlockPrice: 0,
+      unlockCosts: VESSEL_REWARD_HOUSE_UNLOCK_COSTS,
+      unlocked: false,
+      maxLevel: VESSEL_REWARD_HOUSE_MAX_LEVEL,
+      unlockMethod: UnlockMethod.workerLevel(VESSEL_WORKER_INDEX, 20),
     },
   ];
 
   constructor(private resources: ResourcesService) {}
 
-  getHousesView(): House[] {
-    return this.houses.map((house) => ({
+  getHousesView(geometerLevel = 0): House[] {
+    return this.houses
+      .map((house, houseIndex) => ({ house, houseIndex }))
+      .filter(({ house }) => this.isHouseAvailable(house, geometerLevel))
+      .map(({ house, houseIndex }) => ({
       ...house,
+      houseIndex,
       price: this.getPrice(house),
       costs: house.costs.map((cost) => ({
         ...cost,
@@ -115,6 +150,12 @@ export class HouseStateService {
       vesselRushDurationSeconds: house.id === VESSEL_RUSH_HOUSE_ID
         ? this.getVesselRushDurationSeconds(house)
         : undefined,
+      vesselRewardMultiplier: house.id === VESSEL_REWARD_HOUSE_ID
+        ? this.getVesselRewardMultiplier(house)
+        : undefined,
+      vesselSpawnIntervalFactor: house.id === VESSEL_REWARD_HOUSE_ID
+        ? this.getVesselSpawnIntervalFactor(house)
+        : undefined,
     }));
   }
 
@@ -124,6 +165,15 @@ export class HouseStateService {
     return {
       vesselCount: level * VESSEL_RUSH_HOUSE_VESSELS_PER_LEVEL,
       durationSeconds: level * VESSEL_RUSH_HOUSE_DURATION_PER_LEVEL_SECONDS,
+    };
+  }
+
+  getVesselUpgradeBonuses(): { rewardMultiplier: number; spawnIntervalFactor: number } {
+    const house = this.houses.find((item) => item.id === VESSEL_REWARD_HOUSE_ID);
+    const level = house?.unlocked ? house.level : 0;
+    return {
+      rewardMultiplier: Math.pow(VESSEL_REWARD_MULTIPLIER_PER_LEVEL, level),
+      spawnIntervalFactor: Math.pow(VESSEL_SPAWN_INTERVAL_FACTOR_PER_LEVEL, level),
     };
   }
 
@@ -146,9 +196,9 @@ export class HouseStateService {
     return this.houses.find((house) => house.id === BAIT_HOUSE_ID)?.nextBaitInSeconds;
   }
 
-  canBuy(index: number): boolean {
+  canBuy(index: number, geometerLevel = 0): boolean {
     const house = this.houses[index];
-    if (!house) return false;
+    if (!house || !this.isHouseAvailable(house, geometerLevel)) return false;
     if (!house.unlocked) {
       return this.resources.getMonsterEssence() >= (house.unlockPrice ?? 0)
         && this.resources.canSpendResources(house.unlockCosts ?? []);
@@ -158,9 +208,9 @@ export class HouseStateService {
       && this.resources.canSpendResources(this.getCostsForNextLevel(house));
   }
 
-  buy(index: number): boolean {
+  buy(index: number, geometerLevel = 0): boolean {
     const house = this.houses[index];
-    if (!house) return false;
+    if (!house || !this.isHouseAvailable(house, geometerLevel)) return false;
     if (!house.unlocked) {
       const unlockPrice = house.unlockPrice ?? 0;
       const unlockCosts = house.unlockCosts ?? [];
@@ -227,5 +277,21 @@ export class HouseStateService {
   private getVesselRushDurationSeconds(house: House): number {
     return VESSEL_RUSH_BASE_DURATION_SECONDS
       + house.level * VESSEL_RUSH_HOUSE_DURATION_PER_LEVEL_SECONDS;
+  }
+
+  private getVesselRewardMultiplier(house: House): number {
+    return Math.pow(VESSEL_REWARD_MULTIPLIER_PER_LEVEL, house.level);
+  }
+
+  private getVesselSpawnIntervalFactor(house: House): number {
+    return Math.pow(VESSEL_SPAWN_INTERVAL_FACTOR_PER_LEVEL, house.level);
+  }
+
+  private isHouseAvailable(house: House, geometerLevel: number): boolean {
+    if (!house.unlockMethod) return true;
+    return house.unlockMethod.isUnlocked({
+      clicks: 0,
+      getWorkerLevel: (workerIndex) => workerIndex === VESSEL_WORKER_INDEX ? geometerLevel : null,
+    });
   }
 }

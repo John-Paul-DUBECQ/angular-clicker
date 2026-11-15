@@ -2,7 +2,7 @@ import { Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@
 import { WorkerAuto, WorkerAutoData, calculateClicksPerSecondForWorker, getClickBonus, getWorkerBuyButtonText, getCanBuyWorkerWithDependencies, getWorkerDescription } from '../models/worker-auto-model';
 import { GameStateService, WorkerInfoStats } from '../models/game/game-state.service';
 import { WorkerUnlock } from '../models/unlocks/worker-unlock.model';
-import { getUpcomingPowerUnlockTiers, POWER_WORKER_INDEX } from '../models/unlocks/power-unlock';
+import { getUpcomingPowerUnlockTiers } from '../models/unlocks/power-unlock';
 import { houseUnlockDefinition } from '../models/unlocks/house-unlock';
 import { getUpcomingShopItemUnlockTiers } from '../models/shop-item';
 import { listShopItem } from '../models/list-shop-item';
@@ -89,11 +89,12 @@ export class WorkerAreaComponent {
   get nextWorkerUnlocks(): WorkerUnlock[] {
     const w = this.workerSelected;
     const level = w?.level ?? 0;
-    const fromUnlocks: WorkerUnlock[] = (w?.unlocks ?? []).filter(
-      (u) => level < (u.levelRequired ?? 1)
-    );
-    const fromPowerTiers =
-      this.workerIndex === POWER_WORKER_INDEX ? getUpcomingPowerUnlockTiers(level) : [];
+    const fromUnlocks: WorkerUnlock[] = (w?.unlocks ?? []).filter((unlock) => {
+      const requiredLevel = unlock.unlockMethod?.getWorkerLevelRequirement(this.workerIndex)
+        ?? unlock.levelRequired;
+      return requiredLevel != null && level < requiredLevel;
+    });
+    const fromPowerTiers = getUpcomingPowerUnlockTiers(this.workerIndex, level);
     const fromHouseTier =
       this.workerIndex === 1 && level < (houseUnlockDefinition.levelRequired ?? 0)
         ? [houseUnlockDefinition]

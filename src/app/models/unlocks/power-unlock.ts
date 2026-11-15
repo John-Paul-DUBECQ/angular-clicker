@@ -1,22 +1,17 @@
 import { WorkerAutoData } from "../worker-auto-model";
 import { WorkerUnlock } from "./worker-unlock.model";
 import { listPower } from "../powers/list-power";
+import { POWER_WORKER_INDEX } from './worker-indexes';
 
-export const POWER_WORKER_INDEX = 5;
+export { POWER_WORKER_INDEX } from './worker-indexes';
 
 export const POWER_LEVEL_REQUIRED = 1;
 
-/** Niveau du worker "power" à partir duquel chaque pouvoir est débloqué. */
-export const POWER_LEVELS_BY_POWER_ID: Record<string, number> = {
-  power: 1,
-  weakness: 9,
-  'spawn-mob': 1,
-  'monster-time': 5,
-  'vessel-rush': 1,
-};
-
 export function getLevelRequiredForPower(powerId: string): number | undefined {
-  return POWER_LEVELS_BY_POWER_ID[powerId];
+  return listPower
+    .find((power) => power.id === powerId)
+    ?.unlockMethod
+    ?.getWorkerLevelRequirement(POWER_WORKER_INDEX);
 }
 
 /** Améliorations mana (max + régénération) débloquées aux niveaux du Magicien. */
@@ -115,20 +110,23 @@ export function isPowerUnlocked(
 }
 
 /** Paliers "déblocage de sort" pour le Magicien, où niveau requis > magicienLevel, triés par niveau. */
-export function getUpcomingPowerUnlockTiers(magicienLevel: number): WorkerUnlock[] {
-  return Object.entries(POWER_LEVELS_BY_POWER_ID)
-    .filter(([, levelRequired]) => levelRequired > magicienLevel)
-    .map(([powerId, levelRequired]) => {
-      const power = listPower.find((p) => p.id === powerId);
-      return {
-        id: `power-unlock-${powerId}`,
-        name: power?.name ?? powerId,
-        description: power?.description ?? `Débloque le sort ${power?.name ?? powerId}.`,
-        imageUrl: power?.imageUrl ?? '',
-        levelRequired,
-        unlockType: 'spell' as const,
-        manaCost: power?.manaCost,
-      };
-    })
+export function getUpcomingPowerUnlockTiers(workerIndex: number, workerLevel: number): WorkerUnlock[] {
+  return listPower
+    .filter((power) => power.unlockMethod != null)
+    .map((power) => ({
+      power,
+      levelRequired: power.unlockMethod?.getWorkerLevelRequirement(workerIndex),
+    }))
+    .filter((entry) => entry.levelRequired != null && entry.levelRequired > workerLevel)
+    .map(({ power, levelRequired }) => ({
+      id: `power-unlock-${power.id}`,
+      name: power.name,
+      description: power.description,
+      imageUrl: power.imageUrl ?? '',
+      levelRequired: levelRequired!,
+      unlockMethod: power.unlockMethod,
+      unlockType: 'spell' as const,
+      manaCost: power.manaCost,
+    }))
     .sort((a, b) => (a.levelRequired ?? 0) - (b.levelRequired ?? 0));
 }

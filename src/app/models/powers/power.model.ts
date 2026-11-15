@@ -1,3 +1,5 @@
+import { UnlockContext, UnlockMethod } from '../unlocks/unlock-method';
+
 export interface Power {
     id: string;
     name: string;
@@ -14,34 +16,14 @@ export interface Power {
     cooldownRemainingSeconds?: number;
     /** Coût en appâts, utilisé par les sorts qui invoquent des créatures ou vaisseaux. */
     baitCost?: number;
+    /** Condition de déblocage du sort et source de son palier de niveau. */
+    unlockMethod?: UnlockMethod;
   }
   
   
-  /** IDs des pouvoirs qui n’apparaissent que si l’Alchimiste (zone mob) est débloqué. */
-  const POWER_IDS_REQUIRING_MONSTER = ['spawn-mob', 'monster-time'];
-  const POWER_IDS_REQUIRING_VESSELS = ['vessel-rush'];
-
-  /**
-   * Un pouvoir apparaît si :
-   * - niveau Magicien >= levelRequired pour ce pouvoir,
-   * - les sorts mob nécessitent l’Alchimiste; Rafale stellaire nécessite les vaisseaux.
-   */
   export function getPowerDoesAppearInGame(
     power: Power,
-    _clicks: number,
-    powerWorkerLevel?: number,
-    levelRequiredForPower?: number,
-    monsterUnlocked?: boolean,
-    vesselsUnlocked?: boolean
+    context: UnlockContext
   ): boolean {
-    if (POWER_IDS_REQUIRING_MONSTER.includes(power.id) && !monsterUnlocked) {
-      return false;
-    }
-    if (POWER_IDS_REQUIRING_VESSELS.includes(power.id) && !vesselsUnlocked) {
-      return false;
-    }
-    if (levelRequiredForPower != null && powerWorkerLevel != null) {
-      return powerWorkerLevel >= levelRequiredForPower;
-    }
-    return power.doesAppearInGame;
+    return power.unlockMethod?.isUnlocked(context) ?? power.doesAppearInGame;
   }

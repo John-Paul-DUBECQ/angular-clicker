@@ -3,14 +3,12 @@ import { Power, getPowerDoesAppearInGame } from '../powers/power.model';
 import { PowerEffect } from '../powers/power-effect.types';
 import { ResourcesService } from './resources.service';
 import { listPower } from '../powers/list-power';
-import { getLevelRequiredForPower } from '../unlocks/power-unlock';
 import { DAMAGE_DOUBLE_POWER_ID, damageDoubleEffect } from '../powers/effects/damage-double.effect';
 import { WEAKNESS_POWER_ID, weaknessPowerEffect } from '../powers/effects/weakness-power-effect';
 import { SPAWN_MOB_POWER_ID, spawnMobEffect } from '../powers/effects/spawn-mob-effect';
 import { MONSTER_TIME_POWER_ID, monsterTimeEffect } from '../powers/effects/monster-time-effect';
 import { MonsterStateService } from './monster-state.service';
 import { WorkerStateService } from './worker-state.service';
-import { isVesselUnlocked } from '../unlocks/vessel';
 import { VESSEL_RUSH_POWER_ID, vesselRushEffect } from '../powers/effects/vessel-rush-effect';
 
 /** Registre des effets par id de pouvoir. Un fichier par power, enregistré ici. */
@@ -58,28 +56,25 @@ export class PowerStateService {
     return this.resources.canSpend(price);
   }
 
-  /** powerWorkerLevel : niveau du worker "power" (Magicien). Les pouvoirs mob n’apparaissent que si l’Alchimiste est débloqué. */
-  getPowersAvailableView(powerWorkerLevel?: number): Power[] {
+  getPowersAvailableView(): Power[] {
     const clicks = this.resources.getClicks();
     const now = Date.now();
     const workers = this.workerState.getWorkers();
     const workersAvailable = this.workerState.getWorkersAvailable();
-    const monsterUnlocked = this.monsterState.isMonsterUnlocked(workers, workersAvailable);
-    const vesselsUnlocked = isVesselUnlocked(workers, workersAvailable);
+    const unlockContext = {
+      clicks,
+      getWorkerLevel: (workerIndex: number) => {
+        const worker = workersAvailable[workerIndex];
+        return worker && workers.includes(worker) ? worker.level : null;
+      },
+    };
     return this.powersAvailable.map((p) => {
       const until = this.cooldownUntilByPowerId.get(p.id) ?? 0;
       const onCooldown = now < until;
       const remaining = onCooldown ? Math.max(0, Math.ceil((until - now) / 1000)) : 0;
       return {
         ...p,
-        doesAppearInGame: getPowerDoesAppearInGame(
-          p,
-          clicks,
-          powerWorkerLevel,
-          getLevelRequiredForPower(p.id),
-          monsterUnlocked,
-          vesselsUnlocked
-        ),
+        doesAppearInGame: getPowerDoesAppearInGame(p, unlockContext),
         bought: true,
         isOnCooldown: onCooldown,
         cooldownRemainingSeconds: remaining,

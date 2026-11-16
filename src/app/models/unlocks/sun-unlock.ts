@@ -92,6 +92,13 @@ export const SUN_UPGRADES: SunUpgrade[] = [
     imageUrl: 'assets/img/Star/Star1.png',
     levelRequired: 50,
     speedOfSunRotation: -0.4,
+  },
+  {
+    id: 'solar-balance-house-unlock',
+    name: 'Maison d’équilibrage solaire',
+    description: 'Débloque une maison qui étend la zone de clic et ouvre les améliorations des soleils.',
+    imageUrl: 'assets/img/House/House1.png',
+    levelRequired: 75,
   }
 ];
 

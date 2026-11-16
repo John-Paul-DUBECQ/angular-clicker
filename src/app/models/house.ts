@@ -5,6 +5,7 @@ export interface House {
   name: string;
   description: string;
   imageUrl: string;
+  tags?: string[];
   level: number;
   bonusPerLevel: number;
   price: number;

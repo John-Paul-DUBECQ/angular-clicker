@@ -52,6 +52,10 @@ export class WorkerAreaComponent {
     return this.workerSelected.effectiveClickBonus ?? getClickBonus(this.workerSelected);
   }
 
+  get totalClickDamage(): number {
+    return this.workerSelected?.totalClickDamage ?? this.clickBonus + 1;
+  }
+
   get isClickWorker(): boolean {
     return this.workerSelected?.workerType === 'click';
   }

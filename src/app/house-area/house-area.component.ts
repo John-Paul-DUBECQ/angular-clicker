@@ -11,7 +11,13 @@ export class HouseAreaComponent {
   @Input() house!: House;
   @Input() essence = 0;
   @Input() resources: ResourceStock[] = [];
+  @Input() collapsed = false;
   @Output() upgraded = new EventEmitter<void>();
+  @Output() collapsedChange = new EventEmitter<boolean>();
+
+  toggleCollapsed(): void {
+    this.collapsedChange.emit(!this.collapsed);
+  }
 
   get canBuy(): boolean {
     const costs = this.house.unlocked ? this.house.costs : (this.house.unlockCosts ?? []);

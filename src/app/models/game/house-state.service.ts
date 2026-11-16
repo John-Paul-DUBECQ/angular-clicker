@@ -8,6 +8,7 @@ import {
 } from '../powers/effects/vessel-rush-effect';
 import { UnlockMethod } from '../unlocks/unlock-method';
 import { VESSEL_WORKER_INDEX } from '../unlocks/vessel';
+import { SUN_WORKER_INDEX } from '../unlocks/sun-unlock';
 
 const CRITICAL_HOUSE_ID = 'critical-house';
 const CRITICAL_HOUSE_BASE_PRICE = 10;
@@ -60,6 +61,37 @@ const VESSEL_REWARD_HOUSE_UPGRADE_COSTS: ResourceCost[] = [
 const VESSEL_REWARD_MULTIPLIER_PER_LEVEL = 1.1;
 const VESSEL_SPAWN_INTERVAL_FACTOR_PER_LEVEL = 0.9;
 const VESSEL_REWARD_HOUSE_MAX_LEVEL = 10;
+const SOLAR_BALANCE_HOUSE_ID = 'solar-balance-house';
+const SOLAR_BLUE_HOUSE_ID = 'solar-blue-house';
+const SOLAR_YELLOW_HOUSE_ID = 'solar-yellow-house';
+const SOLAR_HOUSE_MAX_LEVEL = 10;
+const SOLAR_AFK_TO_CLICK_PER_LEVEL = 0.003;
+const SOLAR_CLICK_TO_AFK_PER_LEVEL = 0.05;
+const SOLAR_BLUE_CLICK_REWARD_PER_LEVEL = 1.05;
+const SOLAR_BLUE_AUTO_DAMAGE_PER_LEVEL = 1.05;
+const SOLAR_BLUE_MANA_PER_CLICK_PER_LEVEL = 0.1;
+const SOLAR_BLUE_CRITICAL_CHANCE_PER_LEVEL = 0.005;
+const SOLAR_BLUE_CRITICAL_DAMAGE_PER_LEVEL = 1.05;
+const SOLAR_YELLOW_MONSTER_INTERVAL_PER_LEVEL = 0.95;
+const SOLAR_YELLOW_STREAK_MULTIPLIER_PER_LEVEL = 1.1;
+
+export type ActiveSolarColor = 'yellow' | 'blue';
+
+export interface SolarHouseBonuses {
+  activeColor: ActiveSolarColor | null;
+  clickRewardMultiplier: number;
+  autoDamageMultiplier: number;
+  manaPerClickBonus: number;
+  criticalChanceBonus: number;
+  criticalDamageMultiplier: number;
+  monsterSpawnRateMultiplier: number;
+  streakClickMultiplier: number;
+}
+
+export interface SolarDamageExchange {
+  clickDamageBonus: number;
+  autoDamageBonus: number;
+}
 
 @Injectable({ providedIn: 'root' })
 export class HouseStateService {
@@ -69,6 +101,7 @@ export class HouseStateService {
       name: 'Maison du Mineur',
       description: '+3 % de chance de coup critique par niveau.',
       imageUrl: 'assets/img/House/House1.png',
+      tags: ['Combat'],
       level: 0,
       bonusPerLevel: CRITICAL_HOUSE_BONUS_PER_LEVEL,
       price: CRITICAL_HOUSE_BASE_PRICE,
@@ -80,6 +113,7 @@ export class HouseStateService {
       name: 'Maison des Appâts',
       description: 'Génère automatiquement un appât qui attire un monstre. -20 secondes par niveau.',
       imageUrl: 'assets/img/House/House1.png',
+      tags: ['Appâts'],
       level: 0,
       bonusPerLevel: 0,
       price: 0,
@@ -96,6 +130,7 @@ export class HouseStateService {
       name: 'Observatoire des Vaisseaux',
       description: '+2 vaisseaux et +1 seconde à la Rafale stellaire par niveau.',
       imageUrl: 'assets/img/House/House1.png',
+      tags: ['Vaisseaux'],
       level: 0,
       bonusPerLevel: 0,
       price: 5,
@@ -111,6 +146,7 @@ export class HouseStateService {
       name: 'Hangar de ravitaillement',
       description: '+10 % aux récompenses et vaisseaux 10 % plus fréquents par niveau.',
       imageUrl: 'assets/img/House/House1.png',
+      tags: ['Vaisseaux'],
       level: 0,
       bonusPerLevel: 0,
       price: 5,
@@ -121,14 +157,78 @@ export class HouseStateService {
       maxLevel: VESSEL_REWARD_HOUSE_MAX_LEVEL,
       unlockMethod: UnlockMethod.workerLevel(VESSEL_WORKER_INDEX, 20),
     },
+    {
+      id: SOLAR_BALANCE_HOUSE_ID,
+      name: 'Maison d’équilibrage solaire',
+      description: 'À l’achat, débloque les Maisons du Soleil bleu et jaune et étend la zone de clic à toute la colonne centrale. Par niveau : +0,3 % des dégâts AFK à chaque clic et +5 % des dégâts du clic à la production AFK.',
+      imageUrl: 'assets/img/House/House1.png',
+      tags: ['Soleil'],
+      level: 0,
+      bonusPerLevel: 0,
+      price: 10,
+      costs: [
+        { resourceId: 'bulb', amount: 2 },
+        { resourceId: 'shell', amount: 1 },
+      ],
+      unlockPrice: 25,
+      unlockCosts: [
+        { resourceId: 'bulb', amount: 5 },
+        { resourceId: 'shell', amount: 3 },
+      ],
+      unlocked: false,
+      maxLevel: SOLAR_HOUSE_MAX_LEVEL,
+      unlockMethod: UnlockMethod.workerLevel(SUN_WORKER_INDEX, 75),
+    },
+    {
+      id: SOLAR_BLUE_HOUSE_ID,
+      name: 'Maison du Soleil bleu',
+      description: 'Pendant la phase bleue, par niveau : +5 % de dégâts AFK, +5 % de récompense par clic, +0,1 mana par clic, +0,5 point de critique et +5 % de dégâts critiques.',
+      imageUrl: 'assets/img/House/House1.png',
+      tags: ['Soleil'],
+      level: 0,
+      bonusPerLevel: 0,
+      price: 5,
+      costs: [
+        { resourceId: 'shell', amount: 2 },
+        { resourceId: 'mermaid-tail', amount: 1 },
+      ],
+      unlockPrice: 10,
+      unlockCosts: [
+        { resourceId: 'shell', amount: 4 },
+        { resourceId: 'mermaid-tail', amount: 2 },
+      ],
+      unlocked: false,
+      maxLevel: SOLAR_HOUSE_MAX_LEVEL,
+    },
+    {
+      id: SOLAR_YELLOW_HOUSE_ID,
+      name: 'Maison du Soleil jaune',
+      description: 'Pendant la phase jaune, par niveau : délai d’apparition des monstres réduit de 5 % et progression du streak augmentée de 10 % par clic.',
+      imageUrl: 'assets/img/House/House1.png',
+      tags: ['Soleil'],
+      level: 0,
+      bonusPerLevel: 0,
+      price: 5,
+      costs: [
+        { resourceId: 'bulb', amount: 2 },
+        { resourceId: 'gribouy-ink', amount: 1 },
+      ],
+      unlockPrice: 10,
+      unlockCosts: [
+        { resourceId: 'bulb', amount: 4 },
+        { resourceId: 'gribouy-ink', amount: 2 },
+      ],
+      unlocked: false,
+      maxLevel: SOLAR_HOUSE_MAX_LEVEL,
+    },
   ];
 
   constructor(private resources: ResourcesService) {}
 
-  getHousesView(geometerLevel = 0): House[] {
+  getHousesView(geometerLevel = 0, astrologueLevel = 0): House[] {
     return this.houses
       .map((house, houseIndex) => ({ house, houseIndex }))
-      .filter(({ house }) => this.isHouseAvailable(house, geometerLevel))
+      .filter(({ house }) => this.isHouseAvailable(house, geometerLevel, astrologueLevel))
       .map(({ house, houseIndex }) => ({
       ...house,
       houseIndex,
@@ -157,6 +257,43 @@ export class HouseStateService {
         ? this.getVesselSpawnIntervalFactor(house)
         : undefined,
     }));
+  }
+
+  isSolarHubUnlocked(): boolean {
+    return !!this.houses.find((house) => house.id === SOLAR_BALANCE_HOUSE_ID)?.unlocked;
+  }
+
+  getActiveSolarColor(now = Date.now()): ActiveSolarColor | null {
+    if (!this.isSolarHubUnlocked()) return null;
+    return Math.floor(now / 60000) % 2 === 0 ? 'yellow' : 'blue';
+  }
+
+  getSolarBonuses(now = Date.now()): SolarHouseBonuses {
+    const activeColor = this.getActiveSolarColor(now);
+    const blueLevel = activeColor === 'blue'
+      ? this.getUnlockedHouseLevel(SOLAR_BLUE_HOUSE_ID)
+      : 0;
+    const yellowLevel = activeColor === 'yellow'
+      ? this.getUnlockedHouseLevel(SOLAR_YELLOW_HOUSE_ID)
+      : 0;
+    return {
+      activeColor,
+      clickRewardMultiplier: Math.pow(SOLAR_BLUE_CLICK_REWARD_PER_LEVEL, blueLevel),
+      autoDamageMultiplier: Math.pow(SOLAR_BLUE_AUTO_DAMAGE_PER_LEVEL, blueLevel),
+      manaPerClickBonus: blueLevel * SOLAR_BLUE_MANA_PER_CLICK_PER_LEVEL,
+      criticalChanceBonus: blueLevel * SOLAR_BLUE_CRITICAL_CHANCE_PER_LEVEL,
+      criticalDamageMultiplier: Math.pow(SOLAR_BLUE_CRITICAL_DAMAGE_PER_LEVEL, blueLevel),
+      monsterSpawnRateMultiplier: Math.pow(1 / SOLAR_YELLOW_MONSTER_INTERVAL_PER_LEVEL, yellowLevel),
+      streakClickMultiplier: 1 + (SOLAR_YELLOW_STREAK_MULTIPLIER_PER_LEVEL - 1) * yellowLevel,
+    };
+  }
+
+  getSolarDamageExchange(clickDamage: number, autoDamagePerSecond: number): SolarDamageExchange {
+    const level = this.getUnlockedHouseLevel(SOLAR_BALANCE_HOUSE_ID);
+    return {
+      clickDamageBonus: autoDamagePerSecond * SOLAR_AFK_TO_CLICK_PER_LEVEL * level,
+      autoDamageBonus: clickDamage * SOLAR_CLICK_TO_AFK_PER_LEVEL * level,
+    };
   }
 
   getVesselRushBonuses(): { vesselCount: number; durationSeconds: number } {
@@ -196,9 +333,9 @@ export class HouseStateService {
     return this.houses.find((house) => house.id === BAIT_HOUSE_ID)?.nextBaitInSeconds;
   }
 
-  canBuy(index: number, geometerLevel = 0): boolean {
+  canBuy(index: number, geometerLevel = 0, astrologueLevel = 0): boolean {
     const house = this.houses[index];
-    if (!house || !this.isHouseAvailable(house, geometerLevel)) return false;
+    if (!house || !this.isHouseAvailable(house, geometerLevel, astrologueLevel)) return false;
     if (!house.unlocked) {
       return this.resources.getMonsterEssence() >= (house.unlockPrice ?? 0)
         && this.resources.canSpendResources(house.unlockCosts ?? []);
@@ -208,9 +345,9 @@ export class HouseStateService {
       && this.resources.canSpendResources(this.getCostsForNextLevel(house));
   }
 
-  buy(index: number, geometerLevel = 0): boolean {
+  buy(index: number, geometerLevel = 0, astrologueLevel = 0): boolean {
     const house = this.houses[index];
-    if (!house || !this.isHouseAvailable(house, geometerLevel)) return false;
+    if (!house || !this.isHouseAvailable(house, geometerLevel, astrologueLevel)) return false;
     if (!house.unlocked) {
       const unlockPrice = house.unlockPrice ?? 0;
       const unlockCosts = house.unlockCosts ?? [];
@@ -241,13 +378,13 @@ export class HouseStateService {
   setLevels(levels: number[], baitCooldownSeconds?: number): void {
     this.houses.forEach((house, index) => {
       house.level = Math.max(0, Math.floor(levels[index] ?? 0));
-      if (house.id === BAIT_HOUSE_ID) {
+      if (house.id !== CRITICAL_HOUSE_ID) {
         house.unlocked = house.level > 0;
+      }
+      if (house.id === BAIT_HOUSE_ID) {
         house.nextBaitInSeconds = baitCooldownSeconds != null
           ? Math.max(0, Math.min(baitCooldownSeconds, this.getBaitIntervalSeconds(house)))
           : this.getBaitIntervalSeconds(house);
-      } else if (house.id === VESSEL_RUSH_HOUSE_ID) {
-        house.unlocked = house.level > 0;
       }
     });
   }
@@ -287,11 +424,24 @@ export class HouseStateService {
     return Math.pow(VESSEL_SPAWN_INTERVAL_FACTOR_PER_LEVEL, house.level);
   }
 
-  private isHouseAvailable(house: House, geometerLevel: number): boolean {
+  private getUnlockedHouseLevel(id: string): number {
+    const house = this.houses.find((item) => item.id === id);
+    return house?.unlocked ? house.level : 0;
+  }
+
+  private isHouseAvailable(house: House, geometerLevel: number, astrologueLevel: number): boolean {
+    if (house.id === SOLAR_BALANCE_HOUSE_ID) return astrologueLevel >= 75;
+    if (house.id === SOLAR_BLUE_HOUSE_ID || house.id === SOLAR_YELLOW_HOUSE_ID) {
+      return astrologueLevel >= 75 && this.isSolarHubUnlocked();
+    }
     if (!house.unlockMethod) return true;
     return house.unlockMethod.isUnlocked({
       clicks: 0,
-      getWorkerLevel: (workerIndex) => workerIndex === VESSEL_WORKER_INDEX ? geometerLevel : null,
+      getWorkerLevel: (workerIndex) => {
+        if (workerIndex === VESSEL_WORKER_INDEX) return geometerLevel;
+        if (workerIndex === SUN_WORKER_INDEX) return astrologueLevel;
+        return null;
+      },
     });
   }
 }

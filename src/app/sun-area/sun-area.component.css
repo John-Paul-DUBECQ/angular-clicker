@@ -21,22 +21,24 @@
   width: 0;
   height: 0;
   animation: sun-orbit calc(var(--sun-orbit-duration, 8) * 1s) linear infinite;
-  cursor: pointer;
-  pointer-events: auto;
+  pointer-events: none;
 }
 
-/* Même style que le bouton central (#click-area) mais en rond. */
 .sun {
   position: absolute;
   left: var(--orbit-distance);
   top: 0;
+  display: block;
   width: var(--sun-size, 44px);
   height: var(--sun-size, 44px);
+  padding: 0;
   transform: translate(-50%, -50%);
   background-color: #292929;
   border: 1px solid #f1f1f1;
   border-radius: 50%;
   transition: all 0.2s ease-in-out;
+  cursor: pointer;
+  pointer-events: auto;
   -moz-user-select: none;
   -webkit-user-select: none;
   -ms-user-select: none;
@@ -48,13 +50,34 @@
   transform: translate(-50%, -50%);
 }
 
-.sun:active {
+.sun--secondary {
+  left: calc(0px - var(--orbit-distance));
+}
+
+.sun--yellow {
+  background-color: #f0c84b;
+  box-shadow: 0 0 16px rgba(240, 200, 75, 0.75);
+}
+
+.sun--blue {
+  background-color: #4b9fe8;
+  box-shadow: 0 0 16px rgba(75, 159, 232, 0.75);
+}
+
+.sun--inactive {
+  opacity: 0.55;
+  filter: saturate(0.65);
+}
+
+.sun:active,
+.sun:focus-visible {
   transform: translate(-50%, -50%);
 }
 
 /* Mobile : déplacement latéral contenu dans la zone centrale, sans modifier le PC. */
 .sun-area-wrapper--mobile {
   --sun-side-padding: 8px;
+  --orbit-distance: clamp(35px, 18vw, 70px);
   width: 100%;
   height: 100%;
 }

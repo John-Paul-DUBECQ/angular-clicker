@@ -51,13 +51,18 @@ export class StreakStateService {
     this.phase = result.phase;
   }
 
-  onClick(workers: WorkerAutoData[], workersAvailable: WorkerAutoData[]): void {
+  onClick(
+    workers: WorkerAutoData[],
+    workersAvailable: WorkerAutoData[],
+    clickCount = 1
+  ): void {
     const smithLevel = getSmithLevel(workers, workersAvailable);
     const result = processStreakOnClick(
       this.barCurrent,
       this.phase,
       smithLevel,
-      this.getWeaknessModifiers()
+      this.getWeaknessModifiers(),
+      clickCount
     );
     this.barCurrent = result.barCurrent;
     this.phase = result.phase;

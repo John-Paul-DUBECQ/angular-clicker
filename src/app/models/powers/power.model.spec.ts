@@ -5,15 +5,15 @@ import { VESSEL_WORKER_INDEX } from '../unlocks/vessel';
 describe('Power unlock methods', () => {
   const vesselRush = listPower.find((power) => power.id === 'vessel-rush')!;
 
-  it('unlocks Rafale stellaire at Geometer level 35', () => {
-    expect(vesselRush.unlockMethod?.getWorkerLevelRequirement(VESSEL_WORKER_INDEX)).toBe(35);
+  it('unlocks Rafale stellaire at Geometer level 25', () => {
+    expect(vesselRush.unlockMethod?.getWorkerLevelRequirement(VESSEL_WORKER_INDEX)).toBe(25);
     expect(getPowerDoesAppearInGame(vesselRush, {
       clicks: 0,
-      getWorkerLevel: (workerIndex) => workerIndex === VESSEL_WORKER_INDEX ? 31 : 1,
+      getWorkerLevel: (workerIndex) => workerIndex === VESSEL_WORKER_INDEX ? 24 : 1,
     })).toBe(false);
     expect(getPowerDoesAppearInGame(vesselRush, {
       clicks: 0,
-      getWorkerLevel: (workerIndex) => workerIndex === VESSEL_WORKER_INDEX ? 35 : 1,
+      getWorkerLevel: (workerIndex) => workerIndex === VESSEL_WORKER_INDEX ? 25 : 1,
     })).toBe(true);
   });
 });

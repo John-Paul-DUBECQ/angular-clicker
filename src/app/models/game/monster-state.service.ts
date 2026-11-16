@@ -272,7 +272,11 @@ export class MonsterStateService {
   }
 
   /** Tick : si monstre en cours → timeout ; sinon remplir la jauge rencontre et spawn à 100 %. */
-  tick(workers: WorkerAutoData[], workersAvailable: WorkerAutoData[]): void {
+  tick(
+    workers: WorkerAutoData[],
+    workersAvailable: WorkerAutoData[],
+    additionalSpawnRateMultiplier = 1
+  ): void {
     if (this.currentMonsterId != null) {
       const remaining = this.spawnTime + this.timeLimitMs - Date.now();
       if (remaining <= 0) {
@@ -283,7 +287,8 @@ export class MonsterStateService {
       return;
     }
     if (!this.isMonsterUnlocked(workers, workersAvailable)) return;
-    const spawnRate = this.essenceShopState.getSpawnRateMultiplier();
+    const spawnRate = this.essenceShopState.getSpawnRateMultiplier()
+      * Math.max(0, additionalSpawnRateMultiplier);
     this.encounterMeter = Math.min(100, this.encounterMeter + (100 * spawnRate) / (ENCOUNTER_FILL_SECONDS * TICKS_PER_SECOND));
     if (this.encounterMeter >= 100) {
       this.encounterMeter = 0;

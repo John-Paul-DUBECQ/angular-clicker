@@ -95,11 +95,21 @@ export class GameStateService {
     this.tickIntervalId = setInterval(() => {
       const workers = this.workerState.getWorkers();
       const workersAvailable = this.workerState.getWorkersAvailable();
-      const baseAutoPerSecond = this.workerState.calculateClicksPerSecond(this.getShopMult);
       const streakMult = this.streakState.getMultiplier(workers, workersAvailable);
       const damageMult = this.powerState.getDamageMultiplier();
+      const solarBonuses = this.houseState.getSolarBonuses();
+      const baseAutoPerSecond =
+        this.workerState.calculateClicksPerSecond(this.getShopMult) * damageMult;
+      const baseClickValue =
+        this.workerState.getCurrentClickValue(this.getShopMult) * damageMult;
+      const solarAutoPerSecond =
+        baseAutoPerSecond * solarBonuses.autoDamageMultiplier;
+      const solarExchange =
+        this.houseState.getSolarDamageExchange(baseClickValue, solarAutoPerSecond);
       const autoPerTick =
-        (baseAutoPerSecond * streakMult * damageMult) / TICKS_PER_SECOND;
+        ((baseAutoPerSecond + solarExchange.autoDamageBonus)
+          * solarBonuses.autoDamageMultiplier
+          * streakMult) / TICKS_PER_SECOND;
       if (this.monsterState.hasCurrentMonster()) {
         if (this.monsterState.dealDamage(autoPerTick, workers, workersAvailable)) {
           this.saveToLocalStorage();
@@ -109,7 +119,7 @@ export class GameStateService {
       }
       this.resources.tickManaRegen();
       this.streakState.tick(TICKS_PER_SECOND, workers, workersAvailable);
-      this.monsterState.tick(workers, workersAvailable);
+      this.monsterState.tick(workers, workersAvailable, solarBonuses.monsterSpawnRateMultiplier);
       this.houseState.tick(1 / TICKS_PER_SECOND, () => {
         this.resources.addResource('bait', 1);
       });
@@ -122,16 +132,33 @@ export class GameStateService {
     const workers = this.workerState.getWorkers();
     const workersAvailable = this.workerState.getWorkersAvailable();
     const damageMult = this.powerState.getDamageMultiplier();
-    const valueAutoPerSecond =
-      this.workerState.calculateClicksPerSecond(this.getShopMult) *
-      this.streakState.getMultiplier(workers, workersAvailable) *
-      damageMult;
-    const clickValue =
+    const streakMultiplier = this.streakState.getMultiplier(workers, workersAvailable);
+    const solarBonuses = this.houseState.getSolarBonuses();
+    const baseAutoPerSecond =
+      this.workerState.calculateClicksPerSecond(this.getShopMult) * damageMult;
+    const baseClickValue =
       this.workerState.getCurrentClickValue(this.getShopMult) * damageMult;
+    const solarAutoPerSecond =
+      baseAutoPerSecond * solarBonuses.autoDamageMultiplier;
+    const solarExchange =
+      this.houseState.getSolarDamageExchange(baseClickValue, solarAutoPerSecond);
+    const valueAutoPerSecond =
+      (baseAutoPerSecond + solarExchange.autoDamageBonus)
+      * solarBonuses.autoDamageMultiplier
+      * streakMultiplier;
+    const clickValue = baseClickValue + solarExchange.clickDamageBonus;
+    const workerViews = this.workerState.getWorkersView(clicks, this.getShopMult);
+    const workersAvailableViews = this.workerState.getWorkersAvailableView(clicks, this.getShopMult);
+    [...workerViews, ...workersAvailableViews]
+      .filter((worker) => worker.workerType === 'click')
+      .forEach((worker) => {
+        worker.totalClickDamage = clickValue;
+      });
     const getWorkerLevel = (i: number) => this.workerState.getWorkerLevel(i);
     const streakView = this.streakState.getView(workers, workersAvailable);
     const architectLevel = this.workerState.getWorkerLevel(7) ?? 0;
     const farmerLevel = this.workerState.getWorkerLevel(1) ?? 0;
+    const astrologueLevel = this.workerState.getWorkerLevel(SUN_WORKER_INDEX) ?? 0;
     const vesselUnlocked = isVesselUnlocked(workers, workersAvailable);
 
     const damageBuffActive = this.powerState.isDamageBuffActive();
@@ -180,8 +207,8 @@ export class GameStateService {
       mana: this.resources.getMana(),
       maxMana: this.resources.getMaxMana(),
       totalManualClicks: this.resources.getTotalManualClicks(),
-      workers: this.workerState.getWorkersView(clicks, this.getShopMult),
-      workersAvailable: this.workerState.getWorkersAvailableView(clicks, this.getShopMult),
+      workers: workerViews,
+      workersAvailable: workersAvailableViews,
       clickValue,
       valueAutoPerSecond,
       shopItems: this.shopState.getShopItemsView(getWorkerLevel),
@@ -202,6 +229,8 @@ export class GameStateService {
         const astrologue = workersAvailable[SUN_WORKER_INDEX];
         return getSunUpgradeStats(astrologue?.level ?? 0).sizeFactor;
       })(),
+      solarAreaExpanded: this.houseState.isSolarHubUnlocked(),
+      activeSolarColor: solarBonuses.activeColor ?? undefined,
       powerUnlocked: isPowerUnlocked(workers, workersAvailable),
       criticalHitUnlocked: isCriticalHitUnlocked(workers, workersAvailable),
       streakUnlocked: streakView.streakUnlocked,
@@ -224,8 +253,11 @@ export class GameStateService {
       essenceShopUnlocked: architectLevel >= 1,
       essenceShopItems: this.essenceShopState.getItemsView(),
       essenceShopStats: this.essenceShopState.getStats(),
-      houses: farmerLevel >= 100 || vesselUnlocked
-        ? this.houseState.getHousesView(workersAvailable[ VESSEL_WORKER_INDEX]?.level ?? 0)
+      houses: farmerLevel >= 100 || vesselUnlocked || astrologueLevel >= 75
+        ? this.houseState.getHousesView(
+          workersAvailable[VESSEL_WORKER_INDEX]?.level ?? 0,
+          astrologueLevel
+        )
         : undefined,
       resources: this.resources.getResourceStocks(),
       plannedCombats: this.monsterState.getPlannedCombats(workers, workersAvailable),
@@ -243,44 +275,63 @@ export class GameStateService {
     this.resources.incrementTotalManualClicks();
     const workers = this.workerState.getWorkers();
     const workersAvailable = this.workerState.getWorkersAvailable();
-    let value = this.workerState.getCurrentClickValue(this.getShopMult);
-    value *= this.powerState.getDamageMultiplier();
+    const damageMultiplier = this.powerState.getDamageMultiplier();
+    const solarBonuses = this.houseState.getSolarBonuses();
+    const baseClickValue =
+      this.workerState.getCurrentClickValue(this.getShopMult) * damageMultiplier;
+    const baseAutoPerSecond =
+      this.workerState.calculateClicksPerSecond(this.getShopMult) * damageMultiplier;
+    const solarAutoPerSecond =
+      baseAutoPerSecond * solarBonuses.autoDamageMultiplier;
+    const solarExchange =
+      this.houseState.getSolarDamageExchange(baseClickValue, solarAutoPerSecond);
+    let value = baseClickValue + solarExchange.clickDamageBonus;
 
     let criticalHit = false;
-    if (isCriticalHitUnlocked(workers, workersAvailable)) {
+    const criticalHitUnlocked = isCriticalHitUnlocked(workers, workersAvailable);
+    if (criticalHitUnlocked || solarBonuses.criticalChanceBonus > 0) {
       const miner = workersAvailable[MINER_WORKER_INDEX];
       const minerLevel = miner?.level ?? 0;
       const { totalChance, totalMultiplier } = getCriticalHitStats(minerLevel);
       const shopChanceBonus = this.shopState.getUnlockBonus('critical-hit', 'chance');
       const houseChanceBonus = this.houseState.getCriticalHitChanceBonus();
-      if (Math.random() < totalChance + shopChanceBonus + houseChanceBonus) {
-        value *= totalMultiplier;
+      const criticalChance = (criticalHitUnlocked ? totalChance : 0)
+        + shopChanceBonus
+        + houseChanceBonus
+        + solarBonuses.criticalChanceBonus;
+      const criticalMultiplier = (criticalHitUnlocked ? totalMultiplier : 1)
+        * solarBonuses.criticalDamageMultiplier;
+      if (Math.random() < criticalChance) {
+        value *= criticalMultiplier;
         criticalHit = true;
-        if (this.showCriticalHitNumbers) {
-          this.showCriticalHit(value * valueMultiplier, clientX, clientY);
-        }
       }
     }
 
-    this.streakState.onClick(workers, workersAvailable);
+    this.streakState.onClick(workers, workersAvailable, solarBonuses.streakClickMultiplier);
     value *= this.streakState.getMultiplier(workers, workersAvailable);
 
     if (this.monsterState.isMonsterUnlocked(workers, workersAvailable) && this.monsterState.hasCurrentMonster()) {
-      if (this.showDamageNumbers && !criticalHit) {
-        this.showDamage(value * valueMultiplier, clientX, clientY);
+      const damage = value * valueMultiplier;
+      if (criticalHit) {
+        if (this.showCriticalHitNumbers) this.showCriticalHit(damage, clientX, clientY);
+      } else if (this.showDamageNumbers) {
+        this.showDamage(damage, clientX, clientY);
       }
-      if (this.monsterState.dealDamage(value * valueMultiplier, workers, workersAvailable)) {
+      if (this.monsterState.dealDamage(damage, workers, workersAvailable)) {
         this.saveToLocalStorage();
       }
-      this.resources.addManaOnClick(0.5);
+      this.resources.addManaOnClick(0.5 + solarBonuses.manaPerClickBonus);
       return;
     }
 
-    if (this.showDamageNumbers && !criticalHit) {
-      this.showDamage(value * valueMultiplier, clientX, clientY);
+    const damage = value * valueMultiplier;
+    if (criticalHit) {
+      if (this.showCriticalHitNumbers) this.showCriticalHit(damage, clientX, clientY);
+    } else if (this.showDamageNumbers) {
+      this.showDamage(damage, clientX, clientY);
     }
-    this.resources.addClicks(value * valueMultiplier);
-    this.resources.addManaOnClick(0.5);
+    this.resources.addClicks(value * valueMultiplier * solarBonuses.clickRewardMultiplier);
+    this.resources.addManaOnClick(0.5 + solarBonuses.manaPerClickBonus);
   }
 
   clickSun(event?: MouseEvent): void {
@@ -408,7 +459,8 @@ export class GameStateService {
 
   buyHouse(houseIndex: number): boolean {
     const geometerLevel = this.workerState.getWorkerLevel(VESSEL_WORKER_INDEX) ?? 0;
-    return this.houseState.buy(houseIndex, geometerLevel);
+    const astrologueLevel = this.workerState.getWorkerLevel(SUN_WORKER_INDEX) ?? 0;
+    return this.houseState.buy(houseIndex, geometerLevel, astrologueLevel);
   }
 
   getCanBuyPower(price: number): boolean {

@@ -85,5 +85,9 @@ export const RESOURCE_DEFINITIONS: GameResource[] = [
     id: 'hunter-beacon',
     name: 'Balise de chasseur',
     description: 'Une balise récupérée sur les chasseurs.',
+  },{
+    id: 'detritus',
+    name: 'Détritus',
+    description: 'Des déchets récupérés dans les zones contaminées.',
   }
 ];

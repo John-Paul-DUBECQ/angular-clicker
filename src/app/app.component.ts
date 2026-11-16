@@ -65,6 +65,9 @@ export class AppComponent implements OnInit, OnDestroy {
   private stableResources: ResourceStock[] = [];
   resources: ResourceStock[] = [];
   resourcesVisible = false;
+  selectedHouseTag: string | null = null;
+  hideMaxLevelHouses = false;
+  collapsedHouseIds: { [houseId: string]: boolean } = {};
   importError = false;
   private rewardSub: Subscription | null = null;
   private vesselRewardSub: Subscription | null = null;
@@ -315,6 +318,14 @@ export class AppComponent implements OnInit, OnDestroy {
     this.refreshGameState();
   }
 
+  onSolarMainAreaClick(event: MouseEvent): void {
+    if (!this.game.solarAreaExpanded || !(event.target instanceof Element)) return;
+    if (event.target.closest(
+      'button, input, select, textarea, a, [role="button"], app-power-area, .mobile-powers-dock, .mobile-mana, .vessel-lane'
+    )) return;
+    this.click(event);
+  }
+
   /** Rafraîchit l’affichage immédiatement après un achat shop (évite le délai du timer 500 ms). */
   onShopItemBought(): void {
     this.refreshGameState();
@@ -334,6 +345,28 @@ export class AppComponent implements OnInit, OnDestroy {
 
   getResourceName(resourceId: string): string {
     return this.resources.find((resource) => resource.id === resourceId)?.name ?? resourceId;
+  }
+
+  getResourceAmount(resourceId: string): number {
+    return this.resources.find((resource) => resource.id === resourceId)?.amount ?? 0;
+  }
+
+  get houseTags(): string[] {
+    return Array.from(new Set((this.game.houses ?? []).reduce(
+      (tags, house) => tags.concat(house.tags ?? []),
+      [] as string[]
+    )));
+  }
+
+  get visibleHouses(): House[] {
+    return (this.game.houses ?? []).filter((house) =>
+      (!this.selectedHouseTag || (house.tags ?? []).includes(this.selectedHouseTag))
+      && (!this.hideMaxLevelHouses || house.maxLevel == null || house.level < house.maxLevel)
+    );
+  }
+
+  toggleHouseCollapsed(houseId: string): void {
+    this.collapsedHouseIds[houseId] = !this.collapsedHouseIds[houseId];
   }
 
   toggleResources(): void {

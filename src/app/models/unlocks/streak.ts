@@ -223,11 +223,12 @@ export function processStreakOnClick(
   barCurrent: number,
   phase: StreakPhase,
   smithLevel: number,
-  weakness?: StreakWeaknessModifiers
+  weakness?: StreakWeaknessModifiers,
+  clickCount = 1
 ): StreakClickResult {
   const stats = getStreakStats(smithLevel, weakness);
   const max = stats.numberOfClicksRequiredForBar;
-  const newCurrent = Math.min(max, barCurrent + 1);
+  const newCurrent = Math.min(max, barCurrent + Math.max(1, clickCount));
   const newPhase: StreakPhase = newCurrent >= max ? 'active' : phase;
   return { barCurrent: newCurrent, phase: newPhase };
 }

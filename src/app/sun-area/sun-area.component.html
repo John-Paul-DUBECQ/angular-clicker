@@ -1,5 +1,23 @@
 <div class="sun-area-wrapper" *ngIf="sunUnlocked" [class.sun-area-wrapper--mobile]="mobileLayout" [style.--sun-orbit-duration]="15 * sunSpeedFactor" [style.--sun-size.px]="44 * sunSizeFactor">
-  <div class="sun-orbit-track" (click)="clickSun($event)">
-    <div class="sun" [title]="'Clic x' + (sunDamageMultiplier || 2)"></div>
+  <div class="sun-orbit-track">
+    <button
+      type="button"
+      class="sun"
+      [class.sun--yellow]="doubleSun && activeSolarColor === 'yellow'"
+      [class.sun--blue]="doubleSun && activeSolarColor === 'blue'"
+      [attr.aria-label]="doubleSun ? 'Soleil ' + activeSolarColor + ' actif' : 'Soleil, clic x' + (sunDamageMultiplier || 2)"
+      [title]="'Clic x' + (sunDamageMultiplier || 2)"
+      (click)="clickSun($event)">
+    </button>
+    <button
+      *ngIf="doubleSun"
+      type="button"
+      class="sun sun--secondary sun--inactive"
+      [class.sun--yellow]="activeSolarColor === 'blue'"
+      [class.sun--blue]="activeSolarColor === 'yellow'"
+      [attr.aria-label]="'Soleil ' + (activeSolarColor === 'yellow' ? 'bleu' : 'jaune') + ' inactif'"
+      [title]="'Soleil ' + (activeSolarColor === 'yellow' ? 'bleu' : 'jaune')"
+      (click)="clickSun($event)">
+    </button>
   </div>
 </div>

@@ -32,6 +32,8 @@ export interface WorkerAuto extends WorkerAutoData {
   effectiveProductionPerSecond?: number;
   /** Bonus dégâts/clic effectif (click) après multiplicateurs shop. Renseigné par le game state. */
   effectiveClickBonus?: number;
+  /** Total effectif des dégâts par clic, transferts compris. Renseigné pour le worker de clic. */
+  totalClickDamage?: number;
 }
 
 /** Crée un worker de production automatique (/s). Courbe dégâts ≠ courbe prix. */

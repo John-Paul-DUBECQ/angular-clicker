@@ -12,15 +12,21 @@ body {
 .critical-hit-popup {
   position: fixed;
   transform: translate(-50%, -50%);
-  padding: 0.25rem 0.5rem;
-  color: #fff;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(15, 17, 22, 0.39);
+  color: #ffffff;
   font-weight: bold;
   font-size: 0.9rem;
-  border-radius: 4px;
   white-space: nowrap;
   pointer-events: none;
   z-index: 9999;
   animation: damage-float 1s ease-out forwards;
+}
+
+.critical-hit-popup {
+  color: #ffe08a;
+  font-size: 1.05rem;
 }
 
 @keyframes damage-float {

@@ -126,12 +126,39 @@
       <section class="houses-area" *ngIf="game.houses && game.houses.length > 0">
         <div class="houses-area__header">
           <h2>Maisons</h2>
+          <button
+            type="button"
+            class="houses-area__max-toggle"
+            [class.houses-area__max-toggle--active]="hideMaxLevelHouses"
+            [attr.aria-pressed]="hideMaxLevelHouses"
+            (click)="hideMaxLevelHouses = !hideMaxLevelHouses">
+            {{ hideMaxLevelHouses ? 'Niveaux max masqués' : 'Masquer les niveaux max' }}
+          </button>
         </div>
-        <ng-container *ngFor="let house of game.houses; let i = index; trackBy: trackByHouse">
+        <div class="houses-area__filters" aria-label="Filtrer les maisons">
+          <button
+            type="button"
+            [class.houses-area__filter--active]="selectedHouseTag === null"
+            [attr.aria-pressed]="selectedHouseTag === null"
+            (click)="selectedHouseTag = null">
+            Toutes
+          </button>
+          <button
+            type="button"
+            *ngFor="let tag of houseTags"
+            [class.houses-area__filter--active]="selectedHouseTag === tag"
+            [attr.aria-pressed]="selectedHouseTag === tag"
+            (click)="selectedHouseTag = tag">
+            {{ tag }}
+          </button>
+        </div>
+        <ng-container *ngFor="let house of visibleHouses; let i = index; trackBy: trackByHouse">
           <app-house-area
             [house]="house"
             [essence]="game.monsterEssence || 0"
             [resources]="resources"
+            [collapsed]="!!collapsedHouseIds[house.id]"
+            (collapsedChange)="toggleHouseCollapsed(house.id)"
             (upgraded)="onHouseUpgraded(house.houseIndex != null ? house.houseIndex : i)">
           </app-house-area>
         </ng-container>
@@ -141,7 +168,11 @@
       </section>
     </div>
     
-    <div class="column column-center">
+    <div
+      class="column column-center"
+      [class.column-center--solar]="game.solarAreaExpanded"
+      [class.column-center--combat]="!!game.currentMonster"
+      (click)="onSolarMainAreaClick($event)">
       <!-- Lane vaisseaux : uniquement colonne centrale, hauteur aléatoire, mouvement fluide (position = temps) -->
       <div class="vessel-lane" *ngIf="game.vesselUnlocked && game.activeVessels && game.activeVessels.length > 0">
         <div
@@ -176,13 +207,28 @@
           </div>
         </div>
       </div>
-      <div class="column-center__main">
-        <div class="monster-title" *ngIf="game.currentMonster">
-          <p class="monster-title__name">
+      <div
+        class="column-center__main column-center__main--game-ui"
+        [class.column-center__main--solar]="game.solarAreaExpanded"
+        [class.column-center__main--combat]="!!game.currentMonster">
+        <div class="column-center__hud">
+        <div
+          class="monster-title"
+          [class.monster-title--boss]="game.currentMonster && game.currentMonster.isBoss"
+          *ngIf="game.currentMonster">
+          <div class="monster-title__heading">
             <span class="monster-title__boss" *ngIf="game.currentMonster.isBoss">DANGER BOSS</span>
-            Nom du mob : {{ game.currentMonster.name }}<span *ngIf="game.queuedMonsterCount && game.queuedMonsterCount > 0"> + {{ game.queuedMonsterCount }}</span>
-          </p>
-          <p class="monster-title__hp">{{ formatMonsterHp(game.currentMonster.currentHp) }} HP</p>
+            <span class="monster-title__name">
+              {{ game.currentMonster.name }}<span *ngIf="game.queuedMonsterCount && game.queuedMonsterCount > 0"> + {{ game.queuedMonsterCount }}</span>
+            </span>
+          </div>
+          <div class="monster-title__details">
+            <span class="monster-title__hp">{{ formatMonsterHp(game.currentMonster.currentHp) }} HP</span>
+            <span class="monster-title__timer">{{ game.currentMonster.remainingSeconds }} s</span>
+          </div>
+          <div class="monster-title__hp-track">
+            <div class="monster-title__hp-fill" [style.width.%]="getMonsterHpPercent()"></div>
+          </div>
         </div>
         <div class="score-area">
           <p class="value-click">{{ game.clicks | formatNumber }}</p>
@@ -190,18 +236,23 @@
             class="value-auto-per-second"
             [class.value-auto-per-second--buff]="game.damageBuffActive"
           >{{ game.valueAutoPerSecond | formatNumber }}/s</p>
+          <p class="value-click-damage">
+            {{ game.clickValue | formatNumber }} dégâts/clic
+          </p>
+        </div>
         </div>
         <div class="center-zone-wrapper">
           <div
             *ngIf="!game.monsterUnlocked || !game.currentMonster"
             id="click-area"
-            (click)="click($event)">
+            (click)="!game.solarAreaExpanded && click($event)">
           </div>
           <div
             *ngIf="game.monsterUnlocked && game.currentMonster"
             id="monster-area"
             class="monster-area"
-            (click)="click($event)">
+            [class.monster-area--boss]="game.currentMonster.isBoss"
+            (click)="!game.solarAreaExpanded && click($event)">
             <img
               *ngIf="game.currentMonster.imageUrl"
               [src]="game.currentMonster.imageUrl"
@@ -222,6 +273,8 @@
             [sunSpeedFactor]="game.sunSpeedFactor != null ? game.sunSpeedFactor : 1"
             [sunSizeFactor]="game.sunSizeFactor != null ? game.sunSizeFactor : 1"
             [sunDamageMultiplier]="game.sunDamageMultiplier"
+            [doubleSun]="game.solarAreaExpanded || false"
+            [activeSolarColor]="game.activeSolarColor || 'yellow'"
             (clicked)="onSunClicked()">
           </app-sun-area>
         </div>
@@ -233,6 +286,8 @@
         <div class="resources-bar__item">
           <span class="resources-bar__label">Essence</span>
           <span class="resources-bar__value">{{ formatResourceValue(game.monsterEssence != null ? game.monsterEssence : 0) }}</span>
+          <span class="resources-bar__label">Appât</span>
+          <span class="resources-bar__value">{{ formatResourceValue(getResourceAmount('bait')) }}</span>
           <button
             type="button"
             class="resources-bar__settings-btn"
@@ -279,19 +334,36 @@
     </nav>
 
     <main class="mobile-content">
-      <section class="mobile-screen mobile-screen--game" *ngIf="mobileScreen === 'game'">
+      <section
+        class="mobile-screen mobile-screen--game"
+        [class.mobile-screen--solar]="game.solarAreaExpanded"
+        *ngIf="mobileScreen === 'game'"
+        (click)="onSolarMainAreaClick($event)">
         <div class="mobile-game-status">
           <span>{{ game.clicks | formatNumber }}</span>
           <span>{{ game.valueAutoPerSecond | formatNumber }}/s</span>
+          <span class="mobile-game-status__damage">{{ game.clickValue | formatNumber }} dégâts/clic</span>
           <span class="mobile-game-status__essence">{{ formatResourceValue(game.monsterEssence != null ? game.monsterEssence : 0) }} essence</span>
         </div>
-        <div class="mobile-monster-title" *ngIf="game.currentMonster">
-          <span>{{ game.currentMonster.name }}</span>
-          <strong>{{ formatMonsterHp(game.currentMonster.currentHp) }} HP</strong>
+        <div
+          class="mobile-monster-title"
+          [class.mobile-monster-title--boss]="game.currentMonster && game.currentMonster.isBoss"
+          *ngIf="game.currentMonster">
+          <div class="mobile-monster-title__heading">
+            <span class="monster-title__boss" *ngIf="game.currentMonster.isBoss">DANGER BOSS</span>
+            <span>{{ game.currentMonster.name }}</span>
+          </div>
+          <div class="mobile-monster-title__details">
+            <strong>{{ formatMonsterHp(game.currentMonster.currentHp) }} HP</strong>
+            <span>{{ game.currentMonster.remainingSeconds }} s</span>
+          </div>
+          <div class="mobile-monster-title__hp-track">
+            <div [style.width.%]="getMonsterHpPercent()"></div>
+          </div>
         </div>
         <div class="mobile-center-zone center-zone-wrapper">
-          <div *ngIf="!game.monsterUnlocked || !game.currentMonster" id="click-area" (click)="click($event)"></div>
-          <div *ngIf="game.monsterUnlocked && game.currentMonster" id="monster-area" class="monster-area" (click)="click($event)">
+          <div *ngIf="!game.monsterUnlocked || !game.currentMonster" id="click-area" (click)="!game.solarAreaExpanded && click($event)"></div>
+          <div *ngIf="game.monsterUnlocked && game.currentMonster" id="monster-area" class="monster-area" [class.monster-area--boss]="game.currentMonster.isBoss" (click)="!game.solarAreaExpanded && click($event)">
             <img *ngIf="game.currentMonster.imageUrl" [src]="game.currentMonster.imageUrl" [alt]="game.currentMonster.name" class="monster-area__img" />
             <span *ngIf="!game.currentMonster.imageUrl" class="monster-area__placeholder">{{ game.currentMonster.name.charAt(0) }}</span>
             <div class="monster-area__hp-track"><div class="monster-area__hp-fill" [style.width.%]="getMonsterHpPercent()"></div></div>
@@ -304,6 +376,8 @@
             [sunSpeedFactor]="(game.sunSpeedFactor != null ? game.sunSpeedFactor : 1) * 0.5"
             [sunSizeFactor]="game.sunSizeFactor != null ? game.sunSizeFactor : 1"
             [sunDamageMultiplier]="game.sunDamageMultiplier"
+            [doubleSun]="game.solarAreaExpanded || false"
+            [activeSolarColor]="game.activeSolarColor || 'yellow'"
             [mobileLayout]="true"
             (clicked)="onSunClicked()">
           </app-sun-area>

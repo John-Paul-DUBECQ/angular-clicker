@@ -5,7 +5,7 @@
     </div>
     <div class="center-part-worker-area">
         <div class="worker-productivity" *ngIf="!isClickWorker">{{ clicksPerSecond | formatNumber }}/s</div>
-        <div class="worker-productivity" *ngIf="isClickWorker">+{{ (clickBonus + 1) | formatNumber }} dégâts/clic</div>
+        <div class="worker-productivity" *ngIf="isClickWorker">{{ totalClickDamage | formatNumber }} dégâts totaux/clic</div>
         <div
             #unlockRef
             class="next-worker-unlock"

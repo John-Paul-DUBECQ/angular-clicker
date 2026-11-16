@@ -32,6 +32,9 @@ export class Game {
     sunSpeedFactor?: number;
     /** Facteur taille du soleil (1 = base). */
     sunSizeFactor?: number;
+    /** Maison d'équilibrage achetée : zone de clic étendue et maisons solaires disponibles. */
+    solarAreaExpanded?: boolean;
+    activeSolarColor?: 'yellow' | 'blue';
     /** Zone pouvoirs/mana débloquée (Magicien niveau 1). */
     powerUnlocked?: boolean;
     criticalHitUnlocked?: boolean;

@@ -43,7 +43,7 @@ export const listMonster: Monster[] = [
     probabilityToSpawn: 15,
     drops: [
       { resourceId: 'food', amount: 0.5 },
-      { resourceId: 'détritus', amount: 1 },
+      { resourceId: 'detritus', amount: 1 },
     ],
   },{
     id: 'monster3',
@@ -51,7 +51,7 @@ export const listMonster: Monster[] = [
     description: 'Gribouy est un petit être très robuste, mais il a une phobie de ses mains, il faut donc le tuer avec ses propres mains.',
     imageUrl: 'assets/img/shadocks/gribouyi.png',
     doesAppearInGame: false,
-    unlockMethod: UnlockMethod.workerLevel(MONSTER_WORKER_INDEX, 10),
+    unlockMethod: UnlockMethod.workerLevel(MONSTER_WORKER_INDEX, 9),
     lootMultiplier: 3,
     probabilityToSpawn: 20,
     drops: [

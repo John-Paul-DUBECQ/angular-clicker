@@ -39,10 +39,30 @@
   gap: 0.5rem;
 }
 
+.house-card--collapsed {
+  align-items: center;
+}
+
+.house-card__heading {
+  justify-content: flex-start;
+}
+
+.house-card__collapse {
+  border: 0 !important;
+  padding: 0.1rem 0.25rem !important;
+  background: transparent !important;
+  color: #67f089 !important;
+  font-size: 0.9rem !important;
+}
+
 .house-card h2 {
   margin: 0;
   color: #67f089;
   font-size: 0.9rem;
+}
+
+.house-card__heading span {
+  margin-left: auto;
 }
 
 .house-card__heading span,

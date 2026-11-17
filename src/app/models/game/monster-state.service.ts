@@ -10,7 +10,9 @@ import { MonsterRewardNotificationService } from './monster-reward-notification.
 import { EssenceShopStateService } from './essence-shop-state.service';
 import { ResourceReward } from '../resource';
 import { listPlannedCombat } from '../monsters/list-planned-combat';
-import { PlannedCombat, PlannedCombatView } from '../monsters/planned-combat.model';
+import { PlannedCombat, PlannedCombatEnemy, PlannedCombatView } from '../monsters/planned-combat.model';
+import { isMonsterBiomeId, MONSTER_BIOMES, MonsterBiomeId } from '../monsters/monster-biome.model';
+import { EXPLORER_WORKER_INDEX, isExplorerUnlocked } from '../unlocks/explorer-unlock';
 
 /** Référence PV : baseProduction * ce multiplicateur (aléatoire autour). */
 const MONSTER_HP_BASE_SECONDS = 12;
@@ -46,8 +48,11 @@ export interface CurrentMonsterView {
   maxHp: number;
   timeLimitSeconds: number;
   remainingSeconds: number;
+  plannedCombatEnemyNumber?: number;
+  plannedCombatEnemyCount?: number;
   /** True si spawn "DANGER BOSS" (1/10, combat plus dur). */
   isBoss?: boolean;
+  isPlannedCombat?: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -70,6 +75,8 @@ export class MonsterStateService {
   private plannedCombatWins: Record<string, number> = {};
   private plannedCombatCooldownEnds: Record<string, number> = {};
   private currentPlannedCombatId: string | null = null;
+  private currentPlannedCombatEnemyIndex = 0;
+  private selectedBiome: MonsterBiomeId = 'forest';
 
   constructor(
     private resources: ResourcesService,
@@ -88,7 +95,7 @@ export class MonsterStateService {
     if (!this.isMonsterUnlocked(workers, workersAvailable)) return;
 
     const monsterLevel = workersAvailable[MONSTER_WORKER_INDEX]?.level ?? 0;
-    const monster = this.pickMonsterForLevel(monsterLevel);
+    const monster = this.pickMonsterForLevel(monsterLevel, this.selectedBiome, workers, workersAvailable);
     if (!monster) return;
 
     const lootMult = Math.max(0.1, monster.lootMultiplier ?? 1);
@@ -115,7 +122,10 @@ export class MonsterStateService {
   getPlannedCombats(workers: WorkerAutoData[], workersAvailable: WorkerAutoData[]): PlannedCombatView[] {
     return listPlannedCombat.map((combat) => ({
       ...combat,
-      unlocked: this.isPlannedCombatUnlocked(combat, workers, workersAvailable),
+      totalHp: combat.enemies.reduce((total, enemy) => total + enemy.maxHp, 0),
+      unlocked: isExplorerUnlocked(workers, workersAvailable)
+        && this.isBiomeUnlocked(combat.biome)
+        && this.isPlannedCombatUnlocked(combat, workers, workersAvailable),
       wins: this.plannedCombatWins[combat.id] ?? 0,
       cooldownRemainingSeconds: Math.max(
         0,
@@ -127,18 +137,56 @@ export class MonsterStateService {
   startPlannedCombat(id: string, workers: WorkerAutoData[], workersAvailable: WorkerAutoData[]): boolean {
     if (this.currentMonsterId != null) return false;
     const combat = listPlannedCombat.find((entry) => entry.id === id);
-    if (!combat || !this.isPlannedCombatUnlocked(combat, workers, workersAvailable)) return false;
+    if (
+      !combat
+      || combat.enemies.length === 0
+      || !isExplorerUnlocked(workers, workersAvailable)
+      || combat.biome !== this.selectedBiome
+      || !this.isBiomeUnlocked(combat.biome)
+      || !this.isPlannedCombatUnlocked(combat, workers, workersAvailable)
+    ) return false;
     if ((this.plannedCombatCooldownEnds[combat.id] ?? 0) > Date.now()) return false;
 
     this.currentPlannedCombatId = combat.id;
+    this.currentPlannedCombatEnemyIndex = 0;
     this.currentMonsterId = combat.id;
-    this.currentHp = combat.maxHp;
-    this.maxHp = combat.maxHp;
+    this.maxHp = combat.enemies[0].maxHp;
+    this.currentHp = this.maxHp;
     this.timeLimitSeconds = combat.timeLimitSeconds;
     this.timeLimitMs = combat.timeLimitSeconds * 1000;
     this.isBoss = true;
     this.spawnTime = Date.now();
     return true;
+  }
+
+  cancelPlannedCombat(workers: WorkerAutoData[], workersAvailable: WorkerAutoData[]): boolean {
+    if (this.currentPlannedCombatId == null) return false;
+
+    this.currentMonsterId = null;
+    this.currentPlannedCombatId = null;
+    this.currentPlannedCombatEnemyIndex = 0;
+    this.currentHp = 0;
+    this.maxHp = 0;
+    this.isBoss = false;
+
+    if (!this.spawnQueuedMonster(workers, workersAvailable)) this.encounterMeter = 0;
+    return true;
+  }
+
+  isBiomeUnlocked(biome: MonsterBiomeId): boolean {
+    const definition = MONSTER_BIOMES.find((entry) => entry.id === biome);
+    return !!definition && (
+      definition.unlockAfterCombatId == null
+      || (this.plannedCombatWins[definition.unlockAfterCombatId] ?? 0) > 0
+    );
+  }
+
+  getUnlockedBiomes(): Record<MonsterBiomeId, boolean> {
+    return {
+      forest: this.isBiomeUnlocked('forest'),
+      beach: this.isBiomeUnlocked('beach'),
+      mine: this.isBiomeUnlocked('mine'),
+    };
   }
 
   private isPlannedCombatUnlocked(
@@ -155,13 +203,24 @@ export class MonsterStateService {
   }
 
   /** Tire un monstre parmi ceux débloqués, pondéré par probabilityToSpawn. */
-  private pickMonsterForLevel(workerLevel: number): Monster | null {
+  private pickMonsterForLevel(
+    workerLevel: number,
+    biome: MonsterBiomeId,
+    workers: WorkerAutoData[],
+    workersAvailable: WorkerAutoData[]
+  ): Monster | null {
+    const explorer = workersAvailable[EXPLORER_WORKER_INDEX];
+    const explorerLevel = explorer && workers.includes(explorer) ? explorer.level : 0;
     const context: UnlockContext = {
       clicks: 0,
-      getWorkerLevel: (workerIndex) => workerIndex === MONSTER_WORKER_INDEX ? workerLevel : null,
+      getWorkerLevel: (workerIndex) => {
+        if (workerIndex === MONSTER_WORKER_INDEX) return workerLevel;
+        if (workerIndex === EXPLORER_WORKER_INDEX) return explorerLevel;
+        return null;
+      },
     };
     const eligible = listMonster.filter((m) => {
-      return m.unlockMethod?.isUnlocked(context) ?? false;
+      return (m.biome ?? 'forest') === biome && (m.unlockMethod?.isUnlocked(context) ?? false);
     });
     if (eligible.length === 0) return null;
     if (eligible.length === 1) return eligible[0];
@@ -176,19 +235,47 @@ export class MonsterStateService {
   }
 
   /** Inflige des dégâts au monstre. Retourne true si le monstre est mort. */
-  dealDamage(amount: number, workers: WorkerAutoData[], workersAvailable: WorkerAutoData[]): boolean {
+  dealDamage(
+    amount: number,
+    workers: WorkerAutoData[],
+    workersAvailable: WorkerAutoData[],
+    source: 'click' | 'afk' = 'click'
+  ): boolean {
     if (this.currentMonsterId == null) return false;
+    if (this.currentPlannedCombatId != null) {
+      const combat = listPlannedCombat.find((entry) => entry.id === this.currentPlannedCombatId);
+      const damageMode = combat?.damageMode ?? 'any';
+      if (damageMode !== 'any' && damageMode !== source) return false;
+    }
     this.currentHp = Math.max(0, this.currentHp - amount);
     if (this.currentHp <= 0) {
+      if (this.advanceToNextPlannedCombatEnemy()) return true;
+
       const remainingMs = this.spawnTime + this.timeLimitMs - Date.now();
       const remainingSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
       this.onMonsterKill(remainingSeconds);
       this.currentMonsterId = null;
       this.currentPlannedCombatId = null;
+      this.currentPlannedCombatEnemyIndex = 0;
       if (!this.spawnQueuedMonster(workers, workersAvailable)) this.encounterMeter = 0;
       return true;
     }
     return false;
+  }
+
+  private advanceToNextPlannedCombatEnemy(): boolean {
+    if (this.currentPlannedCombatId == null) return false;
+    const combat = listPlannedCombat.find((entry) => entry.id === this.currentPlannedCombatId);
+    if (!combat) return false;
+
+    const nextIndex = this.currentPlannedCombatEnemyIndex + 1;
+    const nextEnemy = combat.enemies[nextIndex];
+    if (!nextEnemy) return false;
+
+    this.currentPlannedCombatEnemyIndex = nextIndex;
+    this.maxHp = nextEnemy.maxHp;
+    this.currentHp = nextEnemy.maxHp;
+    return true;
   }
 
   /**
@@ -259,6 +346,10 @@ export class MonsterStateService {
     return { ...this.plannedCombatWins };
   }
 
+  getPlannedCombatWinCount(combatId: string): number {
+    return this.plannedCombatWins[combatId] ?? 0;
+  }
+
   setPlannedCombatWins(wins: Record<string, number> | undefined): void {
     this.plannedCombatWins = { ...(wins ?? {}) };
   }
@@ -282,6 +373,7 @@ export class MonsterStateService {
       if (remaining <= 0) {
         this.currentMonsterId = null;
         this.currentPlannedCombatId = null;
+        this.currentPlannedCombatEnemyIndex = 0;
         if (!this.spawnQueuedMonster(workers, workersAvailable)) this.encounterMeter = 0;
       }
       return;
@@ -324,9 +416,10 @@ export class MonsterStateService {
     const plannedCombat = this.currentPlannedCombatId == null
       ? null
       : listPlannedCombat.find((combat) => combat.id === this.currentPlannedCombatId);
+    const plannedEnemy: PlannedCombatEnemy | undefined = plannedCombat?.enemies[this.currentPlannedCombatEnemyIndex];
     const monster = plannedCombat == null
       ? listMonster.find((m) => m.id === this.currentMonsterId)
-      : plannedCombat;
+      : plannedEnemy;
     if (!monster) return null;
     const remaining = Math.max(0, this.spawnTime + this.timeLimitMs - Date.now());
     return {
@@ -338,6 +431,9 @@ export class MonsterStateService {
       timeLimitSeconds: this.timeLimitSeconds,
       remainingSeconds: Math.ceil(remaining / 1000),
       isBoss: plannedCombat != null || this.isBoss,
+      isPlannedCombat: plannedCombat != null,
+      plannedCombatEnemyNumber: plannedCombat == null ? undefined : this.currentPlannedCombatEnemyIndex + 1,
+      plannedCombatEnemyCount: plannedCombat?.enemies.length,
     };
   }
 
@@ -347,6 +443,14 @@ export class MonsterStateService {
 
   getQueuedMonsterCount(): number {
     return this.queuedMonsterCount;
+  }
+
+  getSelectedBiome(): MonsterBiomeId {
+    return this.selectedBiome;
+  }
+
+  setSelectedBiome(biome: MonsterBiomeId): void {
+    if (isMonsterBiomeId(biome) && this.isBiomeUnlocked(biome)) this.selectedBiome = biome;
   }
 
   private spawnQueuedMonster(

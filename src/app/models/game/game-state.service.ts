@@ -25,6 +25,8 @@ import { EssenceShopStateService } from './essence-shop-state.service';
 import { HouseStateService } from './house-state.service';
 import { listMonster } from '../monsters/list-monster';
 import { Monster } from '../monsters/monster.model';
+import { isMonsterBiomeId, MonsterBiomeId } from '../monsters/monster-biome.model';
+import { isExplorerUnlocked } from '../unlocks/explorer-unlock';
 
 const TICKS_PER_SECOND = 10;
 
@@ -57,6 +59,7 @@ export interface SaveData {
   monsterKillCounts?: Record<string, number>;
   plannedCombatWins?: Record<string, number>;
   plannedCombatCooldownEnds?: Record<string, number>;
+  selectedBiome?: MonsterBiomeId;
   showDamageNumbers?: boolean;
   showCriticalHitNumbers?: boolean;
 }
@@ -111,7 +114,7 @@ export class GameStateService {
           * solarBonuses.autoDamageMultiplier
           * streakMult) / TICKS_PER_SECOND;
       if (this.monsterState.hasCurrentMonster()) {
-        if (this.monsterState.dealDamage(autoPerTick, workers, workersAvailable)) {
+        if (this.monsterState.dealDamage(autoPerTick, workers, workersAvailable, 'afk')) {
           this.saveToLocalStorage();
         }
       } else {
@@ -211,23 +214,26 @@ export class GameStateService {
       workersAvailable: workersAvailableViews,
       clickValue,
       valueAutoPerSecond,
-      shopItems: this.shopState.getShopItemsView(getWorkerLevel),
+      shopItems: this.shopState.getShopItemsView(
+        getWorkerLevel,
+        (combatId) => this.monsterState.getPlannedCombatWinCount(combatId)
+      ),
       powersAvailable: this.powerState.getPowersAvailableView(),
       sunUnlocked: isSunUnlocked(workers, workersAvailable),
       sunDamageMultiplier: (() => {
         if (!isSunUnlocked(workers, workersAvailable)) return undefined;
         const astrologue = workersAvailable[SUN_WORKER_INDEX];
-        return getSunUpgradeStats(astrologue?.level ?? 0).damageMultiplier;
+        return this.getSunStats(astrologue?.level ?? 0).damageMultiplier;
       })(),
       sunSpeedFactor: (() => {
         if (!isSunUnlocked(workers, workersAvailable)) return undefined;
         const astrologue = workersAvailable[SUN_WORKER_INDEX];
-        return getSunUpgradeStats(astrologue?.level ?? 0).speedFactor;
+        return this.getSunStats(astrologue?.level ?? 0).speedFactor;
       })(),
       sunSizeFactor: (() => {
         if (!isSunUnlocked(workers, workersAvailable)) return undefined;
         const astrologue = workersAvailable[SUN_WORKER_INDEX];
-        return getSunUpgradeStats(astrologue?.level ?? 0).sizeFactor;
+        return this.getSunStats(astrologue?.level ?? 0).sizeFactor;
       })(),
       solarAreaExpanded: this.houseState.isSolarHubUnlocked(),
       activeSolarColor: solarBonuses.activeColor ?? undefined,
@@ -246,6 +252,9 @@ export class GameStateService {
         ? powerEffectRemainingPercent
         : undefined,
       monsterUnlocked: this.monsterState.isMonsterUnlocked(workers, workersAvailable),
+      explorerUnlocked: isExplorerUnlocked(workers, workersAvailable),
+      selectedBiome: this.monsterState.getSelectedBiome(),
+      unlockedBiomes: this.monsterState.getUnlockedBiomes(),
       currentMonster: this.monsterState.getCurrentMonsterView(workers, workersAvailable),
       queuedMonsterCount: this.monsterState.getQueuedMonsterCount(),
       encounterMeterPercent: this.monsterState.getEncounterMeterPercent(),
@@ -289,17 +298,26 @@ export class GameStateService {
 
     let criticalHit = false;
     const criticalHitUnlocked = isCriticalHitUnlocked(workers, workersAvailable);
-    if (criticalHitUnlocked || solarBonuses.criticalChanceBonus > 0) {
+    const shopChanceBonus = this.shopState.getUnlockBonus('critical-hit', 'chance');
+    const sunChanceBonus = this.shopState.getUnlockBonus('sun', 'chance');
+    if (
+      criticalHitUnlocked
+      || solarBonuses.criticalChanceBonus > 0
+      || shopChanceBonus > 0
+      || sunChanceBonus > 0
+    ) {
       const miner = workersAvailable[MINER_WORKER_INDEX];
       const minerLevel = miner?.level ?? 0;
       const { totalChance, totalMultiplier } = getCriticalHitStats(minerLevel);
-      const shopChanceBonus = this.shopState.getUnlockBonus('critical-hit', 'chance');
+      const shopDamageBonus = this.shopState.getUnlockBonus('critical-hit', 'damage');
       const houseChanceBonus = this.houseState.getCriticalHitChanceBonus();
       const criticalChance = (criticalHitUnlocked ? totalChance : 0)
         + shopChanceBonus
         + houseChanceBonus
+        + sunChanceBonus
         + solarBonuses.criticalChanceBonus;
       const criticalMultiplier = (criticalHitUnlocked ? totalMultiplier : 1)
+        * (1 + shopDamageBonus)
         * solarBonuses.criticalDamageMultiplier;
       if (Math.random() < criticalChance) {
         value *= criticalMultiplier;
@@ -317,7 +335,7 @@ export class GameStateService {
       } else if (this.showDamageNumbers) {
         this.showDamage(damage, clientX, clientY);
       }
-      if (this.monsterState.dealDamage(damage, workers, workersAvailable)) {
+      if (this.monsterState.dealDamage(damage, workers, workersAvailable, 'click')) {
         this.saveToLocalStorage();
       }
       this.resources.addManaOnClick(0.5 + solarBonuses.manaPerClickBonus);
@@ -339,7 +357,7 @@ export class GameStateService {
     const workersAvailable = this.workerState.getWorkersAvailable();
     if (!isSunUnlocked(workers, workersAvailable)) return;
     const astrologue = workersAvailable[SUN_WORKER_INDEX];
-    const sunMult = getSunUpgradeStats(astrologue?.level ?? 0).damageMultiplier;
+    const sunMult = this.getSunStats(astrologue?.level ?? 0).damageMultiplier;
     this.click(sunMult, event?.clientX, event?.clientY);
   }
 
@@ -376,17 +394,25 @@ export class GameStateService {
       const minerLevel = miner?.level ?? 0;
       const { totalChance, totalMultiplier } = getCriticalHitStats(minerLevel);
       const shopChanceBonus = this.shopState.getUnlockBonus('critical-hit', 'chance');
+      const shopDamageBonus = this.shopState.getUnlockBonus('critical-hit', 'damage');
       const houseChanceBonus = this.houseState.getCriticalHitChanceBonus();
-      const chancePercent = (totalChance + shopChanceBonus + houseChanceBonus) * 100;
+      const sunChanceBonus = this.shopState.getUnlockBonus('sun', 'chance');
+      const chancePercent = (
+        totalChance + shopChanceBonus + houseChanceBonus + sunChanceBonus
+      ) * 100;
       lines.push(
         { label: 'Chance de coup critique', value: `${chancePercent.toFixed(1)} %` },
-        { label: 'Dégâts critique', value: `×${totalMultiplier.toFixed(2)}` }
+        { label: 'Dégâts critique', value: `×${(totalMultiplier * (1 + shopDamageBonus)).toFixed(2)}` }
       );
     }
 
     if (workerIndex === SMITH_WORKER_INDEX) {
       const smithLevel = getSmithLevel(workers, workersAvailable);
-      const stats = getStreakStats(smithLevel);
+      const stats = getStreakStats(
+        smithLevel,
+        undefined,
+        this.streakState.getUpgradeBonuses()
+      );
       lines.push(
         { label: 'Multiplicateur streak', value: `×${stats.damageMultiplier}` },
         { label: 'Clics pour activer la barre', value: `${stats.numberOfClicksRequiredForBar}` },
@@ -397,10 +423,10 @@ export class GameStateService {
     if (workerIndex === SUN_WORKER_INDEX) {
       const astrologue = workersAvailable[SUN_WORKER_INDEX];
       const level = astrologue?.level ?? 0;
-      const sun = getSunUpgradeStats(level);
+      const sun = this.getSunStats(level);
       lines.push(
         { label: 'Dégâts clic soleil', value: `×${sun.damageMultiplier}` },
-        { label: 'Vitesse rotation soleil', value: `${(sun.speedFactor * 100).toFixed(0)} %` },
+        { label: 'Vitesse rotation soleil', value: `${(100 / sun.speedFactor).toFixed(0)} %` },
         { label: 'Taille soleil', value: `${(sun.sizeFactor * 100).toFixed(0)} %` }
       );
     }
@@ -421,7 +447,11 @@ export class GameStateService {
     if (workerIndex === VESSEL_WORKER_INDEX) {
       const vessel = getVesselUpgradeStats(workers, workersAvailable);
       const freqPercent = vessel.spawnIntervalFactor <= 0 ? 0 : (100 / vessel.spawnIntervalFactor - 100);
+      const speedPercent = (
+        1 + this.shopState.getUnlockBonus('vessel', 'speed')
+      ) * 100;
       lines.push(
+        { label: 'Vitesse de déplacement vaisseaux', value: `${speedPercent.toFixed(0)} %` },
         { label: 'Vitesse apparition vaisseaux', value: `+${freqPercent.toFixed(0)} %` },
         { label: 'Gain récompenses vaisseaux', value: `×${vessel.rewardMultiplier.toFixed(2)}` }
       );
@@ -490,20 +520,51 @@ export class GameStateService {
     return Math.max(1, Math.floor(base * mult));
   }
 
+  private getSunStats(astrologueLevel: number): ReturnType<typeof getSunUpgradeStats> {
+    const stats = getSunUpgradeStats(astrologueLevel);
+    return {
+      ...stats,
+      damageMultiplier: stats.damageMultiplier
+        * (1 + this.shopState.getUnlockBonus('sun', 'damage')),
+      speedFactor: stats.speedFactor
+        / (1 + this.shopState.getUnlockBonus('sun', 'speed')),
+      sizeFactor: stats.sizeFactor
+        * (1 + this.shopState.getUnlockBonus('sun', 'size')),
+    };
+  }
+
   getPowerBaitCost(powerIndex: number): number {
     return this.powerState.getPowerBaitCost(powerIndex);
   }
 
   castPower(powerIndex: number): void {
     const cost = this.getPowerManaCost(powerIndex);
+    const power = this.powerState.getPowersAvailable()[powerIndex];
+    const cooldownSeconds = power == null
+      ? undefined
+      : Math.max(0, Math.floor(
+        power.cooldownSeconds
+        * this.shopState.getPowerCooldownMultiplier(power.id)
+      ));
+    const upgrades = power == null
+      ? { duration: 1, strength: 1 }
+      : {
+        duration: this.shopState.getPowerDurationMultiplier(power.id),
+        strength: this.shopState.getPowerStrengthMultiplier(power.id),
+      };
     const bonuses = this.houseState.getVesselRushBonuses();
+    const vesselCountBonus = Math.floor(
+      this.shopState.getUnlockBonus('vessel-rush', 'count')
+    );
     this.powerState.castPower(
       powerIndex,
       cost ?? undefined,
       (count, durationSeconds) => this.vesselState.summonVesselRush(
-        count + bonuses.vesselCount,
+        count + bonuses.vesselCount + vesselCountBonus,
         durationSeconds + bonuses.durationSeconds
-      )
+      ),
+      cooldownSeconds,
+      upgrades
     );
   }
 
@@ -519,6 +580,27 @@ export class GameStateService {
     const started = this.monsterState.startPlannedCombat(combatId, workers, workersAvailable);
     if (started) this.saveToLocalStorage();
     return started;
+  }
+
+  cancelPlannedCombat(): boolean {
+    const workers = this.workerState.getWorkers();
+    const workersAvailable = this.workerState.getWorkersAvailable();
+    const cancelled = this.monsterState.cancelPlannedCombat(workers, workersAvailable);
+    if (cancelled) this.saveToLocalStorage();
+    return cancelled;
+  }
+
+  setSelectedBiome(biome: MonsterBiomeId): boolean {
+    const workers = this.workerState.getWorkers();
+    const workersAvailable = this.workerState.getWorkersAvailable();
+    if (
+      !isMonsterBiomeId(biome)
+      || !isExplorerUnlocked(workers, workersAvailable)
+      || !this.monsterState.isBiomeUnlocked(biome)
+    ) return false;
+    this.monsterState.setSelectedBiome(biome);
+    this.saveToLocalStorage();
+    return true;
   }
 
   /**
@@ -576,6 +658,7 @@ export class GameStateService {
         monsterKillCounts: this.monsterState.getKillCounts(),
         plannedCombatWins: this.monsterState.getPlannedCombatWins(),
         plannedCombatCooldownEnds: this.monsterState.getPlannedCombatCooldownEnds(),
+        selectedBiome: this.monsterState.getSelectedBiome(),
         showDamageNumbers: this.showDamageNumbers,
         showCriticalHitNumbers: this.showCriticalHitNumbers,
       };
@@ -613,6 +696,11 @@ export class GameStateService {
       this.monsterState.setKillCounts(saveData.monsterKillCounts);
       this.monsterState.setPlannedCombatWins(saveData.plannedCombatWins);
       this.monsterState.setPlannedCombatCooldownEnds(saveData.plannedCombatCooldownEnds);
+      if (isMonsterBiomeId(saveData.selectedBiome) && this.monsterState.isBiomeUnlocked(saveData.selectedBiome)) {
+        this.monsterState.setSelectedBiome(saveData.selectedBiome);
+      } else {
+        this.monsterState.setSelectedBiome('forest');
+      }
       this.showDamageNumbers = saveData.showDamageNumbers ?? false;
       this.showCriticalHitNumbers = saveData.showCriticalHitNumbers ?? true;
     } catch (e) {
@@ -641,6 +729,7 @@ export class GameStateService {
       monsterKillCounts: this.monsterState.getKillCounts(),
       plannedCombatWins: this.monsterState.getPlannedCombatWins(),
       plannedCombatCooldownEnds: this.monsterState.getPlannedCombatCooldownEnds(),
+      selectedBiome: this.monsterState.getSelectedBiome(),
       showDamageNumbers: this.showDamageNumbers,
       showCriticalHitNumbers: this.showCriticalHitNumbers,
     };
@@ -691,6 +780,11 @@ export class GameStateService {
       this.monsterState.setKillCounts(saveData.monsterKillCounts);
       this.monsterState.setPlannedCombatWins(saveData.plannedCombatWins);
       this.monsterState.setPlannedCombatCooldownEnds(saveData.plannedCombatCooldownEnds);
+      if (isMonsterBiomeId(saveData.selectedBiome) && this.monsterState.isBiomeUnlocked(saveData.selectedBiome)) {
+        this.monsterState.setSelectedBiome(saveData.selectedBiome);
+      } else {
+        this.monsterState.setSelectedBiome('forest');
+      }
       this.showDamageNumbers = saveData.showDamageNumbers ?? false;
       this.showCriticalHitNumbers = saveData.showCriticalHitNumbers ?? true;
 

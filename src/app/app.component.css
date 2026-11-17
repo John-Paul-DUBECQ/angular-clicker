@@ -348,6 +348,27 @@
   animation: monster-hud-arrive 0.25s ease-out both;
 }
 
+.column-center__main--game-ui .planned-combat-cancel,
+.mobile-monster-title .planned-combat-cancel {
+  flex: 0 0 auto;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid rgba(232, 85, 85, 0.65);
+  border-radius: 6px;
+  background: rgba(130, 35, 42, 0.8);
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.column-center__main--game-ui .planned-combat-cancel {
+  pointer-events: auto;
+}
+
+.column-center__main--game-ui .planned-combat-cancel:hover,
+.mobile-monster-title .planned-combat-cancel:hover {
+  background: #a92c36;
+}
+
 .column-center__main--game-ui .monster-title--boss {
   border-color: rgba(232, 85, 85, 0.72);
   box-shadow: 0 8px 26px rgba(0, 0, 0, 0.3), 0 0 20px rgba(232, 85, 85, 0.14);
@@ -674,6 +695,40 @@
   font-size: 0.72rem;
 }
 
+.quest-biomes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.quest-biomes button {
+  padding: 6px 10px;
+  border: 1px solid #513737;
+  background: #2a2020;
+  color: #c6aaa5;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.quest-biomes button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.quest-biomes__item--active {
+  border-color: #ef8f83 !important;
+  background: #513737 !important;
+  color: #fff1ee !important;
+}
+
+.quest-biome-description,
+.planned-combat-empty {
+  margin: 8px 0 0;
+  color: #c6aaa5;
+  font-size: 0.72rem;
+}
+
 .planned-combat-list {
   display: flex;
   flex-direction: column;
@@ -704,6 +759,15 @@
 .planned-combat__heading span,
 .planned-combat__meta {
   color: #c89a94;
+  font-size: 0.68rem;
+}
+
+.planned-combat__enemies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 10px;
+  margin: 5px 0;
+  color: #e2c6c0;
   font-size: 0.68rem;
 }
 
@@ -1525,7 +1589,9 @@
     gap: 0.5rem;
   }
 
-  .mobile-monster-title__heading > span:last-child {
+  .mobile-monster-title__name {
+    min-width: 0;
+    flex: 1;
     overflow: hidden;
     color: #f1f1f1;
     font-size: 0.9rem;

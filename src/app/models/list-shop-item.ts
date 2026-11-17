@@ -1,4 +1,4 @@
-import { requireAll, requireBought, requirePower, requireWorkerLevel, ShopItem } from "./shop-item";
+import { requirePlannedCombatWins, requireAll, requireBought, requirePower, requireWorkerLevel, ShopItem } from "./shop-item";
 /*
 Recap des workers :
 - Épée : 0
@@ -195,6 +195,122 @@ export const listShopItem: Array<ShopItem> = [
     value: 2,
     unlockMethod: requireAll(requireBought('shop-critical-chance'), requireWorkerLevel(2, 30)),
     unlockUpgrade: { unlockId: 'critical-hit', type: 'chance', value: 0.02 },
+  },{
+    id: 'golden-hoe',
+    name: 'Faux dorée',
+    description: 'Augmente la production de ressources du fermier de 400%.',
+    imageUrl: 'assets/img/Farmer/Farmer1.png',
+    price: 2e14,
+    doesAppearInGame: false,
+    bought: false,
+    value: 5,
+    workerIndex: 1,
+    appearImmediatelyOnUnlock: true,
+    unlockMethod: requirePlannedCombatWins('planned-beach-01', 1),
+  },{
+    id: 'golden-pickaxe',
+    name: 'Pioche dorée',
+    description: 'Augmente la production de ressources du mineur de 350%.',
+    imageUrl: 'assets/img/Miner/Miner1.png',
+    price: 4e14,
+    doesAppearInGame: false,
+    bought: false,
+    value: 4.5,
+    workerIndex: 2,
+    appearImmediatelyOnUnlock: true,
+    unlockMethod: requirePlannedCombatWins('planned-beach-02', 1),
+  },{
+    id: 'golden-hammer',
+    name: 'Marteau doré',
+    description: 'Augmente la production de ressources du forgeron de 300%.',
+    imageUrl: 'assets/img/Smith/Smith1.png',
+    price: 6e14,
+    doesAppearInGame: false,
+    bought: false,
+    value: 4,
+    workerIndex: 3,
+    appearImmediatelyOnUnlock: true,
+    unlockMethod: requirePlannedCombatWins('planned-beach-03', 1),
+  },{
+    id: 'oeil-de-verre',
+    name: 'Oeil de verre',
+    description: 'Regarder à travers permet de découvrir des secrets enfouis, multiplie les dégâts de l\'astrologue par 3.5.',
+    imageUrl: 'assets/img/Star/Star1.png',
+    price: 8e14,
+    doesAppearInGame: false,
+    bought: false,
+    value: 3.5,
+    workerIndex: 4,
+    appearImmediatelyOnUnlock: true,
+    unlockMethod: requirePlannedCombatWins('planned-beach-04', 1),
+  },{
+    id: 'incantation-florale',
+    name: 'Incantation florale',
+    description: 'Invoquer des fleurs est un plaisir de chaque instant, x3 des dégâts du Magicien.',
+    imageUrl: 'assets/img/Wand/Wand1.png',
+    price: 1e15,
+    doesAppearInGame: false,
+    bought: false,
+    value: 3,
+    workerIndex: 5,
+    appearImmediatelyOnUnlock: true,
+    unlockMethod: requirePlannedCombatWins('planned-beach-05', 1),
+  },{
+    id: 'potion-de-rapetissement',
+    name: 'Potion de rapetissement',
+    description: 'Le monde est tout aussi beau vu d\'en bas, c\'est juste plus dur pour chercher aux dessus des armoires. x2.5 des dégâts de l\'Alchimiste.',
+    imageUrl: 'assets/img/Potion/Potion1.png',
+    price: 2e15,
+    doesAppearInGame: false,
+    bought: false,
+    value: 2.5,
+    workerIndex: 6,
+    appearImmediatelyOnUnlock: true,
+    unlockMethod: requirePlannedCombatWins('planned-beach-06', 1),
+  },{
+    id: 'glue-super-adhesive',
+    name: 'Glue super adhésive',
+    description: 'Colle les choses ensemble de manière très efficace. x2 de la production du géomètre.',
+    imageUrl: 'assets/img/Machine/Machine1.png',
+    price: 4e15,
+    doesAppearInGame: false,
+    bought: false,
+    value: 2,
+    workerIndex: 7,
+    appearImmediatelyOnUnlock: true,
+    unlockMethod: requirePlannedCombatWins('planned-beach-07', 1),
+  },{
+    id: 'dos-d-ane',
+    name: 'Dos d\'âne',
+    description: 'La loi veut qu\'on ralentisse à un dos d\'âne. Ralentit le soleil.',
+    imageUrl: 'assets/img/Star/Star1.png',
+    price: 1e16,
+    doesAppearInGame: false,
+    bought: false,
+    value: 2,
+    appearImmediatelyOnUnlock: true,
+    unlockMethod: requirePlannedCombatWins('planned-beach-08', 1),
+    unlockUpgrade: { unlockId: 'sun', type: 'speed', value: -0.25 },
   },
 ];
+
+/*
+UnlockUpgrade disponibles (appliques quand l'item est achete) :
+- sun / chance : chance critique ajoutee (0.01 = +1 point de pourcentage).
+- sun / damage : multiplicateur de degats du clic Soleil (+10 % avec 0.1).
+- sun / size : taille du Soleil (+10 % avec 0.1).
+- sun / speed : vitesse de rotation du Soleil (+10 % avec 0.1).
+- critical-hit / chance : chance critique ajoutee (0.01 = +1 point de pourcentage).
+- critical-hit / damage : degats critiques (+10 % avec 0.1).
+- vessel / speed : vitesse de deplacement des vaisseaux (+10 % avec 0.1).
+- vessel-rush / count : nombre de vaisseaux ajoutes a Rafale stellaire (+2 avec 2).
+- streak / damage : multiplicateur de degats du streak (+10 % avec 0.1).
+- streak / clicks : reduction du nombre de clics requis pour remplir le streak (10 % avec 0.1).
+- streak / decay : ralentissement de la baisse de la barre streak (10 % avec 0.1).
+- power:<id> / mana-cost : reduction du cout de mana du sort (10 % avec 0.1).
+- power:<id> / cooldown : reduction du cooldown du sort (10 % avec 0.1).
+- power:<id> / duration : augmentation de la duree des effets temporises (10 % avec 0.1).
+- power:<id> / strength : augmentation de la puissance (10 % avec 0.1; degats et weakness).
+  IDs de sorts : power, weakness, spawn-mob, monster-time, vessel-rush.
+*/
 

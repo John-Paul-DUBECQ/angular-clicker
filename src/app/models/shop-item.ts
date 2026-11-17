@@ -29,11 +29,14 @@ export interface ShopItem {
   id?: string;
   /**
    * Condition optionnelle : l'item n'apparaît que si cette fonction retourne true
-   * (en plus de la règle de base clicks >= price/2).
-  * Utiliser les helpers requireMinClicks, requireWorkerLevel, requireAll, requireAny
-  * pour construire un UnlockMethod.
+   * (en plus de la règle de base clicks >= price/2, sauf si l'apparition immédiate
+   * au déblocage est activée).
+   * Utiliser les helpers requireMinClicks, requireWorkerLevel, requireAll, requireAny
+   * pour construire un UnlockMethod.
    */
   unlockMethod?: UnlockMethod;
+  /** Affiche l'item immédiatement dès que sa condition de déblocage est remplie. */
+  appearImmediatelyOnUnlock?: boolean;
   /** Amélioration de pouvoir : réduit le coût en mana (ex: 0.9 = -10%). Un seul type d'effet power pour l'instant. */
   powerId?: string;
   powerManaFactor?: number;
@@ -55,6 +58,14 @@ const BASE_VISIBILITY_CLICKS_RATIO = 1 / 2;
 export function getDoesAppearInShop(item: ShopItem, ctx: ShopUnlockContext): boolean {
   if (item.doesAppearInGame) return true;
   if (item.bought) {
+    item.doesAppearInGame = true;
+    return true;
+  }
+  if (
+    item.appearImmediatelyOnUnlock
+    && item.unlockMethod != null
+    && item.unlockMethod.isUnlocked(ctx)
+  ) {
     item.doesAppearInGame = true;
     return true;
   }
@@ -84,6 +95,10 @@ export function requirePower(powerId: string): ShopUnlockCondition {
 /** Condition : l'item du shop est acheté. `ref` = index (0-based) dans la liste, ou id (string) si l'item a un id. */
 export function requireBought(ref: string | number): ShopUnlockCondition {
   return UnlockMethod.shopItemBought(ref);
+}
+
+export function requirePlannedCombatWins(combatId: string, minWins: number): ShopUnlockCondition {
+  return UnlockMethod.plannedCombatCompleted(combatId, minWins);
 }
 
 

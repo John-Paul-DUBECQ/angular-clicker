@@ -1,6 +1,6 @@
 <div class="app-wrapper">
   <ng-template #workerSectionMenu>
-    <nav class="worker-section-tabs" *ngIf="game.essenceShopUnlocked" aria-label="Section des personnages">
+    <nav class="worker-section-tabs" *ngIf="game.essenceShopUnlocked || game.explorerUnlocked" aria-label="Sections du jeu">
       <button
         type="button"
         [class.worker-section-tabs__item--active]="workerView === 'workers'"
@@ -9,15 +9,17 @@
       </button>
       <button
         type="button"
+        *ngIf="game.essenceShopUnlocked"
         [class.worker-section-tabs__item--active]="workerView === 'essenceShop'"
         (click)="setWorkerView('essenceShop')">
         Shop d’essences
       </button>
       <button
         type="button"
-        [class.worker-section-tabs__item--active]="workerView === 'boss'"
-        (click)="setWorkerView('boss')">
-        Boss
+        *ngIf="game.explorerUnlocked"
+        [class.worker-section-tabs__item--active]="workerView === 'quests'"
+        (click)="setWorkerView('quests')">
+        Quêtes
       </button>
     </nav>
     <section class="essence-shop-panel" *ngIf="game.essenceShopUnlocked && workerView === 'essenceShop'">
@@ -44,22 +46,45 @@
         </ng-container>
       </div>
     </section>
-    <section class="planned-combat-panel" *ngIf="game.monsterUnlocked && workerView === 'boss'">
+    <section class="planned-combat-panel" *ngIf="game.explorerUnlocked && workerView === 'quests'">
       <div class="planned-combat-panel__header">
         <div>
-          <h2>Combats prévus</h2>
-          <p>Des affrontements fixes, avec une récompense garantie.</p>
+          <h2>Quêtes</h2>
+          <p>Choisis un biome pour changer les monstres du mode normal. Chaque ennemi a des PV fixes.</p>
         </div>
       </div>
-      <div class="planned-combat-list">
-        <article class="planned-combat" *ngFor="let combat of game.plannedCombats">
+      <nav class="quest-biomes" aria-label="Choisir un biome">
+        <button
+          type="button"
+          *ngFor="let biome of monsterBiomes"
+          [disabled]="!isBiomeUnlocked(biome.id)"
+          [class.quest-biomes__item--active]="game.selectedBiome === biome.id"
+          [attr.aria-pressed]="game.selectedBiome === biome.id"
+          (click)="setSelectedBiome(biome.id)">
+          {{ biome.name }}
+          <span *ngIf="biome.levelCount">({{ getCompletedBiomeLevels(biome.id) }}/{{ biome.levelCount }})</span>
+          <span *ngIf="!isBiomeUnlocked(biome.id)"> · Verrouillé</span>
+        </button>
+      </nav>
+      <p class="quest-biome-description">{{ selectedBiomeDescription }}</p>
+      <div class="planned-combat-list" *ngIf="plannedCombatsForSelectedBiome.length > 0; else noQuestsForBiome">
+        <article class="planned-combat" *ngFor="let combat of plannedCombatsForSelectedBiome">
           <div class="planned-combat__heading">
-            <strong>{{ combat.name }}</strong>
+            <strong>Palier {{ combat.level }} · {{ combat.name }}</strong>
             <span *ngIf="combat.unlocked">{{ combat.wins }} victoire(s)</span>
             <span *ngIf="!combat.unlocked">Verrouillé</span>
           </div>
           <p>{{ combat.description }}</p>
-          <div class="planned-combat__meta">{{ formatMonsterHp(combat.maxHp) }} PV fixes · {{ combat.timeLimitSeconds }}s</div>
+          <div class="planned-combat__meta">
+            {{ formatMonsterHp(combat.totalHp) }} PV au total · {{ combat.enemies.length }} ennemi(s) · {{ combat.timeLimitSeconds }}s
+          </div>
+          <div class="planned-combat__meta" *ngIf="combat.damageMode === 'click'">
+            Dégâts au clic uniquement
+          </div>
+          <div class="planned-combat__meta" *ngIf="combat.damageMode === 'afk'">
+            Dégâts AFK uniquement
+          </div>
+          
           <div class="planned-combat__meta" *ngIf="combat.cooldownRemainingSeconds > 0">
             Relance possible dans {{ formatCooldown(combat.cooldownRemainingSeconds) }}
           </div>
@@ -84,6 +109,11 @@
           </button>
         </article>
       </div>
+      <ng-template #noQuestsForBiome>
+        <p class="planned-combat-empty">
+          Aucun palier n’est encore défini pour ce biome. Les combats de la plage et de la mine sont à venir.
+        </p>
+      </ng-template>
     </section>
   </ng-template>
 
@@ -221,9 +251,20 @@
             <span class="monster-title__name">
               {{ game.currentMonster.name }}<span *ngIf="game.queuedMonsterCount && game.queuedMonsterCount > 0"> + {{ game.queuedMonsterCount }}</span>
             </span>
+            <button
+              *ngIf="game.currentMonster.isPlannedCombat"
+              type="button"
+              class="planned-combat-cancel"
+              aria-label="Annuler le combat scénarisé"
+              (click)="cancelPlannedCombat($event)">
+              Annuler
+            </button>
           </div>
           <div class="monster-title__details">
             <span class="monster-title__hp">{{ formatMonsterHp(game.currentMonster.currentHp) }} HP</span>
+            <span *ngIf="game.currentMonster.plannedCombatEnemyCount">
+              Ennemi {{ game.currentMonster.plannedCombatEnemyNumber }}/{{ game.currentMonster.plannedCombatEnemyCount }}
+            </span>
             <span class="monster-title__timer">{{ game.currentMonster.remainingSeconds }} s</span>
           </div>
           <div class="monster-title__hp-track">
@@ -298,7 +339,7 @@
         </div>
       </div>
       <ng-container *ngTemplateOutlet="workerSectionMenu"></ng-container>
-      <div class="workers-list" *ngIf="workerView === 'workers' || !game.essenceShopUnlocked">
+      <div class="workers-list" *ngIf="workerView === 'workers' || (!game.essenceShopUnlocked && workerView !== 'quests')">
         <ng-container class="worker-area" *ngFor="let worker of workersAvailable; let i = index; trackBy: trackByIndex" >
           <app-worker-area
             *ngIf="worker.doesAppearInGame"
@@ -351,10 +392,21 @@
           *ngIf="game.currentMonster">
           <div class="mobile-monster-title__heading">
             <span class="monster-title__boss" *ngIf="game.currentMonster.isBoss">DANGER BOSS</span>
-            <span>{{ game.currentMonster.name }}</span>
+            <span class="mobile-monster-title__name">{{ game.currentMonster.name }}</span>
+            <button
+              *ngIf="game.currentMonster.isPlannedCombat"
+              type="button"
+              class="planned-combat-cancel"
+              aria-label="Annuler le combat scénarisé"
+              (click)="cancelPlannedCombat($event)">
+              Annuler
+            </button>
           </div>
           <div class="mobile-monster-title__details">
             <strong>{{ formatMonsterHp(game.currentMonster.currentHp) }} HP</strong>
+            <span *ngIf="game.currentMonster.plannedCombatEnemyCount">
+              {{ game.currentMonster.plannedCombatEnemyNumber }}/{{ game.currentMonster.plannedCombatEnemyCount }}
+            </span>
             <span>{{ game.currentMonster.remainingSeconds }} s</span>
           </div>
           <div class="mobile-monster-title__hp-track">

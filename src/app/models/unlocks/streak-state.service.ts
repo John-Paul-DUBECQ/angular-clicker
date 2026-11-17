@@ -6,10 +6,12 @@ import {
   tickStreak,
   processStreakOnClick,
   getStreakView,
+  StreakUnlockBonuses,
   StreakPhase,
   StreakView,
 } from './streak';
 import { PowerStateService } from '../game/power-state.service';
+import { ShopStateService } from '../game/shop-state.service';
 
 /** Service qui porte l'état de la barre streak (barre, phase) et délègue la logique à streak.ts */
 @Injectable({ providedIn: 'root' })
@@ -17,7 +19,18 @@ export class StreakStateService {
   private barCurrent = 0;
   private phase: StreakPhase = 'filling';
 
-  constructor(private powerState: PowerStateService) {}
+  constructor(
+    private powerState: PowerStateService,
+    private shopState: ShopStateService
+  ) {}
+
+  getUpgradeBonuses(): StreakUnlockBonuses {
+    return {
+      damage: this.shopState.getUnlockBonus('streak', 'damage'),
+      clicks: this.shopState.getUnlockBonus('streak', 'clicks'),
+      decay: this.shopState.getUnlockBonus('streak', 'decay'),
+    };
+  }
 
   getSaveState(): { barCurrent: number; phase: StreakPhase } {
     return { barCurrent: this.barCurrent, phase: this.phase };
@@ -45,7 +58,8 @@ export class StreakStateService {
       this.phase,
       ticksPerSecond,
       smithLevel,
-      this.getWeaknessModifiers()
+      this.getWeaknessModifiers(),
+      this.getUpgradeBonuses()
     );
     this.barCurrent = result.barCurrent;
     this.phase = result.phase;
@@ -62,14 +76,20 @@ export class StreakStateService {
       this.phase,
       smithLevel,
       this.getWeaknessModifiers(),
-      clickCount
+      clickCount,
+      this.getUpgradeBonuses()
     );
     this.barCurrent = result.barCurrent;
     this.phase = result.phase;
   }
 
   getMultiplier(workers: WorkerAutoData[], workersAvailable: WorkerAutoData[]): number {
-    return getStreakMultiplier(workers, workersAvailable, this.phase);
+    return getStreakMultiplier(
+      workers,
+      workersAvailable,
+      this.phase,
+      this.getUpgradeBonuses()
+    );
   }
 
   getView(workers: WorkerAutoData[], workersAvailable: WorkerAutoData[]): StreakView {
@@ -78,7 +98,8 @@ export class StreakStateService {
       workersAvailable,
       this.barCurrent,
       this.phase,
-      this.getWeaknessModifiers()
+      this.getWeaknessModifiers(),
+      this.getUpgradeBonuses()
     );
   }
 }

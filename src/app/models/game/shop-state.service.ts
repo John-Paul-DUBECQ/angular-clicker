@@ -33,7 +33,8 @@ export class ShopStateService {
   }
 
   getShopContext(
-    getWorkerLevel: (index: number) => number | null
+    getWorkerLevel: (index: number) => number | null,
+    getPlannedCombatWins: (combatId: string) => number = () => 0
   ): ShopUnlockContext {
     return {
       clicks: this.resources.getClicks(),
@@ -44,6 +45,7 @@ export class ShopStateService {
           : (this.shopItems.find((i) => i.id === ref)?.bought ?? false),
       getPowerBought: (powerId: string) =>
         this.powerState.getPowers().some((p) => p.id === powerId),
+      getPlannedCombatWins,
     };
   }
 
@@ -51,7 +53,20 @@ export class ShopStateService {
     const factor = this.shopItems
       .filter((i) => i.bought && i.powerId === powerId && i.powerManaFactor != null)
       .reduce((p, i) => p * (i.powerManaFactor ?? 1), 1);
-    return factor > 0 ? factor : 1;
+    const reduction = this.getUnlockBonus(`power:${powerId}`, 'mana-cost');
+    return Math.max(0.1, factor * (1 - reduction));
+  }
+
+  getPowerCooldownMultiplier(powerId: string): number {
+    return Math.max(0, 1 - this.getUnlockBonus(`power:${powerId}`, 'cooldown'));
+  }
+
+  getPowerDurationMultiplier(powerId: string): number {
+    return 1 + this.getUnlockBonus(`power:${powerId}`, 'duration');
+  }
+
+  getPowerStrengthMultiplier(powerId: string): number {
+    return 1 + this.getUnlockBonus(`power:${powerId}`, 'strength');
   }
 
   getUnlockBonus(unlockId: string, type: string): number {
@@ -79,8 +94,11 @@ export class ShopStateService {
       .reduce((s, i) => s + (i.manaRegenBonus ?? 0), 0);
   }
 
-  getShopItemsView(getWorkerLevel: (index: number) => number | null): ShopItem[] {
-    const ctx = this.getShopContext(getWorkerLevel);
+  getShopItemsView(
+    getWorkerLevel: (index: number) => number | null,
+    getPlannedCombatWins?: (combatId: string) => number
+  ): ShopItem[] {
+    const ctx = this.getShopContext(getWorkerLevel, getPlannedCombatWins);
     return this.shopItems.map((item) => ({
       ...item,
       doesAppearInGame: getDoesAppearInShop(item, ctx),

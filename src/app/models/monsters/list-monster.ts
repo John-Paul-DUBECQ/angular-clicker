@@ -1,10 +1,12 @@
 import { Monster } from "./monster.model";
 import { UnlockMethod } from '../unlocks/unlock-method';
 import { MONSTER_WORKER_INDEX } from '../unlocks/monster-unlock';
+import { EXPLORER_WORKER_INDEX } from '../unlocks/explorer-unlock';
 
 export const listMonster: Monster[] = [
   {
     id: 'monster1',
+    biome: 'forest',
     name: 'Mosh',
     description: 'Mosh est un vrai monstre, il porte bien son nom.',
     imageUrl: 'assets/img/shadocks/mosh.png',
@@ -20,6 +22,7 @@ export const listMonster: Monster[] = [
   },
   {
     id: 'monster2',
+    biome: 'forest',
     name: 'Super-Mosh',
     description: 'Super-Mosh est un Mosh qui a muté, C\'est dire à quel point il est idiot.',
     imageUrl: 'assets/img/shadocks/mosh.png',
@@ -34,6 +37,7 @@ export const listMonster: Monster[] = [
   },
   {
     id: 'monster8',
+    biome: 'forest',
     name: 'Sac Poubelle Sama',
     description: 'Sac Poubelle Sama est une poubelle, il est très difficile à tuer.',
     imageUrl: 'assets/img/shadocks/sac-poubelle-sama.png',
@@ -47,6 +51,7 @@ export const listMonster: Monster[] = [
     ],
   },{
     id: 'monster3',
+    biome: 'forest',
     name: 'Gribouy',
     description: 'Gribouy est un petit être très robuste, mais il a une phobie de ses mains, il faut donc le tuer avec ses propres mains.',
     imageUrl: 'assets/img/shadocks/gribouyi.png',
@@ -61,11 +66,12 @@ export const listMonster: Monster[] = [
   },
   {
     id: 'monster4',
+    biome: 'beach',
     name: "Calque",
     imageUrl: 'assets/img/shadocks/aquaticMobs/calque.png',
     description: 'Calque est un monstre très rapide, il est donc difficile à tuer.',
     doesAppearInGame: false,
-    unlockMethod: UnlockMethod.workerLevel(MONSTER_WORKER_INDEX, 1),
+    unlockMethod: UnlockMethod.workerLevel(EXPLORER_WORKER_INDEX, 1),
     probabilityToSpawn: 10,
     drops: [
       { resourceId: 'sea-food', amount: 2 },
@@ -73,11 +79,12 @@ export const listMonster: Monster[] = [
   }, 
   {
     id: 'monster5',
+    biome: 'beach',
     name: "Molusk",
     imageUrl: 'assets/img/shadocks/aquaticMobs/molusk.png',
     description: 'Molusk est un monstre très fort, il est donc difficile à tuer.',
     doesAppearInGame: false,
-    unlockMethod: UnlockMethod.workerLevel(MONSTER_WORKER_INDEX, 10),
+    unlockMethod: UnlockMethod.workerLevel(EXPLORER_WORKER_INDEX, 1),
     probabilityToSpawn: 10,
     drops: [
       { resourceId: 'sea-food', amount: 1 },
@@ -86,11 +93,12 @@ export const listMonster: Monster[] = [
   }, 
   {
     id: 'monster6',
+    biome: 'beach',
     name: "Peji",
     imageUrl: 'assets/img/shadocks/aquaticMobs/peji.png',
     description: 'Peji est un monstre très mystérieux, il est donc difficile à tuer.',
     doesAppearInGame: false,
-    unlockMethod: UnlockMethod.workerLevel(MONSTER_WORKER_INDEX, 10),
+    unlockMethod: UnlockMethod.workerLevel(EXPLORER_WORKER_INDEX, 1),
     probabilityToSpawn: 10,
     lootMultiplier: 2,
     drops: [
@@ -100,11 +108,12 @@ export const listMonster: Monster[] = [
   }, 
   {
     id: 'monster7',
+    biome: 'beach',
     name: "Pwaskay",
     imageUrl: 'assets/img/shadocks/aquaticMobs/pwaskay.png',
     description: 'Pwaskay est un monstre très étrange, il est donc difficile à tuer.',
     doesAppearInGame: false,
-    unlockMethod: UnlockMethod.workerLevel(MONSTER_WORKER_INDEX, 10),
+    unlockMethod: UnlockMethod.workerLevel(EXPLORER_WORKER_INDEX, 1),
     probabilityToSpawn: 10,
     drops: [
       { resourceId: 'sea-food', amount: 2 },

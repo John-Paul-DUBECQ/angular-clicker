@@ -20,6 +20,11 @@ const POWER_EFFECTS: Map<string, PowerEffect> = new Map([
   [VESSEL_RUSH_POWER_ID, vesselRushEffect],
 ]);
 
+interface PowerUpgradeMultipliers {
+  duration: number;
+  strength: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class PowerStateService {
   private powersAvailable: Power[] = listPower;
@@ -113,7 +118,9 @@ export class PowerStateService {
   castPower(
     powerIndex: number,
     effectiveManaCost: number | undefined,
-    summonVessels: (count: number, durationSeconds: number) => void
+    summonVessels: (count: number, durationSeconds: number) => void,
+    effectiveCooldownSeconds?: number,
+    upgrades: PowerUpgradeMultipliers = { duration: 1, strength: 1 }
   ): boolean {
     if (powerIndex < 0 || powerIndex >= this.powersAvailable.length) return false;
     const power = this.powersAvailable[powerIndex];
@@ -130,19 +137,19 @@ export class PowerStateService {
 
     const context = {
       setDamageBuff: (mult: number, durationSeconds: number) => {
-        this.damageBuffUntil = Date.now() + durationSeconds * 1000;
-        this.damageBuffMultiplier = mult;
+        this.damageBuffUntil = Date.now() + durationSeconds * upgrades.duration * 1000;
+        this.damageBuffMultiplier = mult * upgrades.strength;
       },
       setComboMultiplier: (mult: number, durationSeconds: number) => {
-        this.weaknessBuffUntil = Date.now() + durationSeconds * 1000;
-        this.weaknessComboMultiplier = mult;
+        this.weaknessBuffUntil = Date.now() + durationSeconds * upgrades.duration * 1000;
+        this.weaknessComboMultiplier = Math.max(0.05, mult / upgrades.strength);
       },
       setSpeedDecrease: (mult: number, durationSeconds: number) => {
         this.weaknessBuffUntil = Math.max(
           this.weaknessBuffUntil,
-          Date.now() + durationSeconds * 1000
+          Date.now() + durationSeconds * upgrades.duration * 1000
         );
-        this.weaknessSpeedMultiplier = mult;
+        this.weaknessSpeedMultiplier = Math.max(0.05, mult / upgrades.strength);
       },
       spawnMonster: () => {
         const workers = this.workerState.getWorkers();
@@ -150,15 +157,17 @@ export class PowerStateService {
         this.monsterState.forceSpawnNext(workers, workersAvailable);
       },
       addMonsterTime: (seconds: number) => {
-        this.monsterState.addTimeToCurrentMonster(seconds);
+        this.monsterState.addTimeToCurrentMonster(seconds * upgrades.duration);
       },
-      summonVessels,
+      summonVessels: (count: number, durationSeconds: number) =>
+        summonVessels(count, durationSeconds * upgrades.duration),
     };
     effect(context);
-    if (power.cooldownSeconds > 0) {
+    const cooldownSeconds = effectiveCooldownSeconds ?? power.cooldownSeconds;
+    if (cooldownSeconds > 0) {
       this.cooldownUntilByPowerId.set(
         power.id,
-        Date.now() + power.cooldownSeconds * 1000
+        Date.now() + cooldownSeconds * 1000
       );
     }
     return true;

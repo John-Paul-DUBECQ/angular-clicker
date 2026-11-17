@@ -16,6 +16,7 @@ import type { VesselReward } from './models/game/vessel-reward-notification.serv
 import { LoreNotificationService, LorePayload } from './models/lore/lore-notification.service';
 import { listMonster } from './models/monsters/list-monster';
 import { Monster } from './models/monsters/monster.model';
+import { MONSTER_BIOMES, MonsterBiomeId } from './models/monsters/monster-biome.model';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -27,7 +28,8 @@ export class AppComponent implements OnInit, OnDestroy {
   title = 'Clicker Game';
   mobileScreen: 'game' | 'shop' | 'workers' | 'combat' | 'settings' = 'game';
   mobileMenuVisible = false;
-  workerView: 'workers' | 'essenceShop' | 'boss' = 'workers';
+  workerView: 'workers' | 'essenceShop' | 'quests' = 'workers';
+  readonly monsterBiomes = MONSTER_BIOMES;
   private refreshInterval: ReturnType<typeof setInterval> | null = null;
   private vesselTickId: ReturnType<typeof setInterval> | null = null;
   /** Position left fluide (dérivée du temps) pour chaque vaisseau, mise à jour ~50 ms. */
@@ -400,6 +402,39 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
+  cancelPlannedCombat(event: MouseEvent): void {
+    event.stopPropagation();
+    if (this.gameState.cancelPlannedCombat()) {
+      this.refreshGameState();
+    }
+  }
+
+  setSelectedBiome(biome: MonsterBiomeId): void {
+    if (this.gameState.setSelectedBiome(biome)) {
+      this.refreshGameState();
+    }
+  }
+
+  get selectedBiomeDescription(): string {
+    return this.monsterBiomes.find((biome) => biome.id === this.game.selectedBiome)?.description ?? '';
+  }
+
+  get plannedCombatsForSelectedBiome(): NonNullable<Game['plannedCombats']> {
+    return (this.game.plannedCombats ?? []).filter(
+      (combat) => combat.biome === this.game.selectedBiome
+    );
+  }
+
+  getCompletedBiomeLevels(biome: MonsterBiomeId): number {
+    return (this.game.plannedCombats ?? []).filter(
+      (combat) => combat.biome === biome && combat.wins > 0
+    ).length;
+  }
+
+  isBiomeUnlocked(biome: MonsterBiomeId): boolean {
+    return this.game.unlockedBiomes?.[biome] === true;
+  }
+
   trackByIndex(index: number, _worker: WorkerAuto): number {
     return index;
   }
@@ -559,7 +594,7 @@ export class AppComponent implements OnInit, OnDestroy {
     return (this.game.essenceShopItems ?? []).map((item, index) => ({ item, index }));
   }
 
-  setWorkerView(view: 'workers' | 'essenceShop' | 'boss'): void {
+  setWorkerView(view: 'workers' | 'essenceShop' | 'quests'): void {
     this.workerView = view;
   }
 

@@ -9,6 +9,7 @@ import { PowerStateService } from './power-state.service';
 import { MonsterStateService } from './monster-state.service';
 import { VesselRewardNotificationService } from './vessel-reward-notification.service';
 import { HouseStateService } from './house-state.service';
+import { ShopStateService } from './shop-state.service';
 
 const VESSEL_SPAWN_INTERVAL_MS_MIN = 50000;
 const VESSEL_SPAWN_INTERVAL_MS_MAX = 140000;
@@ -57,7 +58,8 @@ export class VesselService {
     private powerState: PowerStateService,
     private monsterState: MonsterStateService,
     private vesselRewardNotify: VesselRewardNotificationService,
-    private houseState: HouseStateService
+    private houseState: HouseStateService,
+    private shopState: ShopStateService
   ) {}
 
   /** Tick : retirer les vaisseaux sortis (position = temps), en faire spawn si débloqué. */
@@ -66,7 +68,7 @@ export class VesselService {
 
     this.processVesselRushes(now);
     this.activeVessels = this.activeVessels.filter((a) => {
-      const speed = a.vessel.speed ?? VESSEL_DEFAULT_SPEED;
+      const speed = this.getVesselSpeed(a.vessel);
       const leftPercent = ((now - a.spawnTime) / 1000) * speed;
       a.leftPercent = leftPercent;
       return leftPercent < 100;
@@ -188,8 +190,8 @@ export class VesselService {
   getActiveVesselsView(): ActiveVesselView[] {
     const now = Date.now();
     return this.activeVessels.map((a) => {
-      const speed = a.vessel.speed ?? VESSEL_DEFAULT_SPEED;
-      const leftPercent = ((now - a.spawnTime) / 1000) * speed;
+      const upgradedSpeed = this.getVesselSpeed(a.vessel);
+      const leftPercent = ((now - a.spawnTime) / 1000) * upgradedSpeed;
       return {
         instanceId: a.instanceId,
         vesselId: a.vessel.id,
@@ -197,9 +199,14 @@ export class VesselService {
         imageUrl: a.vessel.imageUrl,
         leftPercent,
         spawnTime: a.spawnTime,
-        speed,
+        speed: upgradedSpeed,
         topPercent: a.topPercent,
       };
     });
+  }
+
+  private getVesselSpeed(vessel: Vessel): number {
+    return (vessel.speed ?? VESSEL_DEFAULT_SPEED)
+      * (1 + this.shopState.getUnlockBonus('vessel', 'speed'));
   }
 }

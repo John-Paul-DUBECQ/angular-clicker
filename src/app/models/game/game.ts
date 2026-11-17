@@ -8,6 +8,7 @@ import { EssenceShopItem } from "../essence-shop-item";
 import { House } from "../house";
 import { ResourceStock } from "../resource";
 import type { PlannedCombatView } from "../monsters/planned-combat.model";
+import type { MonsterBiomeId } from "../monsters/monster-biome.model";
 
 /**
  * Vue agrégée du jeu pour l'UI. Les données réelles sont dans Resources, WorkerState, ShopState, PowerState.
@@ -53,6 +54,9 @@ export class Game {
     powerEffectRemainingPercent?: Record<string, number>;
     /** Zone monstre débloquée (Alchimiste). */
     monsterUnlocked?: boolean;
+    explorerUnlocked?: boolean;
+    selectedBiome?: MonsterBiomeId;
+    unlockedBiomes?: Record<MonsterBiomeId, boolean>;
     /** Monstre actuel à la place du clicker (PV, temps restant). */
     currentMonster?: CurrentMonsterView | null;
     /** Nombre de monstres en attente derrière le monstre actuel. */

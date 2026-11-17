@@ -4,7 +4,16 @@ import { HouseStateService } from './house-state.service';
 import { MonsterStateService } from './monster-state.service';
 import { ResourcesService } from './resources.service';
 import { WorkerStateService } from './worker-state.service';
+import { ShopStateService } from './shop-state.service';
+import { PowerStateService } from './power-state.service';
+import { VesselService } from './vessel.service';
 import { formatNumberValue } from '../../pipes/format-number.pipe';
+import { listPlannedCombat } from '../monsters/list-planned-combat';
+import { listShopItem } from '../list-shop-item';
+import { getSunUpgradeStats } from '../unlocks/sun-unlock';
+import { getCriticalHitStats } from '../unlocks/critical-hit';
+import { ShopItem } from '../shop-item';
+import { listPower } from '../powers/list-power';
 
 describe('GameStateService solar bonuses', () => {
   let gameState: GameStateService;
@@ -12,16 +21,19 @@ describe('GameStateService solar bonuses', () => {
   let monsterState: MonsterStateService;
   let resources: ResourcesService;
   let workerState: WorkerStateService;
+  let shopState: ShopStateService;
 
   beforeEach(() => {
     jasmine.clock().install();
     jasmine.clock().mockDate(new Date(60000));
+    localStorage.removeItem('clickerGameSave');
     TestBed.configureTestingModule({});
     gameState = TestBed.inject(GameStateService);
     houseState = TestBed.inject(HouseStateService);
     monsterState = TestBed.inject(MonsterStateService);
     resources = TestBed.inject(ResourcesService);
     workerState = TestBed.inject(WorkerStateService);
+    shopState = TestBed.inject(ShopStateService);
 
     const workersAvailable = workerState.getWorkersAvailable();
     workersAvailable[0].level = 1;
@@ -36,6 +48,8 @@ describe('GameStateService solar bonuses', () => {
   });
 
   afterEach(() => {
+    const goldenHoe = listShopItem.find((item) => item.id === 'golden-hoe');
+    if (goldenHoe) goldenHoe.doesAppearInGame = false;
     document.querySelectorAll('.damage-popup, .critical-hit-popup').forEach((popup) => popup.remove());
     TestBed.resetTestingModule();
     jasmine.clock().uninstall();
@@ -166,5 +180,395 @@ describe('GameStateService solar bonuses', () => {
     expect(monsterAfter).not.toBeNull();
     expect(Math.abs(monsterBefore!.currentHp - monsterAfter!.currentHp - expectedDamage))
       .toBeLessThan(expectedDamage * 1e-10);
+  });
+
+  it('spawns only aquatic monsters when the beach biome is selected', () => {
+    const workersAvailable = workerState.getWorkersAvailable();
+    const alchemist = workersAvailable[6];
+    const explorer = workersAvailable[8];
+    alchemist.level = 1;
+    explorer.level = 1;
+    workerState.setWorkers([alchemist, explorer]);
+    monsterState.setPlannedCombatWins({ 'planned-forest-10': 1 });
+    monsterState.setSelectedBiome('beach');
+
+    spyOn(Math, 'random').and.returnValue(0.99);
+    monsterState.forceSpawnNext(workerState.getWorkers(), workersAvailable);
+
+    const monster = monsterState.getCurrentMonsterView(workerState.getWorkers(), workersAvailable);
+    expect(monster).not.toBeNull();
+    expect(['monster4', 'monster5', 'monster6', 'monster7']).toContain(monster!.monsterId);
+  });
+
+  it('keeps the forest as the default spawn biome', () => {
+    const workersAvailable = workerState.getWorkersAvailable();
+    const alchemist = workersAvailable[6];
+    const explorer = workersAvailable[8];
+    alchemist.level = 1;
+    explorer.level = 1;
+    workerState.setWorkers([alchemist, explorer]);
+
+    spyOn(Math, 'random').and.returnValue(0.99);
+    monsterState.forceSpawnNext(workerState.getWorkers(), workersAvailable);
+
+    const monster = monsterState.getCurrentMonsterView(workerState.getWorkers(), workersAvailable);
+    expect(monster?.monsterId).toBe('monster1');
+  });
+
+  it('does not spawn monsters in the mine before its content is defined', () => {
+    const workersAvailable = workerState.getWorkersAvailable();
+    const alchemist = workersAvailable[6];
+    alchemist.level = 1;
+    workerState.setWorkers([alchemist]);
+    monsterState.setPlannedCombatWins({
+      'planned-forest-10': 1,
+      'planned-beach-10': 1,
+    });
+    monsterState.setSelectedBiome('mine');
+
+    monsterState.forceSpawnNext(workerState.getWorkers(), workersAvailable);
+
+    expect(monsterState.getCurrentMonsterView(workerState.getWorkers(), workersAvailable)).toBeNull();
+  });
+
+  it('unlocks biome selection with the explorer and includes it in saves', () => {
+    expect(gameState.setSelectedBiome('beach')).toBeFalse();
+
+    const workersAvailable = workerState.getWorkersAvailable();
+    const explorer = workersAvailable[8];
+    explorer.level = 1;
+    workerState.setWorkers([...workerState.getWorkers(), explorer]);
+    monsterState.setPlannedCombatWins({ 'planned-forest-10': 1 });
+
+    expect(gameState.setSelectedBiome('beach')).toBeTrue();
+    const save = localStorage.getItem('clickerGameSave');
+    expect(save).not.toBeNull();
+    expect(gameState.importSave(save!)).toBeTrue();
+    expect(gameState.getState().selectedBiome).toBe('beach');
+  });
+
+  it('unlocks biomes only after the previous biome final level is won', () => {
+    expect(monsterState.getUnlockedBiomes()).toEqual({
+      forest: true,
+      beach: false,
+      mine: false,
+    });
+
+    monsterState.setPlannedCombatWins({ 'planned-forest-09': 1 });
+    expect(monsterState.isBiomeUnlocked('beach')).toBeFalse();
+    monsterState.setPlannedCombatWins({ 'planned-forest-10': 1 });
+    expect(monsterState.isBiomeUnlocked('beach')).toBeTrue();
+    expect(monsterState.isBiomeUnlocked('mine')).toBeFalse();
+    monsterState.setPlannedCombatWins({
+      'planned-forest-10': 1,
+      'planned-beach-10': 1,
+    });
+    expect(monsterState.isBiomeUnlocked('mine')).toBeTrue();
+  });
+
+  it('defines ten sequential combat levels for both available biomes', () => {
+    const forest = listPlannedCombat.filter((combat) => combat.biome === 'forest');
+    const beach = listPlannedCombat.filter((combat) => combat.biome === 'beach');
+
+    expect(forest.map((combat) => combat.level)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(beach.map((combat) => combat.level)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  });
+
+  it('unlocks each combat only after the previous level is won', () => {
+    const workersAvailable = workerState.getWorkersAvailable();
+    const alchemist = workersAvailable[6];
+    const explorer = workersAvailable[8];
+    alchemist.level = 1;
+    explorer.level = 1;
+    workerState.setWorkers([alchemist, explorer]);
+
+    let combats = monsterState.getPlannedCombats(workerState.getWorkers(), workersAvailable);
+    expect(combats.find((combat) => combat.id === 'planned-mosh-hunt')?.unlocked).toBeTrue();
+    expect(combats.find((combat) => combat.id === 'planned-super-mosh')?.unlocked).toBeFalse();
+
+    monsterState.setPlannedCombatWins({ 'planned-mosh-hunt': 1 });
+    combats = monsterState.getPlannedCombats(workerState.getWorkers(), workersAvailable);
+    expect(combats.find((combat) => combat.id === 'planned-super-mosh')?.unlocked).toBeTrue();
+    expect(combats.find((combat) => combat.id === 'planned-forest-03')?.unlocked).toBeFalse();
+
+    monsterState.setPlannedCombatWins({ 'planned-forest-10': 1 });
+    combats = monsterState.getPlannedCombats(workerState.getWorkers(), workersAvailable);
+    expect(combats.find((combat) => combat.id === 'planned-beach-01')?.unlocked).toBeTrue();
+  });
+
+  it('uses the fixed HP values configured for planned combat enemies', () => {
+    const workersAvailable = workerState.getWorkersAvailable();
+    const alchemist = workersAvailable[6];
+    alchemist.level = 1;
+    alchemist.baseProduction = 10;
+    workerState.setWorkers([alchemist]);
+
+    const firstCombat = monsterState.getPlannedCombats(
+      workerState.getWorkers(),
+      workersAvailable
+    )[0];
+
+    expect(firstCombat.totalHp).toBe(1.2e15);
+    expect(firstCombat.enemies[0].maxHp).toBe(1.2e15);
+  });
+
+  it('advances through all enemies in one combat and rewards only after the last one', () => {
+    const workersAvailable = workerState.getWorkersAvailable();
+    const alchemist = workersAvailable[6];
+    const explorer = workersAvailable[8];
+    alchemist.level = 1;
+    explorer.level = 1;
+    workerState.setWorkers([alchemist, explorer]);
+    monsterState.setPlannedCombatWins({ 'planned-super-mosh': 1 });
+
+    expect(monsterState.startPlannedCombat(
+      'planned-forest-03',
+      workerState.getWorkers(),
+      workersAvailable
+    )).toBeTrue();
+
+    const firstEnemy = monsterState.getCurrentMonsterView(workerState.getWorkers(), workersAvailable);
+    expect(firstEnemy?.name).toBe('Sac Poubelle Sama');
+    expect(firstEnemy?.plannedCombatEnemyNumber).toBe(1);
+    expect(firstEnemy?.plannedCombatEnemyCount).toBe(2);
+
+    expect(monsterState.dealDamage(1e15, workerState.getWorkers(), workersAvailable)).toBeTrue();
+
+    const secondEnemy = monsterState.getCurrentMonsterView(workerState.getWorkers(), workersAvailable);
+    expect(secondEnemy?.name).toBe('Mosh');
+    expect(secondEnemy?.currentHp).toBe(4e14);
+    expect(secondEnemy?.plannedCombatEnemyNumber).toBe(2);
+    expect(secondEnemy?.remainingSeconds).toBe(firstEnemy?.remainingSeconds);
+    expect(monsterState.getPlannedCombatWins()['planned-forest-03']).toBeUndefined();
+
+    expect(monsterState.dealDamage(4e14, workerState.getWorkers(), workersAvailable)).toBeTrue();
+    expect(monsterState.getCurrentMonsterView(workerState.getWorkers(), workersAvailable)).toBeNull();
+    expect(monsterState.getPlannedCombatWins()['planned-forest-03']).toBe(1);
+  });
+
+  it('cancels a planned combat without awarding a win or reward', () => {
+    const workersAvailable = workerState.getWorkersAvailable();
+    const alchemist = workersAvailable[6];
+    const explorer = workersAvailable[8];
+    alchemist.level = 1;
+    explorer.level = 1;
+    workerState.setWorkers([alchemist, explorer]);
+    monsterState.setPlannedCombatWins({ 'planned-super-mosh': 1 });
+    const clicksBefore = resources.getClicks();
+    const essenceBefore = resources.getMonsterEssence();
+
+    expect(gameState.startPlannedCombat('planned-forest-03')).toBeTrue();
+    expect(monsterState.getCurrentMonsterView(workerState.getWorkers(), workersAvailable)?.isPlannedCombat)
+      .toBeTrue();
+
+    expect(gameState.cancelPlannedCombat()).toBeTrue();
+    expect(monsterState.getCurrentMonsterView(workerState.getWorkers(), workersAvailable)).toBeNull();
+    expect(monsterState.getPlannedCombatWins()['planned-forest-03']).toBeUndefined();
+    expect(resources.getClicks()).toBe(clicksBefore);
+    expect(resources.getMonsterEssence()).toBe(essenceBefore);
+    expect(gameState.cancelPlannedCombat()).toBeFalse();
+    expect(gameState.startPlannedCombat('planned-forest-03')).toBeTrue();
+    expect(gameState.cancelPlannedCombat()).toBeTrue();
+  });
+
+  it('accepts damage only from the configured source in planned combat', () => {
+    const combat = listPlannedCombat.find((entry) => entry.id === 'planned-forest-03')!;
+    const previousDamageMode = combat.damageMode;
+    const workersAvailable = workerState.getWorkersAvailable();
+    const alchemist = workersAvailable[6];
+    const explorer = workersAvailable[8];
+    alchemist.level = 1;
+    explorer.level = 1;
+    workerState.setWorkers([alchemist, explorer]);
+    monsterState.setPlannedCombatWins({ 'planned-super-mosh': 1 });
+    const workers = workerState.getWorkers();
+
+    try {
+      combat.damageMode = 'click';
+      expect(gameState.startPlannedCombat(combat.id)).toBeTrue();
+      const initialHp = monsterState.getCurrentMonsterView(workers, workersAvailable)!.currentHp;
+      expect(monsterState.dealDamage(1e5, workers, workersAvailable, 'afk')).toBeFalse();
+      expect(monsterState.getCurrentMonsterView(workers, workersAvailable)!.currentHp).toBe(initialHp);
+      expect(monsterState.dealDamage(1e5, workers, workersAvailable, 'click')).toBeFalse();
+      expect(monsterState.getCurrentMonsterView(workers, workersAvailable)!.currentHp).toBe(initialHp - 1e5);
+      expect(gameState.cancelPlannedCombat()).toBeTrue();
+
+      combat.damageMode = 'afk';
+      expect(gameState.startPlannedCombat(combat.id)).toBeTrue();
+      const afkInitialHp = monsterState.getCurrentMonsterView(workers, workersAvailable)!.currentHp;
+      expect(monsterState.dealDamage(1e5, workers, workersAvailable, 'click')).toBeFalse();
+      expect(monsterState.getCurrentMonsterView(workers, workersAvailable)!.currentHp).toBe(afkInitialHp);
+      expect(monsterState.dealDamage(1e5, workers, workersAvailable, 'afk')).toBeFalse();
+      expect(monsterState.getCurrentMonsterView(workers, workersAvailable)!.currentHp).toBe(afkInitialHp - 1e5);
+      expect(gameState.cancelPlannedCombat()).toBeTrue();
+    } finally {
+      combat.damageMode = previousDamageMode;
+    }
+  });
+
+  it('shows the golden hoe immediately after its planned combat unlock at 2B clicks', () => {
+    const goldenHoe = listShopItem.find((item) => item.id === 'golden-hoe');
+    expect(goldenHoe).toBeDefined();
+    goldenHoe!.doesAppearInGame = false;
+    resources.setClicks(2e9);
+
+    expect(gameState.getState().shopItems.find((item) => item.id === 'golden-hoe')?.doesAppearInGame)
+      .toBeFalse();
+
+    monsterState.setPlannedCombatWins({ 'planned-beach-01': 1 });
+
+    expect(gameState.getState().shopItems.find((item) => item.id === 'golden-hoe')?.doesAppearInGame)
+      .toBeTrue();
+  });
+
+  it('applies shop unlock upgrades to sun stats, critical damage, and spell cost', () => {
+    const upgrades: ShopItem[] = [
+      {
+        id: 'test-sun-upgrade',
+        name: 'Test',
+        description: '',
+        price: 0,
+        doesAppearInGame: true,
+        bought: true,
+        value: 1,
+        unlockUpgrade: { unlockId: 'sun', type: 'size', value: 0.1 },
+      },
+      {
+        id: 'test-sun-speed-upgrade',
+        name: 'Test',
+        description: '',
+        price: 0,
+        doesAppearInGame: true,
+        bought: true,
+        value: 1,
+        unlockUpgrade: { unlockId: 'sun', type: 'speed', value: 0.1 },
+      },
+      {
+        id: 'test-critical-upgrade',
+        name: 'Test',
+        description: '',
+        price: 0,
+        doesAppearInGame: true,
+        bought: true,
+        value: 1,
+        unlockUpgrade: { unlockId: 'critical-hit', type: 'damage', value: 0.1 },
+      },
+      {
+        id: 'test-power-upgrade',
+        name: 'Test',
+        description: '',
+        price: 0,
+        doesAppearInGame: true,
+        bought: true,
+        value: 1,
+        unlockUpgrade: { unlockId: 'power:power', type: 'mana-cost', value: 0.1 },
+      },
+    ];
+    const shopItems = shopState.getShopItems();
+    shopItems.push(...upgrades);
+
+    try {
+      const baseSunStats = getSunUpgradeStats(75);
+      const sunStats = gameState.getState();
+      expect(sunStats.sunSizeFactor).toBeCloseTo(baseSunStats.sizeFactor * 1.1, 10);
+      expect(sunStats.sunSpeedFactor).toBeCloseTo(baseSunStats.speedFactor / 1.1, 10);
+
+      const baseCriticalMultiplier = getCriticalHitStats(0).totalMultiplier;
+      const criticalDamage = gameState.getWorkerInfoStats(2).lines
+        .find((line) => line.label === 'Dégâts critique');
+      expect(criticalDamage?.value).toBe(`×${(baseCriticalMultiplier * 1.1).toFixed(2)}`);
+      expect(gameState.getPowerManaCost(0)).toBe(180);
+    } finally {
+      shopItems.splice(shopItems.length - upgrades.length, upgrades.length);
+    }
+  });
+
+  it('applies per-spell mana, cooldown, duration, and strength upgrades', () => {
+    const upgrades: ShopItem[] = [
+      {
+        id: 'test-power-cost',
+        name: 'Test',
+        description: '',
+        price: 0,
+        doesAppearInGame: true,
+        bought: true,
+        value: 1,
+        unlockUpgrade: { unlockId: 'power:power', type: 'mana-cost', value: 0.1 },
+      },
+      {
+        id: 'test-power-cooldown',
+        name: 'Test',
+        description: '',
+        price: 0,
+        doesAppearInGame: true,
+        bought: true,
+        value: 1,
+        unlockUpgrade: { unlockId: 'power:power', type: 'cooldown', value: 0.1 },
+      },
+      {
+        id: 'test-power-duration',
+        name: 'Test',
+        description: '',
+        price: 0,
+        doesAppearInGame: true,
+        bought: true,
+        value: 1,
+        unlockUpgrade: { unlockId: 'power:power', type: 'duration', value: 0.1 },
+      },
+      {
+        id: 'test-power-strength',
+        name: 'Test',
+        description: '',
+        price: 0,
+        doesAppearInGame: true,
+        bought: true,
+        value: 1,
+        unlockUpgrade: { unlockId: 'power:power', type: 'strength', value: 0.1 },
+      },
+    ];
+    const shopItems = shopState.getShopItems();
+    shopItems.push(...upgrades);
+    const powerState = TestBed.inject(PowerStateService);
+    const powerIndex = listPower.findIndex((power) => power.id === 'power');
+    resources.setMana(1000);
+    const manaBefore = resources.getMana();
+
+    try {
+      gameState.castPower(powerIndex);
+
+      expect(resources.getMana()).toBe(manaBefore - 180);
+      expect(powerState.getDamageMultiplier()).toBeCloseTo(2.2, 10);
+      expect(powerState.getCooldowns()['power']).toBeCloseTo(108, 0);
+      expect(powerState.getDamageBuffEndTime()).toBeGreaterThanOrEqual(Date.now() + 65999);
+    } finally {
+      shopItems.splice(shopItems.length - upgrades.length, upgrades.length);
+    }
+  });
+
+  it('adds shop unlock upgrades to the number of vessels summoned by the spell', () => {
+    const upgrade: ShopItem = {
+      id: 'test-vessel-count',
+      name: 'Test',
+      description: '',
+      price: 0,
+      doesAppearInGame: true,
+      bought: true,
+      value: 1,
+      unlockUpgrade: { unlockId: 'vessel-rush', type: 'count', value: 2 },
+    };
+    const shopItems = shopState.getShopItems();
+    shopItems.push(upgrade);
+    const vesselService = TestBed.inject(VesselService);
+    spyOn(vesselService, 'summonVesselRush');
+    const powerIndex = listPower.findIndex((power) => power.id === 'vessel-rush');
+    resources.setMana(1000);
+    resources.setResourceAmounts({ bait: 3 });
+
+    try {
+      gameState.castPower(powerIndex);
+      expect(vesselService.summonVesselRush).toHaveBeenCalledWith(12, 3);
+    } finally {
+      shopItems.pop();
+    }
   });
 });

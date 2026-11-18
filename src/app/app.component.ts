@@ -64,6 +64,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private stableWorkersAvailable: WorkerAuto[] = [];
   private stableEssenceShopItems: EssenceShopItem[] = [];
   private stableHouses: House[] = [];
+  private stablePlannedCombats: NonNullable<Game['plannedCombats']> = [];
   private stableResources: ResourceStock[] = [];
   resources: ResourceStock[] = [];
   resourcesVisible = false;
@@ -203,6 +204,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.stableWorkersAvailable = this.reuseViewItems(this.stableWorkersAvailable, state.workersAvailable);
     this.stableEssenceShopItems = this.reuseViewItems(this.stableEssenceShopItems, state.essenceShopItems ?? []);
     this.stableHouses = this.reuseViewItems(this.stableHouses, state.houses ?? []);
+    this.stablePlannedCombats = this.reuseViewItems(this.stablePlannedCombats, state.plannedCombats ?? []);
     this.stableResources = this.reuseViewItems(this.stableResources, state.resources ?? []);
     this.resources = this.stableResources;
     this.game = {
@@ -211,6 +213,7 @@ export class AppComponent implements OnInit, OnDestroy {
       workersAvailable: this.stableWorkersAvailable,
       essenceShopItems: this.stableEssenceShopItems,
       houses: this.stableHouses,
+      plannedCombats: this.stablePlannedCombats,
     };
     this.workersAvailable = this.stableWorkersAvailable;
     this.powersAvailable = state.powersAvailable ?? [];
@@ -225,7 +228,11 @@ export class AppComponent implements OnInit, OnDestroy {
       const nextKeys = Object.keys(item) as (keyof T)[];
       if (
         previousKeys.length === nextKeys.length &&
-        previousKeys.every((key) => previousItem[key] === item[key])
+        previousKeys.every((key) =>
+          typeof previousItem[key] === 'object' || typeof item[key] === 'object'
+            ? JSON.stringify(previousItem[key]) === JSON.stringify(item[key])
+            : previousItem[key] === item[key]
+        )
       ) {
         return previousItem;
       }
@@ -469,6 +476,10 @@ export class AppComponent implements OnInit, OnDestroy {
 
   trackByVesselInstance(_i: number, v: { instanceId: string }): string {
     return v.instanceId;
+  }
+
+  trackByPlannedCombat(_index: number, combat: NonNullable<Game['plannedCombats']>[number]): string {
+    return combat.id;
   }
 
   trackByPowerIndex(index: number, _power: Power): number {

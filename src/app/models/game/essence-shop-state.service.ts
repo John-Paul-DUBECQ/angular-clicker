@@ -1,13 +1,17 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Optional } from '@angular/core';
 import { EssenceShopItem } from '../essence-shop-item';
 import { listEssenceShopItem } from '../list-essence-shop-item';
 import { ResourcesService } from './resources.service';
+import { UnlockUpgradeService } from './unlock-upgrade.service';
 
 @Injectable({ providedIn: 'root' })
 export class EssenceShopStateService {
   private items: EssenceShopItem[] = listEssenceShopItem;
 
-  constructor(private resources: ResourcesService) {}
+  constructor(
+    private resources: ResourcesService,
+    @Optional() private unlockUpgrades?: UnlockUpgradeService
+  ) {}
 
   getItems(): EssenceShopItem[] {
     return this.items;
@@ -18,23 +22,28 @@ export class EssenceShopStateService {
   }
 
   getEssenceMultiplier(): number {
-    return this.items.reduce((multiplier, item) => {
+    const essenceShopMultiplier = this.items.reduce((multiplier, item) => {
       const effect = item.secondaryEssenceMultiplier
         ?? (item.effectType === 'essence' ? item.effectValue : 1);
       return multiplier + (effect - 1) * item.level;
     }, 1);
+    return essenceShopMultiplier
+      * (1 + (this.unlockUpgrades?.getBonus('monster', 'essence') ?? 0));
   }
 
   getSpawnRateMultiplier(): number {
-    return this.getMultiplier('spawnRate');
+    return this.getMultiplier('spawnRate')
+      * (1 + (this.unlockUpgrades?.getBonus('monster', 'spawn-rate') ?? 0));
   }
 
   getMonsterHpMultiplier(): number {
-    return this.getMultiplier('hp');
+    return this.getMultiplier('hp')
+      * (1 + (this.unlockUpgrades?.getBonus('monster', 'hp') ?? 0));
   }
 
   getMonsterTimeMultiplier(): number {
-    return this.getMultiplier('time');
+    return this.getMultiplier('time')
+      * (1 + (this.unlockUpgrades?.getBonus('monster', 'time') ?? 0));
   }
 
   getStats(): { spawnRate: number; essence: number; hp: number; time: number } {

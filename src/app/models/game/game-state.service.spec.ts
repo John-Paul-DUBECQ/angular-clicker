@@ -503,7 +503,7 @@ describe('GameStateService solar bonuses', () => {
         doesAppearInGame: true,
         bought: true,
         value: 1,
-        unlockUpgrade: { unlockId: 'power:power', type: 'cooldown', value: 0.1 },
+        unlockUpgrade: { unlockId: 'power:power', type: 'cooldown', value: 10 },
       },
       {
         id: 'test-power-duration',
@@ -538,7 +538,7 @@ describe('GameStateService solar bonuses', () => {
 
       expect(resources.getMana()).toBe(manaBefore - 180);
       expect(powerState.getDamageMultiplier()).toBeCloseTo(2.2, 10);
-      expect(powerState.getCooldowns()['power']).toBeCloseTo(108, 0);
+      expect(powerState.getCooldowns()['power']).toBeCloseTo(110, 0);
       expect(powerState.getDamageBuffEndTime()).toBeGreaterThanOrEqual(Date.now() + 65999);
     } finally {
       shopItems.splice(shopItems.length - upgrades.length, upgrades.length);

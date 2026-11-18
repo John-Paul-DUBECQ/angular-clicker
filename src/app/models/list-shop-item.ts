@@ -291,11 +291,153 @@ export const listShopItem: Array<ShopItem> = [
     appearImmediatelyOnUnlock: true,
     unlockMethod: requirePlannedCombatWins('planned-beach-08', 1),
     unlockUpgrade: { unlockId: 'sun', type: 'speed', value: -0.25 },
+  },{
+    id: 'Appat-1',
+    name: 'Appat 1',
+    description: 'Reduit les temps de production des appâts de 10 secondes.',
+    imageUrl: 'assets/img/Bait/Bait1.png',
+    price: 1e16,
+    doesAppearInGame: false,
+    bought: false,
+    value: 2,
+    appearImmediatelyOnUnlock: true,
+    unlockMethod: requirePlannedCombatWins('planned-mosh-hunt', 2),
+    unlockUpgrade: { unlockId: 'house:bait', type: 'interval-seconds', value: 10 },
+  },{
+    id: 'Appat-2',
+    name: 'Appat 2',
+    description: 'Reduit les temps de production des appâts de 10 secondes.',
+    imageUrl: 'assets/img/Bait/Bait1.png',
+    price: 1e16,
+    doesAppearInGame: false,
+    bought: false,
+    value: 2,
+    appearImmediatelyOnUnlock: true,
+    unlockMethod: requirePlannedCombatWins('planned-super-mosh', 2),
+    unlockUpgrade: { unlockId: 'house:bait', type: 'interval-seconds', value: 10 },
+  },{
+    id: 'Appat-3',
+    name: 'Appat 3',
+    description: 'Reduit les temps de production des appâts de 10 secondes.',
+    imageUrl: 'assets/img/Bait/Bait1.png',
+    price: 1e16,
+    doesAppearInGame: false,
+    bought: false,
+    value: 2,
+    appearImmediatelyOnUnlock: true,
+    unlockMethod: requirePlannedCombatWins('planned-forest-03', 2),
+    unlockUpgrade: { unlockId: 'house:bait', type: 'interval-seconds', value: 10 },
+  },{
+    id: 'Appat-4',
+    name: 'Appat 4',
+    description: 'Reduit les temps de production des appâts de 10 secondes.',
+    imageUrl: 'assets/img/Bait/Bait1.png',
+    price: 1e16,
+    doesAppearInGame: false,
+    bought: false,
+    value: 2,
+    appearImmediatelyOnUnlock: true,
+    unlockMethod: requirePlannedCombatWins('planned-forest-04', 2),
+    unlockUpgrade: { unlockId: 'house:bait', type: 'interval-seconds', value: 10 },
+  },{
+    id: 'Appat-5',
+    name: 'Appat 5',
+    description: 'Reduit les temps de production des appâts de 10 secondes.',
+    imageUrl: 'assets/img/Bait/Bait1.png',
+    price: 1e16,
+    doesAppearInGame: false,
+    bought: false,
+    value: 2,
+    appearImmediatelyOnUnlock: true,
+    unlockMethod: requirePlannedCombatWins('planned-forest-05', 2),
+    unlockUpgrade: { unlockId: 'house:bait', type: 'interval-seconds', value: 10 },
+  },{
+    id: 'Appat-6',
+    name: 'Appat 6',
+    description: 'Reduit les temps de production des appâts de 10 secondes.',
+    imageUrl: 'assets/img/Bait/Bait1.png',
+    price: 1e16,
+    doesAppearInGame: false,
+    bought: false,
+    value: 2,
+    appearImmediatelyOnUnlock: true,
+    unlockMethod: requirePlannedCombatWins('planned-forest-06', 2),
+    unlockUpgrade: { unlockId: 'house:bait', type: 'interval-seconds', value: 10 },
+  },{
+    id: 'Appat-7',
+    name: 'Appat 7',
+    description: 'Reduit les temps de production des appâts de 10 secondes.',
+    imageUrl: 'assets/img/Bait/Bait1.png',
+    price: 1e16,
+    doesAppearInGame: false,
+    bought: false,
+    value: 2,
+    appearImmediatelyOnUnlock: true,
+    unlockMethod: requirePlannedCombatWins('planned-forest-07', 2),
+    unlockUpgrade: { unlockId: 'house:bait', type: 'interval-seconds', value: 10 },
+  },{
+    id: 'Appat-8',
+    name: 'Appat 8',
+    description: 'Reduit les temps de production des appâts de 10 secondes.',
+    imageUrl: 'assets/img/Bait/Bait1.png',
+    price: 1e16,
+    doesAppearInGame: false,
+    bought: false,
+    value: 2,
+    appearImmediatelyOnUnlock: true,
+    unlockMethod: requirePlannedCombatWins('planned-forest-08', 2),
+    unlockUpgrade: { unlockId: 'house:bait', type: 'interval-seconds', value: 10 },
+  },{
+    id: 'Appat-9',
+    name: 'Appat 9',
+    description: 'Reduit les temps de production des appâts de 10 secondes.',
+    imageUrl: 'assets/img/Bait/Bait1.png',
+    price: 1e16,
+    doesAppearInGame: false,
+    bought: false,
+    value: 2,
+    appearImmediatelyOnUnlock: true,
+    unlockMethod: requirePlannedCombatWins('planned-forest-09', 2),
+    unlockUpgrade: { unlockId: 'house:bait', type: 'interval-seconds', value: 10 },
+  },{
+    id: 'Appat-10',
+    name: 'Appat 10',
+    description: 'Reduit les temps de production des appâts de 10 secondes.',
+    imageUrl: 'assets/img/Bait/Bait1.png',
+    price: 1e16,
+    doesAppearInGame: false,
+    bought: false,
+    value: 2,
+    appearImmediatelyOnUnlock: true,
+    unlockMethod: requirePlannedCombatWins('planned-forest-10', 2),
+    unlockUpgrade: { unlockId: 'house:bait', type: 'interval-seconds', value: 10 },
   },
 ];
 
 /*
 UnlockUpgrade disponibles (appliques quand l'item est achete) :
+- house:bait / interval-seconds : reduction du délai entre deux appâts (seconds).
+- house:bait / amount : nombre d'appâts produits a chaque cycle (1 avec 1).
+- house:vessel-rush / count : vaisseaux supplementaires pour la Rafale stellaire.
+- house:vessel-rush / duration : secondes supplementaires pour la Rafale stellaire.
+- house:vessel-reward / reward : multiplicateur des récompenses des vaisseaux (0.1 = +10 %).
+- house:vessel-reward / spawn-interval : reduction additive du facteur d'intervalle des vaisseaux (0.1 = -10 %).
+- house:solar-balance / afk-to-click : bonus des dégâts AFK transferes au clic.
+- house:solar-balance / click-to-afk : bonus des dégâts de clic transferes en AFK.
+- house:solar-blue / click-reward : bonus des récompenses en phase bleue.
+- house:solar-blue / auto-damage : bonus des dégâts AFK en phase bleue.
+- house:solar-blue / mana-per-click : mana gagne par clic en phase bleue.
+- house:solar-blue / critical-chance : chance critique ajoutee en phase bleue.
+- house:solar-blue / critical-damage : multiplicateur des dégâts critiques en phase bleue.
+- house:solar-yellow / spawn-rate : bonus du taux d'apparition des monstres en phase jaune.
+- house:solar-yellow / streak-click : bonus de progression du streak en phase jaune.
+- house:critical / chance : bonus de chance critique ajoute par la maison du Mineur.
+- monster / spawn-rate : bonus du taux d'apparition des monstres.
+- monster / essence : bonus des gains d'essence des monstres.
+- monster / hp : multiplicateur des PV des monstres.
+- monster / time : multiplicateur du temps disponible contre les monstres.
+- monster / drops : bonus multiplicatif des drops de monstres.
+- monster / gold : bonus multiplicatif des récompenses en clics des monstres.
 - sun / chance : chance critique ajoutee (0.01 = +1 point de pourcentage).
 - sun / damage : multiplicateur de degats du clic Soleil (+10 % avec 0.1).
 - sun / size : taille du Soleil (+10 % avec 0.1).
@@ -308,7 +450,7 @@ UnlockUpgrade disponibles (appliques quand l'item est achete) :
 - streak / clicks : reduction du nombre de clics requis pour remplir le streak (10 % avec 0.1).
 - streak / decay : ralentissement de la baisse de la barre streak (10 % avec 0.1).
 - power:<id> / mana-cost : reduction du cout de mana du sort (10 % avec 0.1).
-- power:<id> / cooldown : reduction du cooldown du sort (10 % avec 0.1).
+- power:<id> / cooldown : reduction du cooldown du sort en secondes (10 avec 10).
 - power:<id> / duration : augmentation de la duree des effets temporises (10 % avec 0.1).
 - power:<id> / strength : augmentation de la puissance (10 % avec 0.1; degats et weakness).
   IDs de sorts : power, weakness, spawn-mob, monster-time, vessel-rush.

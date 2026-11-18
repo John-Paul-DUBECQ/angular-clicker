@@ -68,7 +68,7 @@
       </nav>
       <p class="quest-biome-description">{{ selectedBiomeDescription }}</p>
       <div class="planned-combat-list" *ngIf="plannedCombatsForSelectedBiome.length > 0; else noQuestsForBiome">
-        <article class="planned-combat" *ngFor="let combat of plannedCombatsForSelectedBiome">
+        <article class="planned-combat" *ngFor="let combat of plannedCombatsForSelectedBiome; trackBy: trackByPlannedCombat">
           <div class="planned-combat__heading">
             <strong>Palier {{ combat.level }} · {{ combat.name }}</strong>
             <span *ngIf="combat.unlocked">{{ combat.wins }} victoire(s)</span>

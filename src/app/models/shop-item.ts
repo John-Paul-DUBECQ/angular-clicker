@@ -44,7 +44,7 @@ export interface ShopItem {
   manaMaxBonus?: number;
   /** Bonus régénération mana en mana/s (s'ajoute à la base + bonus Magicien). */
   manaRegenBonus?: number;
-  /** Amélioration d'un unlock (ex: coup critique, streak). */
+  /** Bonus global réutilisable par les sorts, maisons, monstres et fonctionnalités futures. */
   unlockUpgrade?: { unlockId: string; type: string; value: number };
 }
 

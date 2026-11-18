@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Optional } from '@angular/core';
 import { House } from '../house';
 import { ResourcesService } from './resources.service';
 import { ResourceCost } from '../resource';
@@ -9,6 +9,7 @@ import {
 import { UnlockMethod } from '../unlocks/unlock-method';
 import { VESSEL_WORKER_INDEX } from '../unlocks/vessel';
 import { SUN_WORKER_INDEX } from '../unlocks/sun-unlock';
+import { UnlockUpgradeService } from './unlock-upgrade.service';
 
 const CRITICAL_HOUSE_ID = 'critical-house';
 const CRITICAL_HOUSE_BASE_PRICE = 10;
@@ -223,7 +224,10 @@ export class HouseStateService {
     },
   ];
 
-  constructor(private resources: ResourcesService) {}
+  constructor(
+    private resources: ResourcesService,
+    @Optional() private unlockUpgrades?: UnlockUpgradeService
+  ) {}
 
   getHousesView(geometerLevel = 0, astrologueLevel = 0): House[] {
     return this.houses
@@ -243,6 +247,9 @@ export class HouseStateService {
       baitIntervalSeconds: house.id === BAIT_HOUSE_ID
         ? this.getBaitIntervalSeconds(house)
         : house.baitIntervalSeconds,
+      baitAmountPerCycle: house.id === BAIT_HOUSE_ID
+        ? this.getBaitAmountPerCycle()
+        : undefined,
       nextBaitInSeconds: house.nextBaitInSeconds,
       vesselRushVesselCount: house.id === VESSEL_RUSH_HOUSE_ID
         ? this.getVesselRushVesselCount(house)
@@ -276,23 +283,34 @@ export class HouseStateService {
     const yellowLevel = activeColor === 'yellow'
       ? this.getUnlockedHouseLevel(SOLAR_YELLOW_HOUSE_ID)
       : 0;
+    const blueClickBonus = this.unlockUpgrades?.getBonus('house:solar-blue', 'click-reward') ?? 0;
+    const blueAutoBonus = this.unlockUpgrades?.getBonus('house:solar-blue', 'auto-damage') ?? 0;
+    const blueManaBonus = this.unlockUpgrades?.getBonus('house:solar-blue', 'mana-per-click') ?? 0;
+    const blueCriticalChanceBonus = this.unlockUpgrades?.getBonus('house:solar-blue', 'critical-chance') ?? 0;
+    const blueCriticalDamageBonus = this.unlockUpgrades?.getBonus('house:solar-blue', 'critical-damage') ?? 0;
+    const yellowSpawnBonus = this.unlockUpgrades?.getBonus('house:solar-yellow', 'spawn-rate') ?? 0;
+    const yellowStreakBonus = this.unlockUpgrades?.getBonus('house:solar-yellow', 'streak-click') ?? 0;
     return {
       activeColor,
-      clickRewardMultiplier: Math.pow(SOLAR_BLUE_CLICK_REWARD_PER_LEVEL, blueLevel),
-      autoDamageMultiplier: Math.pow(SOLAR_BLUE_AUTO_DAMAGE_PER_LEVEL, blueLevel),
-      manaPerClickBonus: blueLevel * SOLAR_BLUE_MANA_PER_CLICK_PER_LEVEL,
-      criticalChanceBonus: blueLevel * SOLAR_BLUE_CRITICAL_CHANCE_PER_LEVEL,
-      criticalDamageMultiplier: Math.pow(SOLAR_BLUE_CRITICAL_DAMAGE_PER_LEVEL, blueLevel),
-      monsterSpawnRateMultiplier: Math.pow(1 / SOLAR_YELLOW_MONSTER_INTERVAL_PER_LEVEL, yellowLevel),
-      streakClickMultiplier: 1 + (SOLAR_YELLOW_STREAK_MULTIPLIER_PER_LEVEL - 1) * yellowLevel,
+      clickRewardMultiplier: Math.pow(SOLAR_BLUE_CLICK_REWARD_PER_LEVEL, blueLevel) * (1 + blueClickBonus),
+      autoDamageMultiplier: Math.pow(SOLAR_BLUE_AUTO_DAMAGE_PER_LEVEL, blueLevel) * (1 + blueAutoBonus),
+      manaPerClickBonus: blueLevel * SOLAR_BLUE_MANA_PER_CLICK_PER_LEVEL + blueManaBonus,
+      criticalChanceBonus: blueLevel * SOLAR_BLUE_CRITICAL_CHANCE_PER_LEVEL + blueCriticalChanceBonus,
+      criticalDamageMultiplier: Math.pow(SOLAR_BLUE_CRITICAL_DAMAGE_PER_LEVEL, blueLevel) * (1 + blueCriticalDamageBonus),
+      monsterSpawnRateMultiplier: Math.pow(1 / SOLAR_YELLOW_MONSTER_INTERVAL_PER_LEVEL, yellowLevel) * (1 + yellowSpawnBonus),
+      streakClickMultiplier: (1 + (SOLAR_YELLOW_STREAK_MULTIPLIER_PER_LEVEL - 1) * yellowLevel) * (1 + yellowStreakBonus),
     };
   }
 
   getSolarDamageExchange(clickDamage: number, autoDamagePerSecond: number): SolarDamageExchange {
     const level = this.getUnlockedHouseLevel(SOLAR_BALANCE_HOUSE_ID);
+    const afkToClick = SOLAR_AFK_TO_CLICK_PER_LEVEL
+      + (this.unlockUpgrades?.getBonus('house:solar-balance', 'afk-to-click') ?? 0);
+    const clickToAfk = SOLAR_CLICK_TO_AFK_PER_LEVEL
+      + (this.unlockUpgrades?.getBonus('house:solar-balance', 'click-to-afk') ?? 0);
     return {
-      clickDamageBonus: autoDamagePerSecond * SOLAR_AFK_TO_CLICK_PER_LEVEL * level,
-      autoDamageBonus: clickDamage * SOLAR_CLICK_TO_AFK_PER_LEVEL * level,
+      clickDamageBonus: autoDamagePerSecond * afkToClick * level,
+      autoDamageBonus: clickDamage * clickToAfk * level,
     };
   }
 
@@ -300,8 +318,10 @@ export class HouseStateService {
     const house = this.houses.find((item) => item.id === VESSEL_RUSH_HOUSE_ID);
     const level = house?.unlocked ? house.level : 0;
     return {
-      vesselCount: level * VESSEL_RUSH_HOUSE_VESSELS_PER_LEVEL,
-      durationSeconds: level * VESSEL_RUSH_HOUSE_DURATION_PER_LEVEL_SECONDS,
+      vesselCount: level * VESSEL_RUSH_HOUSE_VESSELS_PER_LEVEL
+        + Math.floor(this.unlockUpgrades?.getBonus('house:vessel-rush', 'count') ?? 0),
+      durationSeconds: level * VESSEL_RUSH_HOUSE_DURATION_PER_LEVEL_SECONDS
+        + (this.unlockUpgrades?.getBonus('house:vessel-rush', 'duration') ?? 0),
     };
   }
 
@@ -309,14 +329,19 @@ export class HouseStateService {
     const house = this.houses.find((item) => item.id === VESSEL_REWARD_HOUSE_ID);
     const level = house?.unlocked ? house.level : 0;
     return {
-      rewardMultiplier: Math.pow(VESSEL_REWARD_MULTIPLIER_PER_LEVEL, level),
-      spawnIntervalFactor: Math.pow(VESSEL_SPAWN_INTERVAL_FACTOR_PER_LEVEL, level),
+      rewardMultiplier: Math.pow(VESSEL_REWARD_MULTIPLIER_PER_LEVEL, level)
+        * (1 + (this.unlockUpgrades?.getBonus('house:vessel-reward', 'reward') ?? 0)),
+      spawnIntervalFactor: Math.max(0.05,
+        Math.pow(VESSEL_SPAWN_INTERVAL_FACTOR_PER_LEVEL, level)
+          * (1 - (this.unlockUpgrades?.getBonus('house:vessel-reward', 'spawn-interval') ?? 0))
+      ),
     };
   }
 
   getCriticalHitChanceBonus(): number {
     const house = this.houses.find((item) => item.id === CRITICAL_HOUSE_ID);
-    return house ? house.level * house.bonusPerLevel : 0;
+    return (house ? house.level * house.bonusPerLevel : 0)
+      + (this.unlockUpgrades?.getBonus('house:critical', 'chance') ?? 0);
   }
 
   tick(seconds: number, onBaitGenerated: () => void): void {
@@ -325,7 +350,8 @@ export class HouseStateService {
     house.nextBaitInSeconds -= seconds;
     while (house.nextBaitInSeconds <= 0) {
       house.nextBaitInSeconds += this.getBaitIntervalSeconds(house);
-      onBaitGenerated();
+      const amount = this.getBaitAmountPerCycle();
+      for (let i = 0; i < amount; i++) onBaitGenerated();
     }
   }
 
@@ -403,25 +429,40 @@ export class HouseStateService {
   private getBaitIntervalSeconds(house: House): number {
     return Math.max(
       BAIT_HOUSE_MIN_INTERVAL_SECONDS,
-      BAIT_HOUSE_BASE_INTERVAL_SECONDS - Math.max(0, house.level - 1) * BAIT_HOUSE_INTERVAL_STEP_SECONDS
+      BAIT_HOUSE_BASE_INTERVAL_SECONDS
+        - Math.max(0, house.level - 1) * BAIT_HOUSE_INTERVAL_STEP_SECONDS
+        - (this.unlockUpgrades?.getBonus('house:bait', 'interval-seconds') ?? 0)
     );
   }
 
+  private getBaitAmountPerCycle(): number {
+    return Math.max(1, Math.floor(
+      1 + (this.unlockUpgrades?.getBonus('house:bait', 'amount') ?? 0)
+    ));
+  }
+
   private getVesselRushVesselCount(house: House): number {
-    return VESSEL_RUSH_BASE_COUNT + house.level * VESSEL_RUSH_HOUSE_VESSELS_PER_LEVEL;
+    return VESSEL_RUSH_BASE_COUNT
+      + house.level * VESSEL_RUSH_HOUSE_VESSELS_PER_LEVEL
+      + Math.floor(this.unlockUpgrades?.getBonus('house:vessel-rush', 'count') ?? 0);
   }
 
   private getVesselRushDurationSeconds(house: House): number {
     return VESSEL_RUSH_BASE_DURATION_SECONDS
-      + house.level * VESSEL_RUSH_HOUSE_DURATION_PER_LEVEL_SECONDS;
+      + house.level * VESSEL_RUSH_HOUSE_DURATION_PER_LEVEL_SECONDS
+      + (this.unlockUpgrades?.getBonus('house:vessel-rush', 'duration') ?? 0);
   }
 
   private getVesselRewardMultiplier(house: House): number {
-    return Math.pow(VESSEL_REWARD_MULTIPLIER_PER_LEVEL, house.level);
+    return Math.pow(VESSEL_REWARD_MULTIPLIER_PER_LEVEL, house.level)
+      * (1 + (this.unlockUpgrades?.getBonus('house:vessel-reward', 'reward') ?? 0));
   }
 
   private getVesselSpawnIntervalFactor(house: House): number {
-    return Math.pow(VESSEL_SPAWN_INTERVAL_FACTOR_PER_LEVEL, house.level);
+    return Math.max(0.05,
+      Math.pow(VESSEL_SPAWN_INTERVAL_FACTOR_PER_LEVEL, house.level)
+        * (1 - (this.unlockUpgrades?.getBonus('house:vessel-reward', 'spawn-interval') ?? 0))
+    );
   }
 
   private getUnlockedHouseLevel(id: string): number {

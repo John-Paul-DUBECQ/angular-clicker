@@ -543,8 +543,7 @@ export class GameStateService {
     const cooldownSeconds = power == null
       ? undefined
       : Math.max(0, Math.floor(
-        power.cooldownSeconds
-        * this.shopState.getPowerCooldownMultiplier(power.id)
+        this.shopState.getPowerCooldownSeconds(power.id, power.cooldownSeconds)
       ));
     const upgrades = power == null
       ? { duration: 1, strength: 1 }

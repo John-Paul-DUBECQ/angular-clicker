@@ -15,6 +15,7 @@ export interface House {
   unlocked?: boolean;
   maxLevel?: number;
   baitIntervalSeconds?: number;
+  baitAmountPerCycle?: number;
   nextBaitInSeconds?: number;
   vesselRushVesselCount?: number;
   vesselRushDurationSeconds?: number;

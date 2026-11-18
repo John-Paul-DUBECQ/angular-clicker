@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Optional } from '@angular/core';
 import { WorkerAutoData } from '../worker-auto-model';
 import { Monster } from '../monsters/monster.model';
 import { listMonster } from '../monsters/list-monster';
@@ -13,6 +13,7 @@ import { listPlannedCombat } from '../monsters/list-planned-combat';
 import { PlannedCombat, PlannedCombatEnemy, PlannedCombatView } from '../monsters/planned-combat.model';
 import { isMonsterBiomeId, MONSTER_BIOMES, MonsterBiomeId } from '../monsters/monster-biome.model';
 import { EXPLORER_WORKER_INDEX, isExplorerUnlocked } from '../unlocks/explorer-unlock';
+import { UnlockUpgradeService } from './unlock-upgrade.service';
 
 /** Référence PV : baseProduction * ce multiplicateur (aléatoire autour). */
 const MONSTER_HP_BASE_SECONDS = 12;
@@ -82,7 +83,8 @@ export class MonsterStateService {
     private resources: ResourcesService,
     private workerState: WorkerStateService,
     private rewardNotify: MonsterRewardNotificationService,
-    private essenceShopState: EssenceShopStateService
+    private essenceShopState: EssenceShopStateService,
+    @Optional() private unlockUpgrades?: UnlockUpgradeService
   ) {}
 
   /** True si la zone monstre est débloquée (Alchimiste niveau requis). */
@@ -298,7 +300,10 @@ export class MonsterStateService {
 
     const encounterDifficulty = this.maxHp / Math.max(1, baseProduction * MONSTER_HP_BASE_SECONDS);
     const goldBase = baseProduction * MONSTER_KILL_REWARD_BASE_SECONDS;
-    const goldReward = Math.max(1, Math.floor(goldBase * (0.7 + 0.3 * Math.min(encounterDifficulty, 3)) * lootMult));
+    const goldMultiplier = 1 + (this.unlockUpgrades?.getBonus('monster', 'gold') ?? 0);
+    const goldReward = Math.max(1, Math.floor(
+      goldBase * (0.7 + 0.3 * Math.min(encounterDifficulty, 3)) * lootMult * goldMultiplier
+    ));
     const gainsCompensation = Math.floor(0.5 * this.maxHp * lootMult);
     const totalGold = goldReward + gainsCompensation;
     this.resources.addClicks(totalGold);
@@ -309,9 +314,11 @@ export class MonsterStateService {
     ));
     this.resources.addMonsterEssence(essenceReward);
 
+    const dropsMultiplier = 1 + (this.unlockUpgrades?.getBonus('monster', 'drops') ?? 0);
     const resourceRewards: ResourceReward[] = (monster?.drops ?? []).map((drop) => ({
       resourceId: drop.resourceId,
-      amount: Math.floor(drop.amount) * lootMult + (Math.random() < (drop.amount % 1) ? lootMult : 0),  
+      amount: Math.floor(drop.amount * dropsMultiplier) * lootMult
+        + (Math.random() < ((drop.amount * dropsMultiplier) % 1) ? lootMult : 0),
   }));
     resourceRewards.forEach((reward) => this.resources.addResource(reward.resourceId, reward.amount));
     this.rewardNotify.notifyReward(totalGold, essenceReward, resourceRewards);

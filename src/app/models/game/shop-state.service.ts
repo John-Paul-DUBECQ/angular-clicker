@@ -4,6 +4,7 @@ import { ShopUnlockContext } from '../shop-item';
 import { listShopItem } from '../list-shop-item';
 import { ResourcesService } from './resources.service';
 import { PowerStateService } from './power-state.service';
+import { UnlockUpgradeService } from './unlock-upgrade.service';
 
 @Injectable({ providedIn: 'root' })
 export class ShopStateService {
@@ -11,8 +12,11 @@ export class ShopStateService {
 
   constructor(
     private resources: ResourcesService,
-    private powerState: PowerStateService
-  ) {}
+    private powerState: PowerStateService,
+    private unlockUpgrades: UnlockUpgradeService
+  ) {
+    this.unlockUpgrades.setShopItems(this.shopItems);
+  }
 
   getShopItems(): ShopItem[] {
     return this.shopItems;
@@ -57,8 +61,9 @@ export class ShopStateService {
     return Math.max(0.1, factor * (1 - reduction));
   }
 
-  getPowerCooldownMultiplier(powerId: string): number {
-    return Math.max(0, 1 - this.getUnlockBonus(`power:${powerId}`, 'cooldown'));
+  getPowerCooldownSeconds(powerId: string, baseCooldownSeconds: number): number {
+    const secondsReduction = this.getUnlockBonus(`power:${powerId}`, 'cooldown');
+    return Math.max(0, baseCooldownSeconds - secondsReduction);
   }
 
   getPowerDurationMultiplier(powerId: string): number {
@@ -70,14 +75,7 @@ export class ShopStateService {
   }
 
   getUnlockBonus(unlockId: string, type: string): number {
-    return this.shopItems
-      .filter(
-        (i) =>
-          i.bought &&
-          i.unlockUpgrade?.unlockId === unlockId &&
-          i.unlockUpgrade?.type === type
-      )
-      .reduce((s, i) => s + (i.unlockUpgrade?.value ?? 0), 0);
+    return this.unlockUpgrades.getBonus(unlockId, type);
   }
 
   /** Bonus mana max des items achetés (s'ajoute à la base + bonus Magicien). */

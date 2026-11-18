@@ -35,7 +35,7 @@ export const listPower: Power[] = [
     doesAppearInGame: false,
     bought: false,
     manaCost: 10,
-    cooldownSeconds: 0,
+    cooldownSeconds: 10,
     baitCost: 1,
     unlockMethod: UnlockMethod.all(
       UnlockMethod.workerLevel(POWER_WORKER_INDEX, 1),

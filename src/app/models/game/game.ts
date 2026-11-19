@@ -9,6 +9,7 @@ import { House } from "../house";
 import { ResourceStock } from "../resource";
 import type { PlannedCombatView } from "../monsters/planned-combat.model";
 import type { MonsterBiomeId } from "../monsters/monster-biome.model";
+import type { MissionSlotView } from "../missions/mission.model";
 
 /**
  * Vue agrégée du jeu pour l'UI. Les données réelles sont dans Resources, WorkerState, ShopState, PowerState.
@@ -75,6 +76,10 @@ export class Game {
     housesUnlocked?: boolean;
     resources?: ResourceStock[];
     plannedCombats?: PlannedCombatView[];
+    missionsUnlocked?: boolean;
+    missionSlots?: MissionSlotView[];
+    missionSlotsUnlocked?: number;
+    nextMissionSlotCost?: { essence?: number; tickets?: number } | null;
     /** Vaisseaux débloqués (Géomètre). */
     vesselUnlocked?: boolean;
     /** Vaisseaux en cours de traversée (gauche → droite). */

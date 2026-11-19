@@ -27,6 +27,11 @@ export const RESOURCE_DEFINITIONS: GameResource[] = [
     description: 'Consommé par le sort Invocation pour attirer un monstre.',
   },
   {
+    id: 'ticket',
+    name: 'Ticket',
+    description: 'Récompense obtenue en terminant des missions.',
+  },
+  {
     id: 'food',
     name: 'Stock de Nourriture',
     description: 'Quantité de nourriture restante',

@@ -10,6 +10,7 @@ import { MonsterStateService } from './monster-state.service';
 import { VesselRewardNotificationService } from './vessel-reward-notification.service';
 import { HouseStateService } from './house-state.service';
 import { ShopStateService } from './shop-state.service';
+import { MissionStateService } from './mission-state.service';
 
 const VESSEL_SPAWN_INTERVAL_MS_MIN = 50000;
 const VESSEL_SPAWN_INTERVAL_MS_MAX = 140000;
@@ -59,7 +60,8 @@ export class VesselService {
     private monsterState: MonsterStateService,
     private vesselRewardNotify: VesselRewardNotificationService,
     private houseState: HouseStateService,
-    private shopState: ShopStateService
+    private shopState: ShopStateService,
+    private missionState: MissionStateService
   ) {}
 
   /** Tick : retirer les vaisseaux sortis (position = temps), en faire spawn si débloqué. */
@@ -145,6 +147,7 @@ export class VesselService {
     if (index === -1) return false;
     const active = this.activeVessels[index];
     this.activeVessels.splice(index, 1);
+    this.missionState.recordVesselCollection();
 
     const v = active.vessel;
     const { rewardMultiplier: geometerRewardMultiplier } = getVesselUpgradeStats(workers, workersAvailable);

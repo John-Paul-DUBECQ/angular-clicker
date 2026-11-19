@@ -109,17 +109,11 @@
             {{ game.currentMonster ? 'Combat en cours' : (combat.cooldownRemainingSeconds > 0 ? 'En recharge...' : 'Lancer le combat') }}
           </button>
           <ng-container *ngIf="combat.baitEncounter && combat.wins >= combat.baitEncounter.unlockWins">
-            <div class="planned-combat__meta">
-              Récolte : {{ combat.baitEncounter.baitCost }} appât(s) contre
-              <span *ngFor="let reward of combat.baitEncounter.rewards; let last = last">
-                {{ reward.amount }} {{ getResourceName(reward.resourceId) }}<span *ngIf="!last">, </span>
-              </span>
-            </div>
             <button
               type="button"
               [disabled]="!!game.currentMonster || combat.cooldownRemainingSeconds > 0 || getResourceAmount('bait') < combat.baitEncounter.baitCost"
               (click)="usePlannedCombatBait(combat.id)">
-              {{ combat.cooldownRemainingSeconds > 0 ? 'Boss en recharge...' : 'Utiliser ' + combat.baitEncounter.baitCost + ' appât(s)' }}
+              {{ combat.cooldownRemainingSeconds > 0 ? 'Boss en recharge...' : 'Utiliser ' + combat.baitEncounter.baitCost + ' appât(s) pour ' + combat.baitEncounter.rewards[0].amount + ' ' + getResourceName(combat.baitEncounter.rewards[0].resourceId) }}
             </button>
           </ng-container>
         </article>
@@ -129,6 +123,73 @@
           Aucun palier n’est encore défini pour ce biome. Les combats de la plage et de la mine sont à venir.
         </p>
       </ng-template>
+    </section>
+  </ng-template>
+  <ng-template #missionsSection>
+    <div class="missions-panel">
+      <div class="missions-panel__header">
+        <div>
+          <h2>Missions</h2>
+          <p>Termine des mini-quêtes pour gagner des tickets. Les emplacements se rechargent après chaque mission.</p>
+        </div>
+        <strong>{{ formatResourceValue(getResourceAmount('ticket')) }} ticket(s)</strong>
+      </div>
+      <div class="mission-slots">
+        <article class="mission-slot" *ngFor="let slot of game.missionSlots; trackBy: trackByMissionSlot">
+          <ng-container *ngIf="slot.mission; else missionCoolingDown">
+            <div class="mission-slot__heading">
+              <strong>Mission {{ slot.id + 1 }}</strong>
+              <span>+{{ slot.mission.ticketReward }} ticket(s)</span>
+            </div>
+            <p>{{ slot.mission.objective.description }}</p>
+            <div class="mission-slot__progress">
+              <span>{{ formatResourceValue(slot.mission.objective.progress) }} / {{ formatResourceValue(slot.mission.objective.target) }}</span>
+              <div><i [style.width.%]="slot.mission.objective.target > 0 ? (100 * slot.mission.objective.progress / slot.mission.objective.target > 100 ? 100 : 100 * slot.mission.objective.progress / slot.mission.objective.target) : 0"></i></div>
+            </div>
+            <button type="button" [disabled]="!slot.rerollAvailable" (click)="rerollMission(slot.id)">
+              Relancer la quête
+            </button>
+          </ng-container>
+          <ng-template #missionCoolingDown>
+            <div class="mission-slot__heading">
+              <strong>Mission {{ slot.id + 1 }}</strong>
+              <span *ngIf="slot.cooldownReason === 'completed'">Terminée · +{{ slot.lastReward }} ticket(s)</span>
+              <span *ngIf="slot.cooldownReason === 'rerolled'">Quête relancée</span>
+            </div>
+            <p *ngIf="slot.cooldownReason === 'completed'">Une nouvelle mission sera disponible après la recharge.</p>
+            <p *ngIf="slot.cooldownReason === 'rerolled'">La nouvelle quête est en attente.</p>
+            <div class="mission-slot__cooldown">Disponible dans {{ formatCooldown(slot.cooldownRemainingSeconds) }}</div>
+          </ng-template>
+        </article>
+      </div>
+      <div class="mission-slot-unlock" *ngIf="game.nextMissionSlotCost as slotCost">
+        <div>
+          <strong>Débloquer un emplacement supplémentaire</strong>
+          <span *ngIf="slotCost.essence">Coût : {{ slotCost.essence }} essences</span>
+          <span *ngIf="slotCost.tickets">Coût : {{ slotCost.tickets }} tickets</span>
+        </div>
+        <button
+          type="button"
+          [disabled]="slotCost.essence ? (game.monsterEssence || 0) < slotCost.essence : getResourceAmount('ticket') < (slotCost.tickets || 0)"
+          (click)="unlockNextMissionSlot()">
+          Débloquer
+        </button>
+      </div>
+    </div>
+  </ng-template>
+  <ng-template #shopTrades>
+    <section class="shop-trades" *ngIf="game.missionsUnlocked">
+      <h2>Échanges</h2>
+      <p>Échange tes tickets contre des ressources · Solde : {{ formatResourceValue(getResourceAmount('ticket')) }}</p>
+      <div class="shop-trades__item">
+        <div>
+          <strong>1 appât</strong>
+          <span>3 tickets</span>
+        </div>
+        <button type="button" [disabled]="getResourceAmount('ticket') < 3" (click)="tradeTicketsForBait()">
+          Échanger
+        </button>
+      </div>
     </section>
   </ng-template>
 
@@ -156,7 +217,7 @@
       </button>
       <button
         type="button"
-        *ngIf="sortedShopItemsWithIndex.length > 0"
+        *ngIf="sortedShopItemsWithIndex.length > 0 || game.missionsUnlocked"
         [class.desktop-section-rail__item--active]="desktopView === 'shop'"
         [attr.aria-pressed]="desktopView === 'shop'"
         title="Shop"
@@ -192,8 +253,9 @@
       <button type="button" [class.desktop-section-rail__item--active]="desktopView === 'garden'" title="Jardin" (click)="setDesktopView('garden')">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21V9M12 12c-4 0-7-2.5-7-6 4 0 7 2.5 7 6ZM12 15c4 0 7-2.5 7-6-4 0-7 2.5-7 6Z"/></svg><span>Jardin</span>
       </button>
-      <button type="button" *ngIf="game.explorerUnlocked" [class.desktop-section-rail__item--active]="desktopView === 'missions'" title="Missions" (click)="setDesktopView('missions')">
+      <button type="button" *ngIf="game.missionsUnlocked" [class.desktop-section-rail__item--active]="desktopView === 'missions'" title="Missions" (click)="setDesktopView('missions')">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="m14.2 9.8 5-5"/></svg><span>Missions</span>
+        <i class="desktop-section-rail__notification" *ngIf="hasNewMissions" aria-hidden="true"></i>
       </button>
       <button type="button" [class.desktop-section-rail__item--active]="desktopView === 'lottery'" title="Loterie" (click)="setDesktopView('lottery')">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v16H3z"/><circle cx="8" cy="9" r="1"/><circle cx="16" cy="9" r="1"/><circle cx="8" cy="15" r="1"/><circle cx="16" cy="15" r="1"/><circle cx="12" cy="12" r="1"/></svg><span>Loterie</span>
@@ -204,16 +266,21 @@
       <div class="desktop-side-resources">
         <div><span>Essence</span><strong>{{ formatResourceValue(game.monsterEssence != null ? game.monsterEssence : 0) }}</strong></div>
         <div><span>Appât</span><strong>{{ formatResourceValue(getResourceAmount('bait')) }}</strong></div>
+        <div><span>Tickets</span><strong>{{ formatResourceValue(getResourceAmount('ticket')) }}</strong></div>
       </div>
-      <div class="shop-items-list" *ngIf="desktopView === 'shop'">
-        <ng-container *ngFor="let entry of sortedShopItemsWithIndex; trackBy: trackByShopEntry">
-          <app-shop-item-area
-            [shopItemSelected]="entry.item"
-            [itemIndex]="entry.index"
-            (bought)="onShopItemBought()">
-          </app-shop-item-area>
-        </ng-container>
-      </div>
+      <ng-container *ngIf="desktopView === 'shop'">
+        <div class="shop-items-list" *ngIf="sortedShopItemsWithIndex.length > 0">
+          <ng-container *ngFor="let entry of sortedShopItemsWithIndex; trackBy: trackByShopEntry">
+            <app-shop-item-area
+              [shopItemSelected]="entry.item"
+              [itemIndex]="entry.index"
+              (bought)="onShopItemBought()">
+            </app-shop-item-area>
+          </ng-container>
+        </div>
+        <p class="shop-items-empty" *ngIf="sortedShopItemsWithIndex.length === 0">Aucun objet à acheter pour le moment.</p>
+        <ng-container *ngTemplateOutlet="shopTrades"></ng-container>
+      </ng-container>
       <div class="workers-list" *ngIf="desktopView === 'characters'">
         <ng-container *ngFor="let worker of workersAvailable; let i = index; trackBy: trackByIndex">
           <app-worker-area
@@ -280,10 +347,9 @@
         <h2>Jardin</h2>
         <p>Cette section sera ajoutée prochainement.</p>
       </section>
-      <section class="future-section-panel" *ngIf="desktopView === 'missions' && game.explorerUnlocked">
-        <h2>Missions</h2>
-        <p>Cette section sera ajoutée prochainement.</p>
-      </section>
+      <ng-container *ngIf="desktopView === 'missions' && game.missionsUnlocked">
+        <ng-container *ngTemplateOutlet="missionsSection"></ng-container>
+      </ng-container>
       <section class="future-section-panel" *ngIf="desktopView === 'lottery'">
         <h2>Loterie</h2>
         <p>Cette section sera ajoutée prochainement.</p>
@@ -451,6 +517,7 @@
       <button type="button" [class.mobile-menu__item--active]="mobileScreen === 'game'" (click)="setMobileScreen('game')">Jeu</button>
       <button type="button" [class.mobile-menu__item--active]="mobileScreen === 'shop'" (click)="setMobileScreen('shop')">Shop</button>
       <button type="button" [class.mobile-menu__item--active]="mobileScreen === 'workers'" (click)="setMobileScreen('workers')">Persos</button>
+      <button *ngIf="game.missionsUnlocked" type="button" [class.mobile-menu__item--active]="mobileScreen === 'missions'" (click)="setMobileScreen('missions')">Missions</button>
       <button type="button" [class.mobile-menu__item--active]="mobileScreen === 'settings'" (click)="setMobileScreen('settings')">Paramètres</button>
     </nav>
 
@@ -542,6 +609,8 @@
             <app-shop-item-area [shopItemSelected]="entry.item" [itemIndex]="entry.index" (bought)="onShopItemBought()"></app-shop-item-area>
           </ng-container>
         </div>
+        <p class="shop-items-empty" *ngIf="sortedShopItemsWithIndex.length === 0">Aucun objet à acheter pour le moment.</p>
+        <ng-container *ngTemplateOutlet="shopTrades"></ng-container>
       </section>
 
       <section class="mobile-screen" *ngIf="mobileScreen === 'workers'">
@@ -552,6 +621,10 @@
             <app-worker-area *ngIf="worker.doesAppearInGame" [workerSelected]="worker" [workerIndex]="i" [workersAvailable]="workersAvailable" [clicks]="game.clicks" (upgraded)="onWorkerUpgraded()"></app-worker-area>
           </ng-container>
         </div>
+      </section>
+
+      <section class="mobile-screen" *ngIf="mobileScreen === 'missions' && game.missionsUnlocked">
+        <ng-container *ngTemplateOutlet="missionsSection"></ng-container>
       </section>
 
       <section class="mobile-screen mobile-screen--settings" *ngIf="mobileScreen === 'settings'">
@@ -579,10 +652,11 @@
       </section>
     </main>
 
-    <nav class="mobile-tab-bar" aria-label="Navigation mobile">
+    <nav class="mobile-tab-bar" [class.mobile-tab-bar--missions]="game.missionsUnlocked" aria-label="Navigation mobile">
       <button type="button" [class.mobile-tab-bar__item--active]="mobileScreen === 'game'" (click)="setMobileScreen('game')"><span>◉</span>Jeu</button>
       <button type="button" [class.mobile-tab-bar__item--active]="mobileScreen === 'shop'" (click)="setMobileScreen('shop')"><span>▣</span>Shop</button>
       <button type="button" [class.mobile-tab-bar__item--active]="mobileScreen === 'workers'" (click)="setMobileScreen('workers')"><span>♙</span>Persos</button>
+      <button *ngIf="game.missionsUnlocked" type="button" [class.mobile-tab-bar__item--active]="mobileScreen === 'missions'" (click)="setMobileScreen('missions')"><span>◎</span>Missions<i *ngIf="hasNewMissions" class="mobile-tab-bar__notification" aria-hidden="true"></i></button>
       <button type="button" [class.mobile-tab-bar__item--active]="mobileScreen === 'settings'" (click)="setMobileScreen('settings')"><span>⚙</span>Paramètres</button>
     </nav>
   </div>

@@ -12,6 +12,7 @@ import {
 } from './streak';
 import { PowerStateService } from '../game/power-state.service';
 import { ShopStateService } from '../game/shop-state.service';
+import { MissionStateService } from '../game/mission-state.service';
 
 /** Service qui porte l'état de la barre streak (barre, phase) et délègue la logique à streak.ts */
 @Injectable({ providedIn: 'root' })
@@ -21,7 +22,8 @@ export class StreakStateService {
 
   constructor(
     private powerState: PowerStateService,
-    private shopState: ShopStateService
+    private shopState: ShopStateService,
+    private missionState: MissionStateService
   ) {}
 
   getUpgradeBonuses(): StreakUnlockBonuses {
@@ -80,6 +82,9 @@ export class StreakStateService {
       this.getUpgradeBonuses()
     );
     this.barCurrent = result.barCurrent;
+    if (this.phase !== 'active' && result.phase === 'active') {
+      this.missionState.recordStreakActivation();
+    }
     this.phase = result.phase;
   }
 

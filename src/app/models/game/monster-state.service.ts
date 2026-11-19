@@ -14,6 +14,7 @@ import { PlannedCombat, PlannedCombatEnemy, PlannedCombatView } from '../monster
 import { isMonsterBiomeId, MONSTER_BIOMES, MonsterBiomeId } from '../monsters/monster-biome.model';
 import { EXPLORER_WORKER_INDEX, isExplorerUnlocked } from '../unlocks/explorer-unlock';
 import { UnlockUpgradeService } from './unlock-upgrade.service';
+import { MissionStateService } from './mission-state.service';
 
 /** Référence PV : baseProduction * ce multiplicateur (aléatoire autour). */
 const MONSTER_HP_BASE_SECONDS = 12;
@@ -84,6 +85,7 @@ export class MonsterStateService {
     private workerState: WorkerStateService,
     private rewardNotify: MonsterRewardNotificationService,
     private essenceShopState: EssenceShopStateService,
+    private missionState: MissionStateService,
     @Optional() private unlockUpgrades?: UnlockUpgradeService
   ) {}
 
@@ -184,6 +186,7 @@ export class MonsterStateService {
     }
 
     baitEncounter.rewards.forEach((reward) => this.resources.addResource(reward.resourceId, reward.amount));
+    this.missionState.recordBaitUse();
     this.plannedCombatCooldownEnds[id] = Date.now() + combat.cooldownSeconds * 1000;
     this.rewardNotify.notifyReward(0, 0, baitEncounter.rewards);
     return true;
@@ -279,6 +282,7 @@ export class MonsterStateService {
     }
     this.currentHp = Math.max(0, this.currentHp - amount);
     if (this.currentHp <= 0) {
+      this.missionState.recordMonsterKill();
       if (this.advanceToNextPlannedCombatEnemy()) return true;
 
       const remainingMs = this.spawnTime + this.timeLimitMs - Date.now();
@@ -359,6 +363,7 @@ export class MonsterStateService {
       ? combat.firstReward
       : combat.repeatReward;
     this.plannedCombatWins[combatId] = (this.plannedCombatWins[combatId] ?? 0) + 1;
+    this.missionState.recordPlannedMission();
     this.plannedCombatCooldownEnds[combatId] = Date.now() + combat.cooldownSeconds * 1000;
     const clicks = Math.max(0, reward.clicks ?? 0);
     const essence = Math.max(0, reward.essence ?? 0);

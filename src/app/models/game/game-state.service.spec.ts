@@ -84,14 +84,31 @@ describe('GameStateService solar bonuses', () => {
     expect(gameState.getState().housesUnlocked).toBeTrue();
   });
 
-  it('unlocks missions after the Explorer is owned', () => {
+  it('unlocks missions only after the beach biome is available', () => {
     expect(gameState.getState().explorerUnlocked).toBeFalse();
+    expect(gameState.getState().missionsUnlocked).toBeFalse();
 
     const explorer = workerState.getWorkersAvailable()[8];
     explorer.level = 1;
     workerState.setWorkers([...workerState.getWorkers(), explorer]);
 
     expect(gameState.getState().explorerUnlocked).toBeTrue();
+    expect(gameState.getState().missionsUnlocked).toBeFalse();
+
+    monsterState.setPlannedCombatWins({ 'planned-forest-10': 1 });
+    expect(gameState.getState().missionsUnlocked).toBeTrue();
+  });
+
+  it('trades three tickets for one bait', () => {
+    resources.setResourceAmounts({ ticket: 2 });
+    expect(gameState.tradeTicketsForBait()).toBeFalse();
+    expect(resources.getResourceAmount('ticket')).toBe(2);
+    expect(resources.getResourceAmount('bait')).toBe(0);
+
+    resources.setResourceAmounts({ ticket: 3 });
+    expect(gameState.tradeTicketsForBait()).toBeTrue();
+    expect(resources.getResourceAmount('ticket')).toBe(0);
+    expect(resources.getResourceAmount('bait')).toBe(1);
   });
 
   it('changes passive damage and click transfer with the active solar phase', () => {

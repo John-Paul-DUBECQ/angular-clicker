@@ -104,7 +104,7 @@ export const listPlannedCombat: PlannedCombat[] = [
     {
       previousCombatId: 'planned-forest-04',
       baitEncounter: {
-        unlockWins: 3,
+        unlockWins: 10,
         baitCost: 5,
         rewards: [{ resourceId: 'mosh-paw', amount: 1 }],
       },
@@ -166,7 +166,7 @@ export const listPlannedCombat: PlannedCombat[] = [
     {
       previousCombatId: 'planned-forest-09',
       baitEncounter: {
-        unlockWins: 10,
+        unlockWins: 3,
         baitCost: 10,
         rewards: [{ resourceId: 'mosh-paw', amount: 1 }],
       },

@@ -17,6 +17,7 @@ import { LoreNotificationService, LorePayload } from './models/lore/lore-notific
 import { listMonster } from './models/monsters/list-monster';
 import { Monster } from './models/monsters/monster.model';
 import { MONSTER_BIOMES, MonsterBiomeId } from './models/monsters/monster-biome.model';
+import { MissionSlotView } from './models/missions/mission.model';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -26,7 +27,7 @@ import Swal from 'sweetalert2';
 })
 export class AppComponent implements OnInit, OnDestroy {
   title = 'Clicker Game';
-  mobileScreen: 'game' | 'shop' | 'workers' | 'combat' | 'settings' = 'game';
+  mobileScreen: 'game' | 'shop' | 'workers' | 'combat' | 'settings' | 'missions' = 'game';
   mobileMenuVisible = false;
   workerView: 'workers' | 'essenceShop' | 'quests' = 'workers';
   desktopView: 'characters' | 'houses' | 'shop' | 'essenceShop' | 'quests' | 'kitchen' | 'garden' | 'missions' | 'lottery' = 'characters';
@@ -68,6 +69,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private stableEssenceShopItems: EssenceShopItem[] = [];
   private stableHouses: House[] = [];
   private stablePlannedCombats: NonNullable<Game['plannedCombats']> = [];
+  private stableMissionSlots: MissionSlotView[] = [];
   private stableResources: ResourceStock[] = [];
   private readonly seenShopItemKeys = new Set<string>();
   private readonly seenHouseIds = new Set<string>();
@@ -86,6 +88,12 @@ export class AppComponent implements OnInit, OnDestroy {
   /** Historique complet des messages de lore vus. */
   get loreHistory(): LorePayload[] {
     return this.game.loreHistory || [];
+  }
+
+  tradeTicketsForBait(): void {
+    if (this.gameState.tradeTicketsForBait()) {
+      this.refreshGameState();
+    }
   }
 
   /** Index du lore sélectionné dans le panneau d'historique. */
@@ -226,6 +234,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.stableEssenceShopItems = this.reuseViewItems(this.stableEssenceShopItems, state.essenceShopItems ?? []);
     this.stableHouses = this.reuseViewItems(this.stableHouses, state.houses ?? []);
     this.stablePlannedCombats = this.reuseViewItems(this.stablePlannedCombats, state.plannedCombats ?? []);
+    this.stableMissionSlots = this.reuseViewItems(this.stableMissionSlots, state.missionSlots ?? []);
     this.stableResources = this.reuseViewItems(this.stableResources, state.resources ?? []);
     this.resources = this.stableResources;
     this.game = {
@@ -235,6 +244,7 @@ export class AppComponent implements OnInit, OnDestroy {
       essenceShopItems: this.stableEssenceShopItems,
       houses: this.stableHouses,
       plannedCombats: this.stablePlannedCombats,
+      missionSlots: this.stableMissionSlots,
     };
     this.workersAvailable = this.stableWorkersAvailable;
     this.powersAvailable = state.powersAvailable ?? [];
@@ -510,6 +520,10 @@ export class AppComponent implements OnInit, OnDestroy {
     return combat.id;
   }
 
+  trackByMissionSlot(_index: number, slot: MissionSlotView): number {
+    return slot.id;
+  }
+
   trackByPowerIndex(index: number, _power: Power): number {
     return index;
   }
@@ -537,6 +551,22 @@ export class AppComponent implements OnInit, OnDestroy {
 
   get hasNewEssenceShop(): boolean {
     return !!this.game.essenceShopUnlocked && !this.essenceShopSeen;
+  }
+
+  get hasNewMissions(): boolean {
+    return !!this.game.missionsUnlocked && this.gameState.hasUnseenMissions();
+  }
+
+  unlockNextMissionSlot(): void {
+    if (this.gameState.unlockNextMissionSlot()) {
+      this.refreshGameState();
+    }
+  }
+
+  rerollMission(slotId: number): void {
+    if (this.gameState.rerollMission(slotId)) {
+      this.refreshGameState();
+    }
   }
 
   private getShopItemNotificationKey(item: ShopItem, index: number): string {
@@ -567,6 +597,9 @@ export class AppComponent implements OnInit, OnDestroy {
     ) {
       this.essenceShopSeen = true;
       changed = true;
+    }
+    if (this.desktopView === 'missions' && this.hasNewMissions) {
+      this.gameState.markMissionsSeen();
     }
     if (changed) {
       this.persistNavigationNotificationState();
@@ -732,9 +765,12 @@ export class AppComponent implements OnInit, OnDestroy {
     this.settingsVisible = false;
   }
 
-  setMobileScreen(screen: 'game' | 'shop' | 'workers' | 'combat' | 'settings'): void {
+  setMobileScreen(screen: 'game' | 'shop' | 'workers' | 'combat' | 'settings' | 'missions'): void {
     this.mobileScreen = screen;
     this.mobileMenuVisible = false;
+    if (screen === 'missions' && this.hasNewMissions) {
+      this.gameState.markMissionsSeen();
+    }
   }
 
   toggleMobileMenu(event?: MouseEvent): void {

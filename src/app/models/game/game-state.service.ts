@@ -28,6 +28,8 @@ import { Monster } from '../monsters/monster.model';
 import { isMonsterBiomeId, MonsterBiomeId } from '../monsters/monster-biome.model';
 import { isExplorerUnlocked } from '../unlocks/explorer-unlock';
 import { HOUSE_LEVEL_REQUIRED } from '../unlocks/house-unlock';
+import { MissionSaveData } from '../missions/mission.model';
+import { MissionStateService } from './mission-state.service';
 
 const TICKS_PER_SECOND = 10;
 
@@ -68,6 +70,7 @@ export interface SaveData {
   plannedCombatCooldownEnds?: Record<string, number>;
   selectedBiome?: MonsterBiomeId;
   navigationNotificationState?: NavigationNotificationState;
+  missions?: MissionSaveData;
   showDamageNumbers?: boolean;
   showCriticalHitNumbers?: boolean;
 }
@@ -96,7 +99,8 @@ export class GameStateService {
     private powerState: PowerStateService,
     private streakState: StreakStateService,
     private monsterState: MonsterStateService,
-    private vesselState: VesselService
+    private vesselState: VesselService,
+    private missionState: MissionStateService
   ) {
     this.startTickLoop();
     this.startAutoSave();
@@ -176,6 +180,8 @@ export class GameStateService {
     const farmerLevel = this.workerState.getWorkerLevel(1) ?? 0;
     const astrologueLevel = this.workerState.getWorkerLevel(SUN_WORKER_INDEX) ?? 0;
     const vesselUnlocked = isVesselUnlocked(workers, workersAvailable);
+    const missionsUnlocked = this.monsterState.isBiomeUnlocked('beach');
+    const missionSlots = this.missionState.getView(missionsUnlocked);
 
     const damageBuffActive = this.powerState.isDamageBuffActive();
     const damageBuffEnd = this.powerState.getDamageBuffEndTime();
@@ -284,6 +290,10 @@ export class GameStateService {
         : undefined,
       resources: this.resources.getResourceStocks(),
       plannedCombats: this.monsterState.getPlannedCombats(workers, workersAvailable),
+      missionsUnlocked,
+      missionSlots,
+      missionSlotsUnlocked: this.missionState.getUnlockedSlots(),
+      nextMissionSlotCost: this.missionState.getNextSlotCost(),
       vesselUnlocked,
       activeVessels: this.vesselState.getActiveVesselsView(),
       acteActual: 1,
@@ -620,6 +630,34 @@ export class GameStateService {
     return used;
   }
 
+  unlockNextMissionSlot(): boolean {
+    const unlocked = this.missionState.unlockNextSlot();
+    if (unlocked) this.saveToLocalStorage();
+    return unlocked;
+  }
+
+  rerollMission(slotId: number): boolean {
+    const rerolled = this.missionState.reroll(slotId);
+    if (rerolled) this.saveToLocalStorage();
+    return rerolled;
+  }
+
+  markMissionsSeen(): void {
+    this.missionState.markSeen();
+    this.saveToLocalStorage();
+  }
+
+  hasUnseenMissions(): boolean {
+    return this.missionState.getUnseen();
+  }
+
+  tradeTicketsForBait(): boolean {
+    if (!this.resources.spendResources([{ resourceId: 'ticket', amount: 3 }])) return false;
+    this.resources.addResource('bait', 1);
+    this.saveToLocalStorage();
+    return true;
+  }
+
   getNavigationNotificationState(): NavigationNotificationState {
     return {
       seenShopItemKeys: [...this.navigationNotificationState.seenShopItemKeys],
@@ -707,6 +745,7 @@ export class GameStateService {
         plannedCombatCooldownEnds: this.monsterState.getPlannedCombatCooldownEnds(),
         selectedBiome: this.monsterState.getSelectedBiome(),
         navigationNotificationState: this.getNavigationNotificationState(),
+        missions: this.missionState.getSaveData(),
         showDamageNumbers: this.showDamageNumbers,
         showCriticalHitNumbers: this.showCriticalHitNumbers,
       };
@@ -747,6 +786,7 @@ export class GameStateService {
       this.navigationNotificationState = this.normalizeNavigationNotificationState(
         saveData.navigationNotificationState
       );
+      this.missionState.setSaveData(saveData.missions);
       if (isMonsterBiomeId(saveData.selectedBiome) && this.monsterState.isBiomeUnlocked(saveData.selectedBiome)) {
         this.monsterState.setSelectedBiome(saveData.selectedBiome);
       } else {
@@ -782,6 +822,7 @@ export class GameStateService {
       plannedCombatCooldownEnds: this.monsterState.getPlannedCombatCooldownEnds(),
       selectedBiome: this.monsterState.getSelectedBiome(),
       navigationNotificationState: this.getNavigationNotificationState(),
+      missions: this.missionState.getSaveData(),
       showDamageNumbers: this.showDamageNumbers,
       showCriticalHitNumbers: this.showCriticalHitNumbers,
     };
@@ -835,6 +876,7 @@ export class GameStateService {
       this.navigationNotificationState = this.normalizeNavigationNotificationState(
         saveData.navigationNotificationState
       );
+      this.missionState.setSaveData(saveData.missions);
       if (isMonsterBiomeId(saveData.selectedBiome) && this.monsterState.isBiomeUnlocked(saveData.selectedBiome)) {
         this.monsterState.setSelectedBiome(saveData.selectedBiome);
       } else {

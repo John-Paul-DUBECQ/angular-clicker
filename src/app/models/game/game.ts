@@ -71,6 +71,8 @@ export class Game {
     essenceShopStats?: { spawnRate: number; essence: number; hp: number; time: number };
     /** Maisons passives débloquées avec le shop d'essences. */
     houses?: House[];
+    /** Onglet Maisons débloqué au niveau 100 du Fermier. */
+    housesUnlocked?: boolean;
     resources?: ResourceStock[];
     plannedCombats?: PlannedCombatView[];
     /** Vaisseaux débloqués (Géomètre). */

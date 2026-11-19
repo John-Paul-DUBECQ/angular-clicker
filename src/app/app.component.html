@@ -13,13 +13,14 @@
         [class.worker-section-tabs__item--active]="workerView === 'essenceShop'"
         (click)="setWorkerView('essenceShop')">
         Shop d’essences
+        <i class="worker-section-tabs__notification" *ngIf="hasNewEssenceShop" aria-hidden="true"></i>
       </button>
       <button
         type="button"
         *ngIf="game.explorerUnlocked"
         [class.worker-section-tabs__item--active]="workerView === 'quests'"
         (click)="setWorkerView('quests')">
-        Quêtes
+        Aventures
       </button>
     </nav>
     <section class="essence-shop-panel" *ngIf="game.essenceShopUnlocked && workerView === 'essenceShop'">
@@ -49,7 +50,7 @@
     <section class="planned-combat-panel" *ngIf="game.explorerUnlocked && workerView === 'quests'">
       <div class="planned-combat-panel__header">
         <div>
-          <h2>Quêtes</h2>
+          <h2>Aventures</h2>
           <p>Choisis un biome pour changer les monstres du mode normal. Chaque ennemi a des PV fixes.</p>
         </div>
       </div>
@@ -107,6 +108,20 @@
           <button type="button" [disabled]="!combat.unlocked || !!game.currentMonster || combat.cooldownRemainingSeconds > 0" (click)="startPlannedCombat(combat.id)">
             {{ game.currentMonster ? 'Combat en cours' : (combat.cooldownRemainingSeconds > 0 ? 'En recharge...' : 'Lancer le combat') }}
           </button>
+          <ng-container *ngIf="combat.baitEncounter && combat.wins >= combat.baitEncounter.unlockWins">
+            <div class="planned-combat__meta">
+              Récolte : {{ combat.baitEncounter.baitCost }} appât(s) contre
+              <span *ngFor="let reward of combat.baitEncounter.rewards; let last = last">
+                {{ reward.amount }} {{ getResourceName(reward.resourceId) }}<span *ngIf="!last">, </span>
+              </span>
+            </div>
+            <button
+              type="button"
+              [disabled]="!!game.currentMonster || combat.cooldownRemainingSeconds > 0 || getResourceAmount('bait') < combat.baitEncounter.baitCost"
+              (click)="usePlannedCombatBait(combat.id)">
+              {{ combat.cooldownRemainingSeconds > 0 ? 'Boss en recharge...' : 'Utiliser ' + combat.baitEncounter.baitCost + ' appât(s)' }}
+            </button>
+          </ng-container>
         </article>
       </div>
       <ng-template #noQuestsForBiome>
@@ -118,8 +133,79 @@
   </ng-template>
 
   <div class="app-layout">
+    <nav class="desktop-section-rail" aria-label="Navigation principale">
+      <button
+        type="button"
+        [class.desktop-section-rail__item--active]="desktopView === 'characters'"
+        [attr.aria-pressed]="desktopView === 'characters'"
+        title="Personnages"
+        (click)="setDesktopView('characters')">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="7" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3.5 19v-2.2A4.8 4.8 0 0 1 8.3 12h1.4a4.8 4.8 0 0 1 4.8 4.8V19M14.5 19v-1.8a5 5 0 0 1 5-5h1"/></svg>
+        <span>Personnages</span>
+      </button>
+      <button
+        type="button"
+        *ngIf="game.housesUnlocked && game.houses && game.houses.length > 0"
+        [class.desktop-section-rail__item--active]="desktopView === 'houses'"
+        [attr.aria-pressed]="desktopView === 'houses'"
+        title="Maisons"
+        (click)="setDesktopView('houses')">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5"/><path d="M6.5 9.5V20h11V9.5"/><path d="M9.5 20v-6h5v6"/></svg>
+        <span>Maisons</span>
+        <i class="desktop-section-rail__notification" *ngIf="hasNewHouses" aria-hidden="true"></i>
+      </button>
+      <button
+        type="button"
+        *ngIf="sortedShopItemsWithIndex.length > 0"
+        [class.desktop-section-rail__item--active]="desktopView === 'shop'"
+        [attr.aria-pressed]="desktopView === 'shop'"
+        title="Shop"
+        (click)="setDesktopView('shop')">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16l-1.5 11h-13L4 9Z"/><path d="M8 9V6.5a4 4 0 0 1 8 0V9"/></svg>
+        <span>Shop</span>
+        <i class="desktop-section-rail__notification" *ngIf="hasNewShopItems" aria-hidden="true"></i>
+      </button>
+      <button
+        type="button"
+        *ngIf="game.essenceShopUnlocked"
+        [class.desktop-section-rail__item--active]="desktopView === 'essenceShop'"
+        [attr.aria-pressed]="desktopView === 'essenceShop'"
+        title="Shop d'essence"
+        (click)="setDesktopView('essenceShop')">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20c-4.5-2.4-7-5.4-7-9a7 7 0 0 1 14 0c0 3.6-2.5 6.6-7 9Z"/><path d="M12 16V8M12 12c-2.3-.5-3.7-1.8-4.3-3.7M12 13.5c2.1-.4 3.5-1.7 4.2-3.5"/></svg>
+        <span>Essence</span>
+        <i class="desktop-section-rail__notification" *ngIf="hasNewEssenceShop" aria-hidden="true"></i>
+      </button>
+      <button
+        type="button"
+        *ngIf="game.explorerUnlocked"
+        [class.desktop-section-rail__item--active]="desktopView === 'quests'"
+        [attr.aria-pressed]="desktopView === 'quests'"
+        title="Aventures"
+        (click)="setDesktopView('quests')">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16v10H4z"/><path d="M7 8V6h10v2M8 12h8M8 15h5"/></svg>
+        <span>Aventures</span>
+      </button>
+      <button type="button" [class.desktop-section-rail__item--active]="desktopView === 'kitchen'" title="Cuisine" (click)="setDesktopView('kitchen')">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3v18M5 7h7v7H5M12 7h7v11h-7"/></svg><span>Cuisine</span>
+      </button>
+      <button type="button" [class.desktop-section-rail__item--active]="desktopView === 'garden'" title="Jardin" (click)="setDesktopView('garden')">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21V9M12 12c-4 0-7-2.5-7-6 4 0 7 2.5 7 6ZM12 15c4 0 7-2.5 7-6-4 0-7 2.5-7 6Z"/></svg><span>Jardin</span>
+      </button>
+      <button type="button" *ngIf="game.explorerUnlocked" [class.desktop-section-rail__item--active]="desktopView === 'missions'" title="Missions" (click)="setDesktopView('missions')">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="m14.2 9.8 5-5"/></svg><span>Missions</span>
+      </button>
+      <button type="button" [class.desktop-section-rail__item--active]="desktopView === 'lottery'" title="Loterie" (click)="setDesktopView('lottery')">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v16H3z"/><circle cx="8" cy="9" r="1"/><circle cx="16" cy="9" r="1"/><circle cx="8" cy="15" r="1"/><circle cx="16" cy="15" r="1"/><circle cx="12" cy="12" r="1"/></svg><span>Loterie</span>
+      </button>
+      <button type="button" class="desktop-section-rail__settings" title="Paramètres" aria-label="Paramètres" (click)="openSettings($event)">⚙</button>
+    </nav>
     <div class="column column-left">
-      <div class="shop-items-list">
+      <div class="desktop-side-resources">
+        <div><span>Essence</span><strong>{{ formatResourceValue(game.monsterEssence != null ? game.monsterEssence : 0) }}</strong></div>
+        <div><span>Appât</span><strong>{{ formatResourceValue(getResourceAmount('bait')) }}</strong></div>
+      </div>
+      <div class="shop-items-list" *ngIf="desktopView === 'shop'">
         <ng-container *ngFor="let entry of sortedShopItemsWithIndex; trackBy: trackByShopEntry">
           <app-shop-item-area
             [shopItemSelected]="entry.item"
@@ -128,32 +214,19 @@
           </app-shop-item-area>
         </ng-container>
       </div>
-      <div class="power-area" *ngIf="game.powerUnlocked">
-        <div class="mana-bar">
-          <div class="mana-bar__track">
-            <div
-              class="mana-bar__fill"
-              [style.width.%]="manaBarPercent">
-            </div>
-            <span class="mana-label">{{ game.mana | formatNumber:0 }}/{{ game.maxMana | formatNumber:0 }}</span>
-          </div>
-        </div>
-        <div class="power-list">
-          <ng-container *ngFor="let entry of sortedPowersWithIndex; trackBy: trackByPowerEntry">
-            <app-power-area
-                [powerSelected]="entry.power"
-                [powerIndex]="entry.index"
-                [manaCost]="getPowerManaCost(entry.index)"
-                [baitCost]="getPowerBaitCost(entry.index)"
-                [canCast]="getCanCastPower(entry.index)"
-                [effectRemainingPercent]="getEffectRemainingPercent(entry.power.id)"
-                (bought)="onPowerBought()"
-                (cast)="onPowerCast(entry.index)">
-              </app-power-area>
-          </ng-container>
-        </div>
+      <div class="workers-list" *ngIf="desktopView === 'characters'">
+        <ng-container *ngFor="let worker of workersAvailable; let i = index; trackBy: trackByIndex">
+          <app-worker-area
+            *ngIf="worker.doesAppearInGame"
+            [workerSelected]="worker"
+            [workerIndex]="i"
+            [workersAvailable]="workersAvailable"
+            [clicks]="game.clicks"
+            (upgraded)="onWorkerUpgraded()">
+          </app-worker-area>
+        </ng-container>
       </div>
-      <section class="houses-area" *ngIf="game.houses && game.houses.length > 0">
+      <section class="houses-area" *ngIf="desktopView === 'houses' && game.housesUnlocked && game.houses && game.houses.length > 0">
         <div class="houses-area__header">
           <h2>Maisons</h2>
           <button
@@ -196,6 +269,25 @@
           Voir toutes les ressources
         </button>
       </section>
+      <ng-container *ngIf="desktopView === 'essenceShop' || desktopView === 'quests'">
+        <ng-container *ngTemplateOutlet="workerSectionMenu"></ng-container>
+      </ng-container>
+      <section class="future-section-panel" *ngIf="desktopView === 'kitchen'">
+        <h2>Cuisine</h2>
+        <p>Cette section sera ajoutée prochainement.</p>
+      </section>
+      <section class="future-section-panel" *ngIf="desktopView === 'garden'">
+        <h2>Jardin</h2>
+        <p>Cette section sera ajoutée prochainement.</p>
+      </section>
+      <section class="future-section-panel" *ngIf="desktopView === 'missions' && game.explorerUnlocked">
+        <h2>Missions</h2>
+        <p>Cette section sera ajoutée prochainement.</p>
+      </section>
+      <section class="future-section-panel" *ngIf="desktopView === 'lottery'">
+        <h2>Loterie</h2>
+        <p>Cette section sera ajoutée prochainement.</p>
+      </section>
     </div>
     
     <div
@@ -204,11 +296,11 @@
       [class.column-center--combat]="!!game.currentMonster"
       (click)="onSolarMainAreaClick($event)">
       <!-- Lane vaisseaux : uniquement colonne centrale, hauteur aléatoire, mouvement fluide (position = temps) -->
-      <div class="vessel-lane" *ngIf="game.vesselUnlocked && game.activeVessels && game.activeVessels.length > 0">
+      <div #vesselLane class="vessel-lane" *ngIf="game.vesselUnlocked && game.activeVessels && game.activeVessels.length > 0">
         <div
           *ngFor="let v of game.activeVessels; trackBy: trackByVesselInstance"
           class="vessel-lane__ship"
-          [style.left.%]="getVesselLeft(v)"
+          [style.transform]="getVesselTransform(v)"
           [style.top.%]="v.topPercent"
           [title]="v.name"
           (mousedown)="onVesselClick(v.instanceId); $event.stopPropagation(); $event.preventDefault()">
@@ -237,6 +329,25 @@
           </div>
         </div>
       </div>
+      <aside class="desktop-power-dock" *ngIf="game.powerUnlocked" aria-label="Sorts">
+        <div class="desktop-power-dock__mana" title="Mana">
+          <span>{{ game.mana | formatNumber:0 }} / {{ game.maxMana | formatNumber:0 }}</span>
+        </div>
+        <div class="desktop-power-dock__list">
+          <ng-container *ngFor="let entry of sortedPowersWithIndex; trackBy: trackByPowerEntry">
+            <app-power-area
+              [powerSelected]="entry.power"
+              [powerIndex]="entry.index"
+              [manaCost]="getPowerManaCost(entry.index)"
+              [baitCost]="getPowerBaitCost(entry.index)"
+              [canCast]="getCanCastPower(entry.index)"
+              [effectRemainingPercent]="getEffectRemainingPercent(entry.power.id)"
+              (bought)="onPowerBought()"
+              (cast)="onPowerCast(entry.index)">
+            </app-power-area>
+          </ng-container>
+        </div>
+      </aside>
       <div
         class="column-center__main column-center__main--game-ui"
         [class.column-center__main--solar]="game.solarAreaExpanded"
@@ -319,37 +430,6 @@
             (clicked)="onSunClicked()">
           </app-sun-area>
         </div>
-      </div>
-    </div>
-
-    <div class="column column-right">
-      <div class="resources-bar" >
-        <div class="resources-bar__item">
-          <span class="resources-bar__label">Essence</span>
-          <span class="resources-bar__value">{{ formatResourceValue(game.monsterEssence != null ? game.monsterEssence : 0) }}</span>
-          <span class="resources-bar__label">Appât</span>
-          <span class="resources-bar__value">{{ formatResourceValue(getResourceAmount('bait')) }}</span>
-          <button
-            type="button"
-            class="resources-bar__settings-btn"
-            aria-label="Ouvrir les paramètres et le récap"
-            (click)="openSettings($event)">
-            ⚙
-          </button>
-        </div>
-      </div>
-      <ng-container *ngTemplateOutlet="workerSectionMenu"></ng-container>
-      <div class="workers-list" *ngIf="workerView === 'workers' || (!game.essenceShopUnlocked && workerView !== 'quests')">
-        <ng-container class="worker-area" *ngFor="let worker of workersAvailable; let i = index; trackBy: trackByIndex" >
-          <app-worker-area
-            *ngIf="worker.doesAppearInGame"
-            [workerSelected]="worker"
-            [workerIndex]="i"
-            [workersAvailable]="workersAvailable"
-            [clicks]="game.clicks"
-            (upgraded)="onWorkerUpgraded()">
-          </app-worker-area>
-        </ng-container>
       </div>
     </div>
   </div>

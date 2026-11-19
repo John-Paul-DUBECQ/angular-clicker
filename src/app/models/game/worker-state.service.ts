@@ -8,6 +8,7 @@ import {
   getDoesAppearInGame,
   getDoesAppearInGameWithDependencies,
   getCanBuyWorker,
+  getCanBuyWorkerWithDependencies,
   calculateClicksPerSecondForWorker,
   getClickBonus,
 } from '../worker-auto-model';
@@ -27,6 +28,12 @@ export type GetShopMultiplierForWorker = (workerIndex: number) => number;
 
 const UPGRADE_COOLDOWN_MS = 80;
 const CLICKS_EPSILON = 0.001;
+
+export interface WorkerUpgradePricePreview {
+  levels: number;
+  totalPrice: number;
+  canBuy: boolean;
+}
 
 @Injectable({ providedIn: 'root' })
 export class WorkerStateService {
@@ -76,7 +83,7 @@ export class WorkerStateService {
       createAutoWorker('Alchimiste', 4500, 1.35, 512500, 1.45, undefined, 1, [monsterUnlockDefinition, ...MONSTER_UPGRADES], { workerIndex: 5, minLevel: 10 }),
       createAutoWorker('Géomètre', 20000, 1.40, 1e7, 1.51, undefined, 1, [vesselUnlockDefinition, ...VESSEL_UPGRADES], { workerIndex: 6, minLevel: 12 }),
       createAutoWorker('Architecte', 100000, 1.45, 55e8, 1.57, undefined, 1, [], { workerIndex: 7, minLevel: 10 }),
-      createAutoWorker('Explorateur', 40000000000000, 1.50, 1e16, 1.63, undefined, 1, [], { workerIndex: 8, minLevel: 10 }),
+      createAutoWorker('Explorateur', 40000000000000, 1.50, 1e15, 1.63, undefined, 1, [], { workerIndex: 8, minLevel: 10 }),
     ];
     attachDefaultWorkerUnlockMethods(this.workersAvailable);
     this.workers = [];
@@ -146,8 +153,57 @@ export class WorkerStateService {
     }));
   }
 
-  upgradeWorker(workerIndex: number, getShopMult: GetShopMultiplierForWorker): boolean {
-    if (workerIndex < 0 || workerIndex >= this.workersAvailable.length) return false;
+  getUpgradePricePreview(workerIndex: number, requestedLevels: number | 'max'): WorkerUpgradePricePreview {
+    const worker = this.workersAvailable[workerIndex];
+    if (!worker || (requestedLevels !== 'max'
+      && (!Number.isInteger(requestedLevels) || requestedLevels < 1))) {
+      return { levels: 0, totalPrice: 0, canBuy: false };
+    }
+
+    const availableClicks = this.resources.getClicks();
+    const levelLimit = requestedLevels === 'max' ? Infinity : requestedLevels;
+    let levels = 0;
+    let totalPrice = 0;
+
+    while (levels < levelLimit) {
+      const nextPrice = Math.floor(
+        worker.basePrice * Math.pow(worker.curvePrice, worker.level + levels)
+      );
+      if (!Number.isFinite(nextPrice) || nextPrice <= 0) {
+        totalPrice = Infinity;
+        break;
+      }
+      if (requestedLevels === 'max'
+        && totalPrice + nextPrice > availableClicks + CLICKS_EPSILON) {
+        if (levels === 0) {
+          totalPrice = nextPrice;
+        }
+        break;
+      }
+      totalPrice += nextPrice;
+      levels += 1;
+    }
+
+    const canAfford = requestedLevels === 'max'
+      ? levels > 0
+      : levels === levelLimit && totalPrice <= availableClicks + CLICKS_EPSILON;
+
+    return {
+      levels: requestedLevels === 'max' ? levels : levelLimit,
+      totalPrice,
+      canBuy: canAfford
+        && getCanBuyWorkerWithDependencies(worker, availableClicks, this.workersAvailable),
+    };
+  }
+
+  upgradeWorker(
+    workerIndex: number,
+    getShopMult: GetShopMultiplierForWorker,
+    requestedLevels: number | 'max' = 1
+  ): boolean {
+    if (workerIndex < 0 || workerIndex >= this.workersAvailable.length) {
+      return false;
+    }
     const now = Date.now();
     if (
       this.lastUpgradedIndex === workerIndex &&
@@ -156,11 +212,14 @@ export class WorkerStateService {
       return false;
     }
     const worker = this.workersAvailable[workerIndex];
+    const preview = this.getUpgradePricePreview(workerIndex, requestedLevels);
+    if (!preview.canBuy || !this.resources.spendClicks(preview.totalPrice, CLICKS_EPSILON)) {
+      return false;
+    }
+
     const firstBuy = !worker.bought;
     const previousLevel = worker.level;
-    const priceToPay = getPrice(worker);
-    if (!this.resources.spendClicks(priceToPay, CLICKS_EPSILON)) return false;
-    worker.level += 1;
+    worker.level += preview.levels;
     worker.bought = true;
     if (!this.workers.includes(worker)) {
       this.workers.push(worker);
@@ -171,10 +230,11 @@ export class WorkerStateService {
         this.loreNotify.notify(lore);
       }
     } else {
-      // Vérifier si un palier de niveau est atteint
-      const levelLore = WORKER_LORE_BY_LEVEL[worker.name]?.[worker.level];
-      if (levelLore) {
-        this.loreNotify.notify(levelLore);
+      for (let level = previousLevel + 1; level <= worker.level; level++) {
+        const levelLore = WORKER_LORE_BY_LEVEL[worker.name]?.[level];
+        if (levelLore) {
+          this.loreNotify.notify(levelLore);
+        }
       }
     }
     this.lastUpgradedIndex = workerIndex;

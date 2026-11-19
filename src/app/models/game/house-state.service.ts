@@ -66,7 +66,7 @@ const SOLAR_BALANCE_HOUSE_ID = 'solar-balance-house';
 const SOLAR_BLUE_HOUSE_ID = 'solar-blue-house';
 const SOLAR_YELLOW_HOUSE_ID = 'solar-yellow-house';
 const SOLAR_HOUSE_MAX_LEVEL = 10;
-const SOLAR_AFK_TO_CLICK_PER_LEVEL = 0.003;
+const SOLAR_AFK_TO_CLICK_PER_LEVEL = 0.001;
 const SOLAR_CLICK_TO_AFK_PER_LEVEL = 0.05;
 const SOLAR_BLUE_CLICK_REWARD_PER_LEVEL = 1.05;
 const SOLAR_BLUE_AUTO_DAMAGE_PER_LEVEL = 1.05;
@@ -161,7 +161,7 @@ export class HouseStateService {
     {
       id: SOLAR_BALANCE_HOUSE_ID,
       name: 'Maison d’équilibrage solaire',
-      description: 'À l’achat, débloque les Maisons du Soleil bleu et jaune et étend la zone de clic à toute la colonne centrale. Par niveau : +0,3 % des dégâts AFK à chaque clic et +5 % des dégâts du clic à la production AFK.',
+      description: 'À l’achat, débloque les Maisons du Soleil bleu et jaune et étend la zone de clic à toute la colonne centrale. Par niveau : +0.1 % des dégâts AFK à chaque clic et +5 % des dégâts du clic à la production AFK.',
       imageUrl: 'assets/img/House/House1.png',
       tags: ['Soleil'],
       level: 0,

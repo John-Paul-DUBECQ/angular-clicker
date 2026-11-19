@@ -17,8 +17,21 @@
         </div>
     </div>
     <div class="worker-buy-button">
-        <button class="btn btn-secondary" *ngIf="canBuyWorkerWithDependencies" (click)="upgradeWorker()">{{ buyButtonText }}</button>
-        <button class="btn btn-secondary disabled" *ngIf="!canBuyWorkerWithDependencies" disabled>{{ buyButtonText }}</button>
+        <div class="worker-upgrade-stack" *ngIf="upgradePricePreview as pricePreview">
+            <div
+                class="worker-upgrade-control"
+                (mouseenter)="upgradeButtonHovered = true"
+                (mouseleave)="upgradeButtonHovered = false">
+                <button
+                    #upgradeRef
+                    class="btn btn-secondary"
+                    [disabled]="!pricePreview.canBuy"
+                    title="Ctrl/Shift + clic, ou M/Q seul ou + clic : achat groupé"
+                    (click)="onUpgradeClick($event)">
+                    {{ getUpgradePricePreviewLabel(pricePreview) }} {{ pricePreview.totalPrice | formatNumber }}
+                </button>
+            </div>
+        </div>
         <div
             #infoRef
             class="worker-info-trigger"

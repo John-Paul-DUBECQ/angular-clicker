@@ -39,7 +39,7 @@ export const listShopItem: Array<ShopItem> = [
     name: 'Epée en calcaire',
     description: 'Cette épée est un unique exemplaire, certainement parce qu\'elle est inutile. Multiplie les dégats de l\'épée définitivement par 1.2',
     imageUrl: 'assets/img/swords/Sword2.png',
-    price: 3000,
+    price: 8000,
     doesAppearInGame: false,
     bought: false,
     value: 1.2,

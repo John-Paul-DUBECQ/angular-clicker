@@ -12,7 +12,7 @@ import { DAMAGE_DOUBLE_POWER_ID } from '../powers/effects/damage-double.effect';
 import { WEAKNESS_POWER_ID } from '../powers/effects/weakness-power-effect';
 import { StreakStateService } from '../unlocks/streak-state.service';
 import { DEFAULT_MAX_MANA, ResourcesService } from './resources.service';
-import { WorkerStateService } from './worker-state.service';
+import { WorkerStateService, WorkerUpgradePricePreview } from './worker-state.service';
 import { ShopStateService } from './shop-state.service';
 import { PowerStateService } from './power-state.service';
 import { MonsterStateService } from './monster-state.service';
@@ -27,6 +27,7 @@ import { listMonster } from '../monsters/list-monster';
 import { Monster } from '../monsters/monster.model';
 import { isMonsterBiomeId, MonsterBiomeId } from '../monsters/monster-biome.model';
 import { isExplorerUnlocked } from '../unlocks/explorer-unlock';
+import { HOUSE_LEVEL_REQUIRED } from '../unlocks/house-unlock';
 
 const TICKS_PER_SECOND = 10;
 
@@ -37,6 +38,12 @@ export interface WorkerInfoLine {
 
 export interface WorkerInfoStats {
   lines: WorkerInfoLine[];
+}
+
+export interface NavigationNotificationState {
+  seenShopItemKeys: string[];
+  seenHouseIds: string[];
+  essenceShopSeen: boolean;
 }
 
 export interface SaveData {
@@ -60,6 +67,7 @@ export interface SaveData {
   plannedCombatWins?: Record<string, number>;
   plannedCombatCooldownEnds?: Record<string, number>;
   selectedBiome?: MonsterBiomeId;
+  navigationNotificationState?: NavigationNotificationState;
   showDamageNumbers?: boolean;
   showCriticalHitNumbers?: boolean;
 }
@@ -71,6 +79,11 @@ export class GameStateService {
   private saveIntervalId: ReturnType<typeof setInterval> | null = null;
 
   private loreHistory: LorePayload[] = [];
+  private navigationNotificationState: NavigationNotificationState = {
+    seenShopItemKeys: [],
+    seenHouseIds: [],
+    essenceShopSeen: false,
+  };
   private showDamageNumbers = false;
   private showCriticalHitNumbers = true;
 
@@ -262,7 +275,8 @@ export class GameStateService {
       essenceShopUnlocked: architectLevel >= 1,
       essenceShopItems: this.essenceShopState.getItemsView(),
       essenceShopStats: this.essenceShopState.getStats(),
-      houses: farmerLevel >= 100 || vesselUnlocked || astrologueLevel >= 75
+      housesUnlocked: farmerLevel >= HOUSE_LEVEL_REQUIRED,
+      houses: farmerLevel >= HOUSE_LEVEL_REQUIRED || vesselUnlocked || astrologueLevel >= 75
         ? this.houseState.getHousesView(
           workersAvailable[VESSEL_WORKER_INDEX]?.level ?? 0,
           astrologueLevel
@@ -377,8 +391,15 @@ export class GameStateService {
     setTimeout(() => criticalHitPopup.remove(), 1000);
   }
 
-  upgradeWorker(workerIndex: number): void {
-    this.workerState.upgradeWorker(workerIndex, this.getShopMult);
+  upgradeWorker(workerIndex: number, levels: number | 'max' = 1): boolean {
+    return this.workerState.upgradeWorker(workerIndex, this.getShopMult, levels);
+  }
+
+  getWorkerUpgradePricePreview(
+    workerIndex: number,
+    levels: number | 'max'
+  ): WorkerUpgradePricePreview {
+    return this.workerState.getUpgradePricePreview(workerIndex, levels);
   }
 
   /**
@@ -589,6 +610,33 @@ export class GameStateService {
     return cancelled;
   }
 
+  usePlannedCombatBait(combatId: string): boolean {
+    const workers = this.workerState.getWorkers();
+    const workersAvailable = this.workerState.getWorkersAvailable();
+    const used = this.monsterState.usePlannedCombatBait(combatId, workers, workersAvailable);
+    if (used) {
+      this.saveToLocalStorage();
+    }
+    return used;
+  }
+
+  getNavigationNotificationState(): NavigationNotificationState {
+    return {
+      seenShopItemKeys: [...this.navigationNotificationState.seenShopItemKeys],
+      seenHouseIds: [...this.navigationNotificationState.seenHouseIds],
+      essenceShopSeen: this.navigationNotificationState.essenceShopSeen,
+    };
+  }
+
+  setNavigationNotificationState(state: NavigationNotificationState): void {
+    this.navigationNotificationState = {
+      seenShopItemKeys: [...state.seenShopItemKeys],
+      seenHouseIds: [...state.seenHouseIds],
+      essenceShopSeen: state.essenceShopSeen,
+    };
+    this.saveToLocalStorage();
+  }
+
   setSelectedBiome(biome: MonsterBiomeId): boolean {
     const workers = this.workerState.getWorkers();
     const workersAvailable = this.workerState.getWorkersAvailable();
@@ -658,6 +706,7 @@ export class GameStateService {
         plannedCombatWins: this.monsterState.getPlannedCombatWins(),
         plannedCombatCooldownEnds: this.monsterState.getPlannedCombatCooldownEnds(),
         selectedBiome: this.monsterState.getSelectedBiome(),
+        navigationNotificationState: this.getNavigationNotificationState(),
         showDamageNumbers: this.showDamageNumbers,
         showCriticalHitNumbers: this.showCriticalHitNumbers,
       };
@@ -695,6 +744,9 @@ export class GameStateService {
       this.monsterState.setKillCounts(saveData.monsterKillCounts);
       this.monsterState.setPlannedCombatWins(saveData.plannedCombatWins);
       this.monsterState.setPlannedCombatCooldownEnds(saveData.plannedCombatCooldownEnds);
+      this.navigationNotificationState = this.normalizeNavigationNotificationState(
+        saveData.navigationNotificationState
+      );
       if (isMonsterBiomeId(saveData.selectedBiome) && this.monsterState.isBiomeUnlocked(saveData.selectedBiome)) {
         this.monsterState.setSelectedBiome(saveData.selectedBiome);
       } else {
@@ -729,6 +781,7 @@ export class GameStateService {
       plannedCombatWins: this.monsterState.getPlannedCombatWins(),
       plannedCombatCooldownEnds: this.monsterState.getPlannedCombatCooldownEnds(),
       selectedBiome: this.monsterState.getSelectedBiome(),
+      navigationNotificationState: this.getNavigationNotificationState(),
       showDamageNumbers: this.showDamageNumbers,
       showCriticalHitNumbers: this.showCriticalHitNumbers,
     };
@@ -779,6 +832,9 @@ export class GameStateService {
       this.monsterState.setKillCounts(saveData.monsterKillCounts);
       this.monsterState.setPlannedCombatWins(saveData.plannedCombatWins);
       this.monsterState.setPlannedCombatCooldownEnds(saveData.plannedCombatCooldownEnds);
+      this.navigationNotificationState = this.normalizeNavigationNotificationState(
+        saveData.navigationNotificationState
+      );
       if (isMonsterBiomeId(saveData.selectedBiome) && this.monsterState.isBiomeUnlocked(saveData.selectedBiome)) {
         this.monsterState.setSelectedBiome(saveData.selectedBiome);
       } else {
@@ -791,5 +847,15 @@ export class GameStateService {
     } catch (e) {
       return false;
     }
+  }
+
+  private normalizeNavigationNotificationState(
+    state?: Partial<NavigationNotificationState>
+  ): NavigationNotificationState {
+    return {
+      seenShopItemKeys: state && Array.isArray(state.seenShopItemKeys) ? [...state.seenShopItemKeys] : [],
+      seenHouseIds: state && Array.isArray(state.seenHouseIds) ? [...state.seenHouseIds] : [],
+      essenceShopSeen: state?.essenceShopSeen === true,
+    };
   }
 }

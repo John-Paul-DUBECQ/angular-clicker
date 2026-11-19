@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, ElementRef, ViewChild } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { GameStateService } from './models/game/game-state.service';
 import { Game } from './models/game/game';
@@ -29,9 +29,12 @@ export class AppComponent implements OnInit, OnDestroy {
   mobileScreen: 'game' | 'shop' | 'workers' | 'combat' | 'settings' = 'game';
   mobileMenuVisible = false;
   workerView: 'workers' | 'essenceShop' | 'quests' = 'workers';
+  desktopView: 'characters' | 'houses' | 'shop' | 'essenceShop' | 'quests' | 'kitchen' | 'garden' | 'missions' | 'lottery' = 'characters';
   readonly monsterBiomes = MONSTER_BIOMES;
   private refreshInterval: ReturnType<typeof setInterval> | null = null;
-  private vesselTickId: ReturnType<typeof setInterval> | null = null;
+  private vesselAnimationFrame: number | null = null;
+  @ViewChild('vesselLane') private vesselLane?: ElementRef<HTMLDivElement>;
+  private vesselLaneWidth = 0;
   /** Position left fluide (dérivée du temps) pour chaque vaisseau, mise à jour ~50 ms. */
   vesselSmoothLeft: Record<string, number> = {};
 
@@ -66,6 +69,9 @@ export class AppComponent implements OnInit, OnDestroy {
   private stableHouses: House[] = [];
   private stablePlannedCombats: NonNullable<Game['plannedCombats']> = [];
   private stableResources: ResourceStock[] = [];
+  private readonly seenShopItemKeys = new Set<string>();
+  private readonly seenHouseIds = new Set<string>();
+  private essenceShopSeen = false;
   resources: ResourceStock[] = [];
   resourcesVisible = false;
   selectedHouseTag: string | null = null;
@@ -97,7 +103,12 @@ export class AppComponent implements OnInit, OnDestroy {
     private vesselRewardNotify: VesselRewardNotificationService,
     private loreNotify: LoreNotificationService,
     private cdr: ChangeDetectorRef
-  ) {}
+  ) {
+    const notificationState = this.gameState.getNavigationNotificationState();
+    notificationState.seenShopItemKeys.forEach((key) => this.seenShopItemKeys.add(key));
+    notificationState.seenHouseIds.forEach((id) => this.seenHouseIds.add(id));
+    this.essenceShopSeen = notificationState.essenceShopSeen;
+  }
 
   ngOnInit(): void {
     this.refreshGameState();
@@ -120,8 +131,8 @@ export class AppComponent implements OnInit, OnDestroy {
     if (this.refreshInterval !== null) {
       clearInterval(this.refreshInterval);
     }
-    if (this.vesselTickId !== null) {
-      clearInterval(this.vesselTickId);
+    if (this.vesselAnimationFrame !== null) {
+      cancelAnimationFrame(this.vesselAnimationFrame);
     }
     this.rewardSub?.unsubscribe();
     this.vesselRewardSub?.unsubscribe();
@@ -134,15 +145,17 @@ export class AppComponent implements OnInit, OnDestroy {
       if (vessels && vessels.length > 0) {
         const now = Date.now();
         const next: Record<string, number> = {};
+        this.vesselLaneWidth = this.vesselLane?.nativeElement.clientWidth
+          ?? this.vesselLaneWidth;
         for (const v of vessels) {
           next[v.instanceId] = ((now - v.spawnTime) / 1000) * v.speed;
         }
         this.vesselSmoothLeft = next;
         this.cdr.detectChanges();
       }
+      this.vesselAnimationFrame = requestAnimationFrame(tick);
     };
     tick();
-    this.vesselTickId = setInterval(tick, 50);
   }
 
   /** Position left fluide pour le rendu (mouvement linéaire comme le soleil). */
@@ -150,15 +163,23 @@ export class AppComponent implements OnInit, OnDestroy {
     return this.vesselSmoothLeft[v.instanceId] != null ? this.vesselSmoothLeft[v.instanceId] : v.leftPercent;
   }
 
+  getVesselTransform(v: ActiveVesselView): string {
+    const leftPercent = this.getVesselLeft(v);
+    const centerX = this.vesselLaneWidth * leftPercent / 100;
+    return `translate3d(${centerX - 40}px, -50%, 0)`;
+  }
+
   private showMonsterReward(reward: { gold: number; essence: number; resources: ResourceReward[] }): void {
     const goldStr = formatNumberValue(reward.gold, 0);
     const essenceStr = formatNumberValue(reward.essence, 0);
+    const goldLine = reward.gold > 0 ? `<p>+${goldStr} clics</p>` : '';
+    const essenceLine = reward.essence > 0 ? `<p>+${essenceStr} essence</p>` : '';
     const resourceLines = reward.resources
       .map((resource) => `<p>+${formatNumberValue(resource.amount, 0)} ${this.getResourceName(resource.resourceId)}</p>`)
       .join('');
     Swal.fire({
       title: 'Récompense !',
-      html: `<p>+${goldStr} clics</p><p>+${essenceStr} essence</p>${resourceLines}`,
+      html: `${goldLine}${essenceLine}${resourceLines}`,
       timer: 2000,
       timerProgressBar: true,
       showConfirmButton: false,
@@ -217,6 +238,7 @@ export class AppComponent implements OnInit, OnDestroy {
     };
     this.workersAvailable = this.stableWorkersAvailable;
     this.powersAvailable = state.powersAvailable ?? [];
+    this.markCurrentSectionItemsAsSeen();
   }
 
   /** Conserve les objets de vue tant que leurs valeurs affichées restent identiques. */
@@ -409,6 +431,12 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
+  usePlannedCombatBait(combatId: string): void {
+    if (this.gameState.usePlannedCombatBait(combatId)) {
+      this.refreshGameState();
+    }
+  }
+
   cancelPlannedCombat(event: MouseEvent): void {
     event.stopPropagation();
     if (this.gameState.cancelPlannedCombat()) {
@@ -492,6 +520,65 @@ export class AppComponent implements OnInit, OnDestroy {
       .map((item, index) => ({ item, index }))
       .filter((entry) => entry.item.doesAppearInGame && !entry.item.bought)
       .sort((a, b) => a.item.price - b.item.price);
+  }
+
+  get hasNewShopItems(): boolean {
+    return this.sortedShopItemsWithIndex.some(({ item, index }) =>
+      !this.seenShopItemKeys.has(this.getShopItemNotificationKey(item, index))
+    );
+  }
+
+  get hasNewHouses(): boolean {
+    if (!this.game.housesUnlocked) {
+      return false;
+    }
+    return (this.game.houses ?? []).some((house) => !this.seenHouseIds.has(house.id));
+  }
+
+  get hasNewEssenceShop(): boolean {
+    return !!this.game.essenceShopUnlocked && !this.essenceShopSeen;
+  }
+
+  private getShopItemNotificationKey(item: ShopItem, index: number): string {
+    return item.id ?? `shop-index-${index}`;
+  }
+
+  private markCurrentSectionItemsAsSeen(): void {
+    let changed = false;
+    if (this.desktopView === 'shop') {
+      this.sortedShopItemsWithIndex.forEach(({ item, index }) => {
+        const key = this.getShopItemNotificationKey(item, index);
+        if (!this.seenShopItemKeys.has(key)) {
+          this.seenShopItemKeys.add(key);
+          changed = true;
+        }
+      });
+    } else if (this.desktopView === 'houses') {
+      (this.game.houses ?? []).forEach((house) => {
+        if (!this.seenHouseIds.has(house.id)) {
+          this.seenHouseIds.add(house.id);
+          changed = true;
+        }
+      });
+    }
+    if (
+      (this.desktopView === 'essenceShop' || this.workerView === 'essenceShop')
+      && !this.essenceShopSeen
+    ) {
+      this.essenceShopSeen = true;
+      changed = true;
+    }
+    if (changed) {
+      this.persistNavigationNotificationState();
+    }
+  }
+
+  private persistNavigationNotificationState(): void {
+    this.gameState.setNavigationNotificationState({
+      seenShopItemKeys: Array.from(this.seenShopItemKeys),
+      seenHouseIds: Array.from(this.seenHouseIds),
+      essenceShopSeen: this.essenceShopSeen,
+    });
   }
 
   /** Pouvoirs affichés par ordre de coût mana (croissant), avec index d’origine pour lancer le sort. */
@@ -607,6 +694,24 @@ export class AppComponent implements OnInit, OnDestroy {
 
   setWorkerView(view: 'workers' | 'essenceShop' | 'quests'): void {
     this.workerView = view;
+    if (view === 'essenceShop' && this.game.essenceShopUnlocked && !this.essenceShopSeen) {
+      this.essenceShopSeen = true;
+      this.persistNavigationNotificationState();
+    }
+  }
+
+  setDesktopView(view: 'characters' | 'houses' | 'shop' | 'essenceShop' | 'quests' | 'kitchen' | 'garden' | 'missions' | 'lottery'): void {
+    this.desktopView = view;
+    if (view === 'characters') {
+      this.workerView = 'workers';
+    }
+    if (view === 'essenceShop') {
+      this.workerView = 'essenceShop';
+    }
+    if (view === 'quests') {
+      this.workerView = 'quests';
+    }
+    this.markCurrentSectionItemsAsSeen();
   }
 
   get selectedLore(): LorePayload | null {

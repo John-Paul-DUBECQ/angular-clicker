@@ -8,6 +8,12 @@ export interface PlannedCombatReward {
   resources?: ResourceReward[];
 }
 
+export interface PlannedCombatBaitEncounter {
+  unlockWins: number;
+  baitCost: number;
+  rewards: ResourceReward[];
+}
+
 export interface PlannedCombatEnemy {
   id: string;
   name: string;
@@ -30,6 +36,7 @@ export interface PlannedCombat {
   unlockMethod?: UnlockMethod;
   firstReward: PlannedCombatReward;
   repeatReward: PlannedCombatReward;
+  baitEncounter?: PlannedCombatBaitEncounter;
 }
 
 export interface PlannedCombatView extends PlannedCombat {

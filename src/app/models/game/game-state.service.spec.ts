@@ -77,6 +77,23 @@ describe('GameStateService solar bonuses', () => {
     expect(unlockMethod?.getWorkerLevelRequirement(1)).toBe(100);
   });
 
+  it('unlocks the houses tab only at Farmer level 100', () => {
+    expect(gameState.getState().housesUnlocked).toBeFalse();
+
+    workerState.getWorkersAvailable()[1].level = 100;
+    expect(gameState.getState().housesUnlocked).toBeTrue();
+  });
+
+  it('unlocks missions after the Explorer is owned', () => {
+    expect(gameState.getState().explorerUnlocked).toBeFalse();
+
+    const explorer = workerState.getWorkersAvailable()[8];
+    explorer.level = 1;
+    workerState.setWorkers([...workerState.getWorkers(), explorer]);
+
+    expect(gameState.getState().explorerUnlocked).toBeTrue();
+  });
+
   it('changes passive damage and click transfer with the active solar phase', () => {
     workerState.getWorkersAvailable()[1].baseProduction = 10000;
     gameState.setShowDamageNumbers(true);
@@ -369,6 +386,56 @@ describe('GameStateService solar bonuses', () => {
     expect(gameState.cancelPlannedCombat()).toBeFalse();
     expect(gameState.startPlannedCombat('planned-forest-03')).toBeTrue();
     expect(gameState.cancelPlannedCombat()).toBeTrue();
+  });
+
+  it('exchanges bait for a configured planned-combat reward after the required wins and starts cooldown', () => {
+    const workersAvailable = workerState.getWorkersAvailable();
+    const alchemist = workersAvailable[6];
+    const explorer = workersAvailable[8];
+    alchemist.level = 1;
+    explorer.level = 1;
+    workerState.setWorkers([alchemist, explorer]);
+    monsterState.setPlannedCombatWins({
+      'planned-forest-04': 1,
+      'planned-forest-05': 9,
+    });
+    resources.setResourceAmounts({ bait: 5 });
+
+    expect(gameState.usePlannedCombatBait('planned-forest-05')).toBeFalse();
+    expect(resources.getResourceAmount('bait')).toBe(5);
+
+    monsterState.setPlannedCombatWins({
+      'planned-forest-04': 1,
+      'planned-forest-05': 10,
+    });
+    expect(gameState.usePlannedCombatBait('planned-forest-05')).toBeTrue();
+    expect(resources.getResourceAmount('bait')).toBe(0);
+    expect(resources.getResourceAmount('mosh-paw')).toBe(1);
+    expect(monsterState.getPlannedCombatWins()['planned-forest-05']).toBe(10);
+    expect(monsterState.getPlannedCombatCooldownEnds()['planned-forest-05'])
+      .toBe(Date.now() + 5 * 60 * 1000);
+    expect(gameState.usePlannedCombatBait('planned-forest-05')).toBeFalse();
+    expect(gameState.startPlannedCombat('planned-forest-05')).toBeFalse();
+  });
+
+  it('persists and restores navigation notification state with the game save', () => {
+    const notificationState = {
+      seenShopItemKeys: ['shop-item-a'],
+      seenHouseIds: ['house-a'],
+      essenceShopSeen: true,
+    };
+    gameState.setNavigationNotificationState(notificationState);
+
+    const saved = JSON.parse(localStorage.getItem('clickerGameSave') || '{}');
+    expect(saved.navigationNotificationState).toEqual(notificationState);
+    gameState.setNavigationNotificationState({
+      seenShopItemKeys: [],
+      seenHouseIds: [],
+      essenceShopSeen: false,
+    });
+
+    expect(gameState.importSave(JSON.stringify(saved))).toBeTrue();
+    expect(gameState.getNavigationNotificationState()).toEqual(notificationState);
   });
 
   it('accepts damage only from the configured source in planned combat', () => {

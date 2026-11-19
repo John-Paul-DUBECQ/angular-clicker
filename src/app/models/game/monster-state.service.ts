@@ -161,6 +161,34 @@ export class MonsterStateService {
     return true;
   }
 
+  usePlannedCombatBait(
+    id: string,
+    workers: WorkerAutoData[],
+    workersAvailable: WorkerAutoData[]
+  ): boolean {
+    const combat = listPlannedCombat.find((entry) => entry.id === id);
+    const baitEncounter = combat?.baitEncounter;
+    if (
+      !combat
+      || !baitEncounter
+      || this.currentMonsterId != null
+      || combat.biome !== this.selectedBiome
+      || !this.isBiomeUnlocked(combat.biome)
+      || !isExplorerUnlocked(workers, workersAvailable)
+      || !this.isPlannedCombatUnlocked(combat, workers, workersAvailable)
+      || (this.plannedCombatWins[id] ?? 0) < baitEncounter.unlockWins
+      || (this.plannedCombatCooldownEnds[id] ?? 0) > Date.now()
+      || !this.resources.spendResources([{ resourceId: 'bait', amount: baitEncounter.baitCost }])
+    ) {
+      return false;
+    }
+
+    baitEncounter.rewards.forEach((reward) => this.resources.addResource(reward.resourceId, reward.amount));
+    this.plannedCombatCooldownEnds[id] = Date.now() + combat.cooldownSeconds * 1000;
+    this.rewardNotify.notifyReward(0, 0, baitEncounter.rewards);
+    return true;
+  }
+
   cancelPlannedCombat(workers: WorkerAutoData[], workersAvailable: WorkerAutoData[]): boolean {
     if (this.currentPlannedCombatId == null) return false;
 

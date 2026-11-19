@@ -1,5 +1,5 @@
-import { Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
-import { WorkerAuto, WorkerAutoData, calculateClicksPerSecondForWorker, getClickBonus, getWorkerBuyButtonText, getCanBuyWorkerWithDependencies, getWorkerDescription } from '../models/worker-auto-model';
+import { Component, ElementRef, EventEmitter, HostListener, Input, Output, ViewChild } from '@angular/core';
+import { WorkerAuto, WorkerAutoData, calculateClicksPerSecondForWorker, getClickBonus, getWorkerBuyButtonText, getWorkerDescription } from '../models/worker-auto-model';
 import { GameStateService, WorkerInfoStats } from '../models/game/game-state.service';
 import { WorkerUnlock } from '../models/unlocks/worker-unlock.model';
 import { getUpcomingPowerUnlockTiers } from '../models/unlocks/power-unlock';
@@ -27,9 +27,13 @@ export class WorkerAreaComponent {
   
   @ViewChild('unlockRef') unlockRef!: ElementRef<HTMLElement>;
   @ViewChild('infoRef') infoRef!: ElementRef<HTMLElement>;
+  @ViewChild('upgradeRef') upgradeRef?: ElementRef<HTMLButtonElement>;
 
   unlockPopupVisible = false;
   unlockPopupStyle: { left: string; top: string } | null = null;
+  upgradeButtonHovered = false;
+  private readonly pressedUpgradeKeys = new Set<string>();
+  private readonly consumedShortcutClicks = new Set<string>();
 
   infoPopupVisible = false;
   infoPopupStyle: { left: string; top: string } | null = null;
@@ -66,10 +70,25 @@ export class WorkerAreaComponent {
     return getWorkerBuyButtonText(this.workerSelected, this.clicks, this.workersAvailable);
   }
 
-  /** Vérifie si le worker peut être acheté en tenant compte des dépendances. */
-  get canBuyWorkerWithDependencies(): boolean {
-    if (!this.workerSelected) return false;
-    return getCanBuyWorkerWithDependencies(this.workerSelected, this.clicks, this.workersAvailable);
+  get selectedUpgradeLevels(): number | 'max' {
+    if (this.pressedUpgradeKeys.has('q')) return 'max';
+    if (this.pressedUpgradeKeys.has('m')) return 1000;
+    if (this.pressedUpgradeKeys.has('shift')) return 100;
+    if (this.pressedUpgradeKeys.has('control')) return 10;
+    return 1;
+  }
+
+  get upgradePricePreview(): { levels: number; totalPrice: number; canBuy: boolean } {
+    return this.gameState.getWorkerUpgradePricePreview(this.workerIndex, this.selectedUpgradeLevels);
+  }
+
+  getUpgradePricePreviewLabel(preview: { levels: number; totalPrice: number; canBuy: boolean }): string {
+    if (this.selectedUpgradeLevels === 'max') {
+      return preview.levels > 0
+        ? `Maximum (${preview.levels} niveau${preview.levels > 1 ? 'x' : ''}) :`
+        : 'Maximum (prochain niveau) :';
+    }
+    return `${this.selectedUpgradeLevels == 1 ? 'Upgrade' : `${this.selectedUpgradeLevels} niveaux`} :`;
   }
 
   /** Prochains paliers (unlocks worker + déblocage sorts pour Magicien), triés par niveau, limité à 3 pour ne pas flood. */
@@ -123,9 +142,71 @@ export class WorkerAreaComponent {
     return 'level-tier-0';
   }
 
-  upgradeWorker(): void {
-    this.gameState.upgradeWorker(this.workerIndex);
-    this.upgraded.emit();
+  upgradeWorker(levels: number | 'max' = 1): void {
+    if (this.gameState.upgradeWorker(this.workerIndex, levels)) {
+      this.upgraded.emit();
+    }
+  }
+
+  onUpgradeClick(event: MouseEvent): void {
+    const levels = this.selectedUpgradeLevelsForClick(event);
+    this.pressedUpgradeKeys.forEach((key) => {
+      if (key === 'm' || key === 'q') {
+        this.consumedShortcutClicks.add(key);
+      }
+    });
+    this.upgradeWorker(levels);
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  onUpgradeShortcut(event: KeyboardEvent): void {
+    const key = event.key.toLowerCase();
+    if (!['m', 'q', 'shift', 'control'].includes(key) || this.isEditableTarget(event.target)) {
+      return;
+    }
+    this.pressedUpgradeKeys.add(key);
+  }
+
+  @HostListener('document:keyup', ['$event'])
+  onUpgradeShortcutRelease(event: KeyboardEvent): void {
+    const key = event.key.toLowerCase();
+    if (!this.pressedUpgradeKeys.delete(key)) {
+      return;
+    }
+    if (key !== 'm' && key !== 'q') {
+      return;
+    }
+    if (this.consumedShortcutClicks.delete(key)) {
+      return;
+    }
+    if (
+      (!this.upgradeButtonHovered && document.activeElement !== this.upgradeRef?.nativeElement)
+      || this.isEditableTarget(event.target)
+    ) {
+      return;
+    }
+    this.upgradeWorker(key === 'm' ? 1000 : 'max');
+  }
+
+  @HostListener('window:blur')
+  onWindowBlur(): void {
+    this.pressedUpgradeKeys.clear();
+    this.consumedShortcutClicks.clear();
+  }
+
+  private selectedUpgradeLevelsForClick(event: MouseEvent): number | 'max' {
+    if (this.pressedUpgradeKeys.has('q')) return 'max';
+    if (this.pressedUpgradeKeys.has('m')) return 1000;
+    if (event.shiftKey || this.pressedUpgradeKeys.has('shift')) return 100;
+    if (event.ctrlKey || this.pressedUpgradeKeys.has('control')) return 10;
+    return 1;
+  }
+
+  private isEditableTarget(target: EventTarget | null): boolean {
+    const element = target as HTMLElement | null;
+    return !!element
+      && (element.isContentEditable
+        || !!element.closest('input, textarea, select, [contenteditable="true"]'));
   }
 
   onUnlockMouseEnter(): void {

@@ -2,6 +2,7 @@ import { UnlockMethod } from '../unlocks/unlock-method';
 import { MONSTER_WORKER_INDEX } from '../unlocks/monster-unlock';
 import {
   PlannedCombat,
+  PlannedCombatBaitEncounter,
   PlannedCombatDamageMode,
   PlannedCombatEnemy,
   PlannedCombatReward,
@@ -23,7 +24,11 @@ function createCombat(
   cooldownSeconds: number,
   firstReward: PlannedCombatReward,
   repeatReward: PlannedCombatReward,
-  options: { previousCombatId?: string; damageMode?: PlannedCombatDamageMode } = {}
+  options: {
+    previousCombatId?: string;
+    damageMode?: PlannedCombatDamageMode;
+    baitEncounter?: PlannedCombatBaitEncounter;
+  } = {}
 ): PlannedCombat {
   return {
     id,
@@ -40,6 +45,7 @@ function createCombat(
     damageMode: options.damageMode ?? 'any',
     firstReward,
     repeatReward,
+    baitEncounter: options.baitEncounter,
   };
 }
 
@@ -55,7 +61,7 @@ export const listPlannedCombat: PlannedCombat[] = [
   createCombat(
     'planned-super-mosh', 'forest', 2, 'Le retour du Super-Mosh',
     'Le combat suivant attend la victoire précédente.',
-    [enemy('super-mosh', 'Super-Mosh', 1.44e15, 'assets/img/shadocks/mosh.png')],
+    [enemy('super-mosh', 'Super-Mosh', 1.8e15, 'assets/img/shadocks/mosh.png')],
     90, 2 * 60,
     { clicks: 2500, essence: 20, resources: [{ resourceId: 'super-mosh-core', amount: 1 }] },
     { clicks: 700, essence: 4 },
@@ -65,7 +71,7 @@ export const listPlannedCombat: PlannedCombat[] = [
     'planned-forest-03', 'forest', 3, 'Le sac des clairières',
     'Sac Poubelle Sama bloque le sentier avec l’aide d’un Mosh.',
     [
-      enemy('sac-poubelle-sama', 'Sac Poubelle Sama', 1e15, 'assets/img/shadocks/sac-poubelle-sama.png'),
+      enemy('sac-poubelle-sama', 'Sac Poubelle Sama', 2e15, 'assets/img/shadocks/sac-poubelle-sama.png'),
       enemy('mosh', 'Mosh', 4e14, 'assets/img/shadocks/mosh.png'),
     ],
     90, 3 * 60,
@@ -95,7 +101,14 @@ export const listPlannedCombat: PlannedCombat[] = [
     95, 5 * 60,
     { clicks: 10000, essence: 60, resources: [{ resourceId: 'mosh-tooth', amount: 5 }] },
     { clicks: 2000, essence: 10 },
-    { previousCombatId: 'planned-forest-04' }
+    {
+      previousCombatId: 'planned-forest-04',
+      baitEncounter: {
+        unlockWins: 3,
+        baitCost: 5,
+        rewards: [{ resourceId: 'mosh-paw', amount: 1 }],
+      },
+    }
   ),
   createCombat(
     'planned-forest-06', 'forest', 6, 'La décharge sauvage',
@@ -110,7 +123,7 @@ export const listPlannedCombat: PlannedCombat[] = [
     'planned-forest-07', 'forest', 7, 'L’encre du sous-bois',
     'Gribouy et son complice sont de retour, plus robustes que jamais.',
     [
-      enemy('gribouy', 'Gribouy', 1.3e15, 'assets/img/shadocks/gribouyi.png'),
+      enemy('gribouy', 'Gribouy', 5.3e15, 'assets/img/shadocks/gribouyi.png'),
       enemy('gribouy-scout', 'Éclaireur Gribouy', 6e14, 'assets/img/shadocks/gribouyi.png'),
     ],
     105, 7 * 60,
@@ -122,7 +135,7 @@ export const listPlannedCombat: PlannedCombat[] = [
     'planned-forest-08', 'forest', 8, 'Le Super-Mosh rôdeur',
     'Le Super-Mosh a quitté son territoire avec un garde du corps.',
     [
-      enemy('super-mosh', 'Super-Mosh', 1.4e15, 'assets/img/shadocks/mosh.png'),
+      enemy('super-mosh', 'Super-Mosh', 9e15, 'assets/img/shadocks/mosh.png'),
       enemy('sac-poubelle-sama', 'Sac Poubelle Sama', 8e14, 'assets/img/shadocks/sac-poubelle-sama.png'),
     ],
     110, 8 * 60,
@@ -135,8 +148,8 @@ export const listPlannedCombat: PlannedCombat[] = [
     'Trois créatures se dressent entre vous et le cœur de la forêt.',
     [
       enemy('mosh', 'Mosh', 1e15, 'assets/img/shadocks/mosh.png'),
-      enemy('gribouy', 'Gribouy', 1e15, 'assets/img/shadocks/gribouyi.png'),
-      enemy('sac-poubelle-sama', 'Sac Poubelle Sama', 8e14, 'assets/img/shadocks/sac-poubelle-sama.png'),
+      enemy('gribouy', 'Gribouy', 3.9e15, 'assets/img/shadocks/gribouyi.png'),
+      enemy('sac-poubelle-sama', 'Sac Poubelle Sama', 8e15, 'assets/img/shadocks/sac-poubelle-sama.png'),
     ],
     115, 9 * 60,
     { clicks: 34000, essence: 190, resources: [{ resourceId: 'detritus', amount: 6 }] },
@@ -150,7 +163,14 @@ export const listPlannedCombat: PlannedCombat[] = [
     120, 10 * 60,
     { clicks: 45000, essence: 250, resources: [{ resourceId: 'gribouy-ink', amount: 6 }] },
     { clicks: 9000, essence: 40, resources: [{ resourceId: 'bait', amount: 2 }]  },
-    { previousCombatId: 'planned-forest-09' }
+    {
+      previousCombatId: 'planned-forest-09',
+      baitEncounter: {
+        unlockWins: 10,
+        baitCost: 10,
+        rewards: [{ resourceId: 'mosh-paw', amount: 1 }],
+      },
+    }
   ),
   createCombat(
     'planned-beach-01', 'beach', 1, 'Éclaboussure de Calque',
@@ -165,8 +185,8 @@ export const listPlannedCombat: PlannedCombat[] = [
     'planned-beach-02', 'beach', 2, 'Le Molusk du récif',
     'Un Molusk et un Calque défendent les rochers de la côte.',
     [
-      enemy('molusk', 'Molusk', 2.2e16, 'assets/img/shadocks/aquaticMobs/molusk.png'),
-      enemy('calque', 'Calque', 1.7e16, 'assets/img/shadocks/aquaticMobs/calque.png'),
+      enemy('molusk', 'Molusk', 5.2e16, 'assets/img/shadocks/aquaticMobs/molusk.png'),
+      enemy('calque', 'Calque', 8.7e16, 'assets/img/shadocks/aquaticMobs/calque.png'),
     ],
     105, 2 * 60,
     { clicks: 75000, essence: 375, resources: [{ resourceId: 'shell', amount: 2 }] },
@@ -176,7 +196,7 @@ export const listPlannedCombat: PlannedCombat[] = [
   createCombat(
     'planned-beach-03', 'beach', 3, 'Le mystère de Peji',
     'Peji surgit des eaux et défend le passage vers les falaises.',
-    [enemy('peji', 'Peji', 8.32e16, 'assets/img/shadocks/aquaticMobs/peji.png')],
+    [enemy('peji', 'Peji', 8.32e17, 'assets/img/shadocks/aquaticMobs/peji.png')],
     110, 3 *60,
     { clicks: 90000, essence: 450, resources: [{ resourceId: 'mermaid-tail', amount: 1 }] },
     { clicks: 18000, essence: 72 },
@@ -186,10 +206,10 @@ export const listPlannedCombat: PlannedCombat[] = [
     'planned-beach-04', 'beach', 4, 'Le chant du Pwaskay',
     'Un Pwaskay et un Calque vous attirent vers les eaux profondes.',
     [
-      enemy('pwaskay', 'Pwaskay', 2.5e16, 'assets/img/shadocks/aquaticMobs/pwaskay.png'),
-      enemy('calque', 'Calque', 1.8e16, 'assets/img/shadocks/aquaticMobs/calque.png'),
-      enemy('calque', 'Calque', 1.9e16, 'assets/img/shadocks/aquaticMobs/calque.png'),
-      enemy('calque', 'Calque', 2.0e16, 'assets/img/shadocks/aquaticMobs/calque.png'),
+      enemy('pwaskay', 'Pwaskay', 2.5e17, 'assets/img/shadocks/aquaticMobs/pwaskay.png'),
+      enemy('calque', 'Calque', 1.8e17, 'assets/img/shadocks/aquaticMobs/calque.png'),
+      enemy('calque', 'Calque', 1.9e17, 'assets/img/shadocks/aquaticMobs/calque.png'),
+      enemy('calque', 'Calque', 2.0e18, 'assets/img/shadocks/aquaticMobs/calque.png'),
     ],
     115, 4 * 60,
     { clicks: 110000, essence: 550, resources: [{ resourceId: 'bulb', amount: 1 }] },
@@ -200,18 +220,26 @@ export const listPlannedCombat: PlannedCombat[] = [
     'planned-beach-05', 'beach', 5, 'La carapace fendue',
     'Un Molusk et un Peji particulièrement robustes gardent la plage.',
     [
-      enemy('molusk', 'Molusk', 2.7e17, 'assets/img/shadocks/aquaticMobs/molusk.png'),
-      enemy('peji', 'Peji', 2.34e17, 'assets/img/shadocks/aquaticMobs/peji.png'),
+      enemy('molusk', 'Molusk', 2.7e18, 'assets/img/shadocks/aquaticMobs/molusk.png'),
+      enemy('peji', 'Peji', 2.34e19, 'assets/img/shadocks/aquaticMobs/peji.png'),
     ],
     120, 5 * 60,
     { clicks: 135000, essence: 675, resources: [{ resourceId: 'shell', amount: 3 }] },
     { clicks: 27000, essence: 108 },
-    { previousCombatId: 'planned-beach-04', damageMode: 'afk' }
+    {
+      previousCombatId: 'planned-beach-04',
+      damageMode: 'afk',
+      baitEncounter: {
+        unlockWins: 10,
+        baitCost: 5,
+        rewards: [{ resourceId: 'peji-tongue', amount: 1 }],
+      },
+    }
   ),
   createCombat(
     'planned-beach-06', 'beach', 6, 'Le retour de Calque',
     'Un Calque renforcé revient accompagné d’un courant violent.',
-    [enemy('calque', 'Calque', 5.4e17, 'assets/img/shadocks/aquaticMobs/calque.png')],
+    [enemy('calque', 'Calque', 5.4e20, 'assets/img/shadocks/aquaticMobs/calque.png')],
     125, 6 * 60,
     { clicks: 165000, essence: 825, resources: [{ resourceId: 'sea-food', amount: 10 }] },
     { clicks: 33000, essence: 132 },
@@ -221,8 +249,8 @@ export const listPlannedCombat: PlannedCombat[] = [
     'planned-beach-07', 'beach', 7, 'La queue des profondeurs',
     'Peji et un Pwaskay se sont renforcés dans les profondeurs.',
     [
-      enemy('peji', 'Peji', 3e17, 'assets/img/shadocks/aquaticMobs/peji.png'),
-      enemy('pwaskay', 'Pwaskay', 2.76e17, 'assets/img/shadocks/aquaticMobs/pwaskay.png'),
+      enemy('peji', 'Peji', 3e20, 'assets/img/shadocks/aquaticMobs/peji.png'),
+      enemy('pwaskay', 'Pwaskay', 2.76e20, 'assets/img/shadocks/aquaticMobs/pwaskay.png'),
     ],
     130, 7 * 60,
     { clicks: 200000, essence: 1000, resources: [{ resourceId: 'mermaid-tail', amount: 2 }] },
@@ -233,8 +261,8 @@ export const listPlannedCombat: PlannedCombat[] = [
     'planned-beach-08', 'beach', 8, 'Lueur sous-marine',
     'Le Pwaskay protège une étrange lueur avec l’aide d’un Molusk.',
     [
-      enemy('pwaskay', 'Pwaskay', 3.2e17, 'assets/img/shadocks/aquaticMobs/pwaskay.png'),
-      enemy('molusk', 'Molusk', 2.92e17, 'assets/img/shadocks/aquaticMobs/molusk.png'),
+      enemy('pwaskay', 'Pwaskay', 3.2e21, 'assets/img/shadocks/aquaticMobs/pwaskay.png'),
+      enemy('molusk', 'Molusk', 2.92e21, 'assets/img/shadocks/aquaticMobs/molusk.png'),
     ],
     135, 8 * 60,
     { clicks: 240000, essence: 1200, resources: [{ resourceId: 'bulb', amount: 2 }] },
@@ -245,9 +273,9 @@ export const listPlannedCombat: PlannedCombat[] = [
     'planned-beach-09', 'beach', 9, 'Le maître du récif',
     'Trois défenseurs gardent l’entrée de la haute mer.',
     [
-      enemy('calque', 'Calque', 2.3e17, 'assets/img/shadocks/aquaticMobs/calque.png'),
-      enemy('molusk', 'Molusk', 2.3e17, 'assets/img/shadocks/aquaticMobs/molusk.png'),
-      enemy('peji', 'Peji', 2e17, 'assets/img/shadocks/aquaticMobs/peji.png'),
+      enemy('calque', 'Calque', 2.3e22, 'assets/img/shadocks/aquaticMobs/calque.png'),
+      enemy('molusk', 'Molusk', 2.3e22, 'assets/img/shadocks/aquaticMobs/molusk.png'),
+      enemy('peji', 'Peji', 9e21, 'assets/img/shadocks/aquaticMobs/peji.png'),
     ],
     140, 9 * 60,
     { clicks: 290000, essence: 1450, resources: [{ resourceId: 'shell', amount: 5 }] },
@@ -257,10 +285,17 @@ export const listPlannedCombat: PlannedCombat[] = [
   createCombat(
     'planned-beach-10', 'beach', 10, 'Le gardien des marées',
     'Vainquez le gardien pour révéler la prochaine destination.',
-    [enemy('peji', 'Gardien des marées', 6.84e18, 'assets/img/shadocks/aquaticMobs/peji.png')],
+    [enemy('peji', 'Gardien des marées', 6.84e24, 'assets/img/shadocks/aquaticMobs/peji.png')],
     145, 10 * 60,
     { clicks: 350000, essence: 1750, resources: [{ resourceId: 'sea-food', amount: 15 }] },
     { clicks: 70000, essence: 280, resources: [{ resourceId: 'bait', amount: 2 }] },
-    { previousCombatId: 'planned-beach-09' }
+    {
+      previousCombatId: 'planned-beach-09',
+      baitEncounter: {
+        unlockWins: 10,
+        baitCost: 10,
+        rewards: [{ resourceId: 'peji-tongue', amount: 1 }],
+      },
+    }
   ),
 ];

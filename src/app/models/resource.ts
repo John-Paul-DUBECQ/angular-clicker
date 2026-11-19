@@ -42,6 +42,11 @@ export const RESOURCE_DEFINITIONS: GameResource[] = [
     description: 'Le Mosh aurait préféré qu\'on ne lui arrache pas sa queue; en effet, contrairement aux dents, la queue ne repousse pas.',
   },
   {
+    id: 'mosh-paw',
+    name: 'Patte de Mosh',
+    description: 'Une patte robuste récupérée sur un Mosh.',
+  },
+  {
     id: 'super-mosh-core',
     name: 'Noyau de Super-Mosh',
     description: 'Un fragment d’énergie mutante.',
@@ -60,6 +65,11 @@ export const RESOURCE_DEFINITIONS: GameResource[] = [
     id: 'mermaid-tail',
     name: 'Queue de Sirène',
     description: '',
+  },
+  {
+    id: 'peji-tongue',
+    name: 'Langue de Péji',
+    description: 'Une langue rare récupérée sur un Péji.',
   },
   {
     id: 'shell',

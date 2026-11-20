@@ -2,6 +2,7 @@
 import { ResourceReward } from '../resource';
 import { UnlockMethod } from '../unlocks/unlock-method';
 import { MonsterBiomeId } from './monster-biome.model';
+import { PlannedCombatDamageMode } from './planned-combat.model';
 
 export interface MonsterDrop extends ResourceReward {
   amount: number;
@@ -15,6 +16,8 @@ export interface Monster {
   biome?: MonsterBiomeId;
   doesAppearInGame: boolean;
   unlockMethod?: UnlockMethod;
+  /** Restriction facultative, à configurer pour les familiers futurs. */
+  damageMode?: PlannedCombatDamageMode;
   lootMultiplier?: number;
 
   probabilityToSpawn?: number;

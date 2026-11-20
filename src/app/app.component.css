@@ -758,12 +758,29 @@
   font-weight: 700;
 }
 
+.column-center__main--game-ui .monster-title__hp--click {
+  color: #6ac8ff;
+}
+
+.column-center__main--game-ui .monster-title__hp--afk {
+  color: #8fe39a;
+}
+
+.column-center__main--game-ui .monster-title__hp--pet {
+  color: #d29aff;
+}
+
 .column-center__main--game-ui .monster-title__hp-track {
+  display: block;
   height: 6px;
   margin-top: 0.55rem;
   overflow: hidden;
   border-radius: 999px;
   background: #31282a;
+}
+
+.column-center__main--game-ui .monster-title__hp-track--split {
+  display: flex;
 }
 
 .column-center__main--game-ui .monster-title__hp-fill {
@@ -772,6 +789,23 @@
   border-radius: inherit;
   background: linear-gradient(90deg, #c44, #e66);
   transition: width 0.12s ease-out;
+}
+
+.column-center__main--game-ui .monster-title__hp-track--split .monster-title__hp-fill {
+  flex: none;
+  border-radius: 0;
+}
+
+.column-center__main--game-ui .monster-title__hp-fill--click {
+  background: #6ac8ff;
+}
+
+.column-center__main--game-ui .monster-title__hp-fill--afk {
+  background: #8fe39a;
+}
+
+.column-center__main--game-ui .monster-title__hp-fill--pet {
+  background: #d29aff;
 }
 
 .column-center__main--game-ui .score-area {
@@ -1093,6 +1127,44 @@
   font-size: 0.72rem;
 }
 
+.lottery-panel {
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid #513737;
+  background: #2a2020;
+  color: #e2c6c0;
+  font-size: 0.72rem;
+}
+
+.lottery-panel h2 {
+  margin: 0 0 8px;
+  color: #fff1ee;
+  font-size: 0.85rem;
+}
+
+.lottery-panel p {
+  margin: 4px 0;
+  color: #c6aaa5;
+}
+
+.lottery-panel ul {
+  margin: 8px 0;
+  padding-left: 18px;
+}
+
+.lottery-panel button {
+  padding: 8px 12px;
+  border: 1px solid #a87d2f;
+  background: #45351b;
+  color: #ffe4a0;
+  cursor: pointer;
+}
+
+.lottery-panel button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .planned-combat-list {
   display: flex;
   flex-direction: column;
@@ -1275,6 +1347,22 @@
   margin: 0;
 }
 
+.monster-title__hp--click {
+  color: #6ac8ff;
+}
+
+.monster-title__hp--afk {
+  color: #8fe39a;
+}
+
+.monster-title__hp--pet {
+  color: #d29aff;
+}
+
+.monster-title__hp-separator {
+  color: #d3d5db;
+}
+
 .monster-title__hp-track {
   display: none;
 }
@@ -1342,11 +1430,32 @@
   overflow: hidden;
 }
 
+.monster-area__hp-track--split {
+  display: flex;
+}
+
 .monster-area__hp-fill {
   height: 100%;
   background: linear-gradient(90deg, #c44, #e66);
   border-radius: 3px;
   transition: width 0.08s ease-out;
+}
+
+.monster-area__hp-track--split .monster-area__hp-fill {
+  flex: none;
+  border-radius: 0;
+}
+
+.monster-area__hp-fill--click {
+  background: #6ac8ff;
+}
+
+.monster-area__hp-fill--afk {
+  background: #8fe39a;
+}
+
+.monster-area__hp-fill--pet {
+  background: #d29aff;
 }
 
 .monster-area__timer {
@@ -1513,8 +1622,32 @@
   font-size: 0.75rem;
 }
 
+.shop-trades__quantities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.shop-trades__quantities button {
+  padding: 4px 7px;
+  border: 1px solid #66542a;
+  border-radius: 4px;
+  background: #30291c;
+  color: #eee8d8;
+  cursor: pointer;
+  font-size: 0.72rem;
+}
+
+.shop-trades__quantities .shop-trades__quantity--active {
+  border-color: #e8c547;
+  background: #4a3c1f;
+  color: #fff1bb;
+}
+
 .shop-trades__item,
 .shop-trades__item > div {
+  margin-top: 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2035,6 +2168,18 @@
     font-size: 0.8rem;
   }
 
+  .mobile-monster-title__details strong.monster-title__hp--click {
+    color: #6ac8ff;
+  }
+
+  .mobile-monster-title__details strong.monster-title__hp--afk {
+    color: #8fe39a;
+  }
+
+  .mobile-monster-title__details strong.monster-title__hp--pet {
+    color: #d29aff;
+  }
+
   .mobile-monster-title__hp-track {
     height: 5px;
     overflow: hidden;
@@ -2042,11 +2187,32 @@
     background: #31282a;
   }
 
+  .mobile-monster-title__hp-track--split {
+    display: flex;
+  }
+
   .mobile-monster-title__hp-track > div {
     height: 100%;
     border-radius: inherit;
     background: linear-gradient(90deg, #c44, #e66);
     transition: width 0.12s ease-out;
+  }
+
+  .mobile-monster-title__hp-track--split > div {
+    flex: none;
+    border-radius: 0;
+  }
+
+  .mobile-monster-title__hp-track--split > .monster-title__hp-fill--click {
+    background: #6ac8ff;
+  }
+
+  .mobile-monster-title__hp-track--split > .monster-title__hp-fill--afk {
+    background: #8fe39a;
+  }
+
+  .mobile-monster-title__hp-track--split > .monster-title__hp-fill--pet {
+    background: #d29aff;
   }
 
   .mobile-center-zone {

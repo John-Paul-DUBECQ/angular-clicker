@@ -30,8 +30,22 @@ import { isExplorerUnlocked } from '../unlocks/explorer-unlock';
 import { HOUSE_LEVEL_REQUIRED } from '../unlocks/house-unlock';
 import { MissionSaveData } from '../missions/mission.model';
 import { MissionStateService } from './mission-state.service';
+import { UnlockContext } from '../unlocks/unlock-method';
+import { listResourceTrade } from '../list-resource-trade';
+import {
+  getMaxResourceTradeQuantity,
+  getResourceTradeCost,
+  ResourceTradeView,
+} from '../resource-trade';
+import { LotteryStateService } from './lottery-state.service';
+import { LOTTERY_UNLOCK_METHOD } from '../monsters/lottery.model';
+import { ResourceReward } from '../resource';
+import { MonsterRewardNotificationService } from './monster-reward-notification.service';
 
 const TICKS_PER_SECOND = 10;
+const TICK_MS = 1000 / TICKS_PER_SECOND;
+/** Au-delà, on simule 2 h puis on abandonne le surplus pour ne pas figer l’onglet. */
+const MAX_CATCH_UP_TICKS = TICKS_PER_SECOND * 60 * 60 * 2;
 
 export interface WorkerInfoLine {
   label: string;
@@ -46,6 +60,7 @@ export interface NavigationNotificationState {
   seenShopItemKeys: string[];
   seenHouseIds: string[];
   essenceShopSeen: boolean;
+  lotterySeen?: boolean;
 }
 
 export interface SaveData {
@@ -69,8 +84,11 @@ export interface SaveData {
   plannedCombatWins?: Record<string, number>;
   plannedCombatCooldownEnds?: Record<string, number>;
   selectedBiome?: MonsterBiomeId;
+  lotteryLastActivation?: number;
+  lotteryUnlockNotified?: boolean;
   navigationNotificationState?: NavigationNotificationState;
   missions?: MissionSaveData;
+  resourceTradeCounts?: Record<string, number>;
   showDamageNumbers?: boolean;
   showCriticalHitNumbers?: boolean;
 }
@@ -78,6 +96,9 @@ export interface SaveData {
 @Injectable({ providedIn: 'root' })
 export class GameStateService {
   private tickIntervalId: ReturnType<typeof setInterval> | null = null;
+  private lastTickAt = Date.now();
+  private simulatedNow = Date.now();
+  private catchingUp = false;
 
   private saveIntervalId: ReturnType<typeof setInterval> | null = null;
 
@@ -86,9 +107,12 @@ export class GameStateService {
     seenShopItemKeys: [],
     seenHouseIds: [],
     essenceShopSeen: false,
+    lotterySeen: false,
   };
   private showDamageNumbers = false;
   private showCriticalHitNumbers = true;
+  private resourceTradeCounts: Record<string, number> = {};
+  private lotteryUnlockNotified = false;
 
   constructor(
     private resources: ResourcesService,
@@ -99,9 +123,12 @@ export class GameStateService {
     private powerState: PowerStateService,
     private streakState: StreakStateService,
     private monsterState: MonsterStateService,
+    private lotteryState: LotteryStateService,
     private vesselState: VesselService,
-    private missionState: MissionStateService
+    private missionState: MissionStateService,
+    private monsterRewardNotify: MonsterRewardNotificationService
   ) {
+    this.monsterState.setNowProvider(() => (this.catchingUp ? this.simulatedNow : Date.now()));
     this.startTickLoop();
     this.startAutoSave();
     this.loadFromLocalStorage();
@@ -110,41 +137,87 @@ export class GameStateService {
   private getShopMult = (workerIndex: number): number =>
     this.shopState.getShopMultiplierForWorker(workerIndex);
 
+  private getUnlockContext(): UnlockContext {
+    return {
+      clicks: this.resources.getClicks(),
+      totalManualClicks: this.resources.getTotalManualClicks(),
+      getWorkerLevel: (workerIndex) => this.workerState.getWorkerLevel(workerIndex),
+      getPlannedCombatWins: (combatId) => this.monsterState.getPlannedCombatWinCount(combatId),
+    };
+  }
+
   private startTickLoop(): void {
     if (this.tickIntervalId != null) return;
-    this.tickIntervalId = setInterval(() => {
-      const workers = this.workerState.getWorkers();
-      const workersAvailable = this.workerState.getWorkersAvailable();
-      const streakMult = this.streakState.getMultiplier(workers, workersAvailable);
-      const damageMult = this.powerState.getDamageMultiplier();
-      const solarBonuses = this.houseState.getSolarBonuses();
-      const baseAutoPerSecond =
-        this.workerState.calculateClicksPerSecond(this.getShopMult) * damageMult;
-      const baseClickValue =
-        this.workerState.getCurrentClickValue(this.getShopMult) * damageMult;
-      const solarAutoPerSecond =
-        baseAutoPerSecond * solarBonuses.autoDamageMultiplier;
-      const solarExchange =
-        this.houseState.getSolarDamageExchange(baseClickValue, solarAutoPerSecond);
-      const autoPerTick =
-        ((baseAutoPerSecond + solarExchange.autoDamageBonus)
-          * solarBonuses.autoDamageMultiplier
-          * streakMult) / TICKS_PER_SECOND;
-      if (this.monsterState.hasCurrentMonster()) {
-        if (this.monsterState.dealDamage(autoPerTick, workers, workersAvailable, 'afk')) {
-          this.saveToLocalStorage();
-        }
-      } else {
-        this.resources.addClicks(autoPerTick);
-      }
-      this.resources.tickManaRegen();
-      this.streakState.tick(TICKS_PER_SECOND, workers, workersAvailable);
-      this.monsterState.tick(workers, workersAvailable, solarBonuses.monsterSpawnRateMultiplier);
-      this.houseState.tick(1 / TICKS_PER_SECOND, () => {
-        this.resources.addResource('bait', 1);
+    this.lastTickAt = Date.now();
+    this.tickIntervalId = setInterval(() => this.catchUpTicks(), TICK_MS);
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') this.catchUpTicks();
       });
-      this.vesselState.tick(workers, workersAvailable);
-    }, 1000 / TICKS_PER_SECOND);
+    }
+  }
+
+  /**
+   * Le navigateur ralentit ou suspend les timers quand l’onglet est en arrière-plan.
+   * On rejoue les ticks manqués à partir du temps réel, combats inclus.
+   */
+  private catchUpTicks(): void {
+    const now = Date.now();
+    let ticks = Math.floor((now - this.lastTickAt) / TICK_MS);
+    if (ticks <= 0) return;
+    const capped = ticks > MAX_CATCH_UP_TICKS;
+    if (capped) ticks = MAX_CATCH_UP_TICKS;
+
+    const batchRewards = ticks >= TICKS_PER_SECOND;
+    if (batchRewards) this.monsterRewardNotify.beginBatch();
+    this.catchingUp = true;
+    let monsterDied = false;
+    try {
+      for (let i = 0; i < ticks; i++) {
+        this.simulatedNow = this.lastTickAt + (i + 1) * TICK_MS;
+        if (this.runGameTick()) monsterDied = true;
+      }
+    } finally {
+      this.catchingUp = false;
+      if (batchRewards) this.monsterRewardNotify.endBatch();
+    }
+
+    this.lastTickAt = capped ? now : this.lastTickAt + ticks * TICK_MS;
+    if (monsterDied) this.saveToLocalStorage();
+  }
+
+  private runGameTick(): boolean {
+    const workers = this.workerState.getWorkers();
+    const workersAvailable = this.workerState.getWorkersAvailable();
+    const streakMult = this.streakState.getMultiplier(workers, workersAvailable);
+    const damageMult = this.powerState.getDamageMultiplier();
+    const solarBonuses = this.houseState.getSolarBonuses();
+    const baseAutoPerSecond =
+      this.workerState.calculateClicksPerSecond(this.getShopMult) * damageMult;
+    const baseClickValue =
+      this.workerState.getCurrentClickValue(this.getShopMult) * damageMult;
+    const solarAutoPerSecond =
+      baseAutoPerSecond * solarBonuses.autoDamageMultiplier;
+    const solarExchange =
+      this.houseState.getSolarDamageExchange(baseClickValue, solarAutoPerSecond);
+    const autoPerTick =
+      ((baseAutoPerSecond + solarExchange.autoDamageBonus)
+        * solarBonuses.autoDamageMultiplier
+        * streakMult) / TICKS_PER_SECOND;
+    let monsterDied = false;
+    if (this.monsterState.hasCurrentMonster()) {
+      monsterDied = this.monsterState.dealDamage(autoPerTick, workers, workersAvailable, 'afk');
+    } else {
+      this.resources.addClicks(autoPerTick);
+    }
+    this.resources.tickManaRegen();
+    this.streakState.tick(TICKS_PER_SECOND, workers, workersAvailable);
+    this.monsterState.tick(workers, workersAvailable, solarBonuses.monsterSpawnRateMultiplier);
+    this.houseState.tick(1 / TICKS_PER_SECOND, () => {
+      this.resources.addResource('bait', 1);
+    });
+    this.vesselState.tick(workers, workersAvailable);
+    return monsterDied;
   }
 
   getState(): Game {
@@ -181,7 +254,7 @@ export class GameStateService {
     const astrologueLevel = this.workerState.getWorkerLevel(SUN_WORKER_INDEX) ?? 0;
     const vesselUnlocked = isVesselUnlocked(workers, workersAvailable);
     const missionsUnlocked = this.monsterState.isBiomeUnlocked('beach');
-    const missionSlots = this.missionState.getView(missionsUnlocked);
+    const missionSlots = this.missionState.getView(missionsUnlocked, this.getUnlockContext());
 
     const damageBuffActive = this.powerState.isDamageBuffActive();
     const damageBuffEnd = this.powerState.getDamageBuffEndTime();
@@ -292,6 +365,8 @@ export class GameStateService {
       plannedCombats: this.monsterState.getPlannedCombats(workers, workersAvailable),
       missionsUnlocked,
       missionSlots,
+      resourceTrades: this.getResourceTradesView(),
+      lottery: this.lotteryState.getView(this.getUnlockContext()),
       missionSlotsUnlocked: this.missionState.getUnlockedSlots(),
       nextMissionSlotCost: this.missionState.getNextSlotCost(),
       vesselUnlocked,
@@ -651,11 +726,73 @@ export class GameStateService {
     return this.missionState.getUnseen();
   }
 
-  tradeTicketsForBait(): boolean {
-    if (!this.resources.spendResources([{ resourceId: 'ticket', amount: 3 }])) return false;
-    this.resources.addResource('bait', 1);
+  getResourceTradesView(): ResourceTradeView[] {
+    const context = this.getUnlockContext();
+    return listResourceTrade.map((trade) => ({
+      id: trade.id,
+      name: trade.name,
+      inputResourceId: trade.inputResourceId,
+      inputAmount: trade.inputAmount,
+      outputResourceId: trade.outputResourceId,
+      outputAmount: trade.outputAmount,
+      priceCoefficient: trade.priceCoefficient,
+      tradedCount: this.resourceTradeCounts[trade.id] ?? 0,
+      unlocked: trade.unlockMethod?.isUnlocked(context) ?? true,
+    }));
+  }
+
+  getResourceTradeCost(tradeId: string, quantity: number): number {
+    const trade = listResourceTrade.find((entry) => entry.id === tradeId);
+    if (!trade) {
+      return Infinity;
+    }
+    return getResourceTradeCost(trade, quantity, this.resourceTradeCounts[trade.id] ?? 0);
+  }
+
+  getMaxResourceTradeQuantity(tradeId: string): number {
+    const trade = listResourceTrade.find((entry) => entry.id === tradeId);
+    if (!trade) {
+      return 0;
+    }
+    return getMaxResourceTradeQuantity(
+      trade,
+      this.resources.getResourceAmount(trade.inputResourceId),
+      this.resourceTradeCounts[trade.id] ?? 0
+    );
+  }
+
+  tradeResource(tradeId: string, quantity: number): boolean {
+    const trade = listResourceTrade.find((entry) => entry.id === tradeId);
+    if (
+      !trade
+      || typeof quantity !== 'number'
+      || !Number.isSafeInteger(quantity)
+      || quantity <= 0
+      || !(trade.unlockMethod?.isUnlocked(this.getUnlockContext()) ?? true)
+    ) {
+      return false;
+    }
+
+    const cost = this.getResourceTradeCost(tradeId, quantity);
+    if (!Number.isFinite(cost) || !this.resources.spendResources([
+      { resourceId: trade.inputResourceId, amount: cost },
+    ])) {
+      return false;
+    }
+
+    this.resources.addResource(trade.outputResourceId, trade.outputAmount * quantity);
+    this.resourceTradeCounts[trade.id] = (this.resourceTradeCounts[trade.id] ?? 0) + quantity;
     this.saveToLocalStorage();
     return true;
+  }
+
+  private setResourceTradeCounts(counts?: Record<string, number>): void {
+    this.resourceTradeCounts = {};
+    listResourceTrade.forEach((trade) => {
+      const count = counts && counts[trade.id];
+      this.resourceTradeCounts[trade.id] = typeof count === 'number'
+        && Number.isSafeInteger(count) && count >= 0 ? count : 0;
+    });
   }
 
   getNavigationNotificationState(): NavigationNotificationState {
@@ -663,6 +800,7 @@ export class GameStateService {
       seenShopItemKeys: [...this.navigationNotificationState.seenShopItemKeys],
       seenHouseIds: [...this.navigationNotificationState.seenHouseIds],
       essenceShopSeen: this.navigationNotificationState.essenceShopSeen,
+      lotterySeen: this.navigationNotificationState.lotterySeen === true,
     };
   }
 
@@ -671,6 +809,7 @@ export class GameStateService {
       seenShopItemKeys: [...state.seenShopItemKeys],
       seenHouseIds: [...state.seenHouseIds],
       essenceShopSeen: state.essenceShopSeen,
+      lotterySeen: state.lotterySeen === true,
     };
     this.saveToLocalStorage();
   }
@@ -686,6 +825,40 @@ export class GameStateService {
     this.monsterState.setSelectedBiome(biome);
     this.saveToLocalStorage();
     return true;
+  }
+
+  activateLottery(): ResourceReward[] | null {
+    const rewards = this.lotteryState.tryActivate(this.getUnlockContext());
+    if (!rewards) return null;
+    if (rewards.length > 0) {
+      this.monsterRewardNotify.notifyReward(0, 0, rewards, 'Loterie !');
+    }
+    this.saveToLocalStorage();
+    return rewards;
+  }
+
+  openLotteryChest(chestId: string): boolean {
+    const reward = this.lotteryState.openChest(this.getUnlockContext(), chestId);
+    if (!reward) return false;
+    this.monsterRewardNotify.notifyReward(0, 0, [reward], 'Coffre ouvert !');
+    this.saveToLocalStorage();
+    return true;
+  }
+
+  claimLotteryUnlockNotification(): boolean {
+    if (
+      this.lotteryUnlockNotified
+      || !LOTTERY_UNLOCK_METHOD.isUnlocked(this.getUnlockContext())
+    ) return false;
+    this.lotteryUnlockNotified = true;
+    this.saveToLocalStorage();
+    return true;
+  }
+
+  markLotterySeen(): void {
+    if (this.navigationNotificationState.lotterySeen) return;
+    this.navigationNotificationState.lotterySeen = true;
+    this.saveToLocalStorage();
   }
 
   /**
@@ -744,8 +917,11 @@ export class GameStateService {
         plannedCombatWins: this.monsterState.getPlannedCombatWins(),
         plannedCombatCooldownEnds: this.monsterState.getPlannedCombatCooldownEnds(),
         selectedBiome: this.monsterState.getSelectedBiome(),
+        lotteryLastActivation: this.lotteryState.getLastActivation(),
+        lotteryUnlockNotified: this.lotteryUnlockNotified,
         navigationNotificationState: this.getNavigationNotificationState(),
         missions: this.missionState.getSaveData(),
+        resourceTradeCounts: this.resourceTradeCounts,
         showDamageNumbers: this.showDamageNumbers,
         showCriticalHitNumbers: this.showCriticalHitNumbers,
       };
@@ -783,10 +959,13 @@ export class GameStateService {
       this.monsterState.setKillCounts(saveData.monsterKillCounts);
       this.monsterState.setPlannedCombatWins(saveData.plannedCombatWins);
       this.monsterState.setPlannedCombatCooldownEnds(saveData.plannedCombatCooldownEnds);
+      this.lotteryState.setLastActivation(saveData.lotteryLastActivation);
+      this.lotteryUnlockNotified = saveData.lotteryUnlockNotified === true;
       this.navigationNotificationState = this.normalizeNavigationNotificationState(
         saveData.navigationNotificationState
       );
-      this.missionState.setSaveData(saveData.missions);
+      this.missionState.setSaveData(saveData.missions, this.getUnlockContext());
+      this.setResourceTradeCounts(saveData.resourceTradeCounts);
       if (isMonsterBiomeId(saveData.selectedBiome) && this.monsterState.isBiomeUnlocked(saveData.selectedBiome)) {
         this.monsterState.setSelectedBiome(saveData.selectedBiome);
       } else {
@@ -821,8 +1000,11 @@ export class GameStateService {
       plannedCombatWins: this.monsterState.getPlannedCombatWins(),
       plannedCombatCooldownEnds: this.monsterState.getPlannedCombatCooldownEnds(),
       selectedBiome: this.monsterState.getSelectedBiome(),
+      lotteryLastActivation: this.lotteryState.getLastActivation(),
+      lotteryUnlockNotified: this.lotteryUnlockNotified,
       navigationNotificationState: this.getNavigationNotificationState(),
       missions: this.missionState.getSaveData(),
+      resourceTradeCounts: this.resourceTradeCounts,
       showDamageNumbers: this.showDamageNumbers,
       showCriticalHitNumbers: this.showCriticalHitNumbers,
     };
@@ -873,10 +1055,13 @@ export class GameStateService {
       this.monsterState.setKillCounts(saveData.monsterKillCounts);
       this.monsterState.setPlannedCombatWins(saveData.plannedCombatWins);
       this.monsterState.setPlannedCombatCooldownEnds(saveData.plannedCombatCooldownEnds);
+      this.lotteryState.setLastActivation(saveData.lotteryLastActivation);
+      this.lotteryUnlockNotified = saveData.lotteryUnlockNotified === true;
       this.navigationNotificationState = this.normalizeNavigationNotificationState(
         saveData.navigationNotificationState
       );
-      this.missionState.setSaveData(saveData.missions);
+      this.missionState.setSaveData(saveData.missions, this.getUnlockContext());
+      this.setResourceTradeCounts(saveData.resourceTradeCounts);
       if (isMonsterBiomeId(saveData.selectedBiome) && this.monsterState.isBiomeUnlocked(saveData.selectedBiome)) {
         this.monsterState.setSelectedBiome(saveData.selectedBiome);
       } else {
@@ -898,6 +1083,7 @@ export class GameStateService {
       seenShopItemKeys: state && Array.isArray(state.seenShopItemKeys) ? [...state.seenShopItemKeys] : [],
       seenHouseIds: state && Array.isArray(state.seenHouseIds) ? [...state.seenHouseIds] : [],
       essenceShopSeen: state?.essenceShopSeen === true,
+      lotterySeen: state?.lotterySeen === true,
     };
   }
 }

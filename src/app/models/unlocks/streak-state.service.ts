@@ -82,6 +82,7 @@ export class StreakStateService {
       this.getUpgradeBonuses()
     );
     this.barCurrent = result.barCurrent;
+    this.missionState.recordClickActivation();
     if (this.phase !== 'active' && result.phase === 'active') {
       this.missionState.recordStreakActivation();
     }

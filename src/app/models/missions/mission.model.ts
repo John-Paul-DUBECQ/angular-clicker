@@ -4,6 +4,7 @@ export type MissionObjectiveType =
   | 'use-bait'
   | 'hold-clicks'
   | 'collect-vessels'
+  | 'clicks'
   | 'activate-streak';
 
 export interface MissionObjective {

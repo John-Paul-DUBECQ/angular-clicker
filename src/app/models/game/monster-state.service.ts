@@ -10,15 +10,21 @@ import { MonsterRewardNotificationService } from './monster-reward-notification.
 import { EssenceShopStateService } from './essence-shop-state.service';
 import { ResourceReward } from '../resource';
 import { listPlannedCombat } from '../monsters/list-planned-combat';
-import { PlannedCombat, PlannedCombatEnemy, PlannedCombatView } from '../monsters/planned-combat.model';
+import {
+  PlannedCombat,
+  PlannedCombatEnemy,
+  PlannedCombatHealthBars,
+  PlannedCombatView,
+} from '../monsters/planned-combat.model';
 import { isMonsterBiomeId, MONSTER_BIOMES, MonsterBiomeId } from '../monsters/monster-biome.model';
 import { EXPLORER_WORKER_INDEX, isExplorerUnlocked } from '../unlocks/explorer-unlock';
 import { UnlockUpgradeService } from './unlock-upgrade.service';
 import { MissionStateService } from './mission-state.service';
+import { LotteryStateService } from './lottery-state.service';
 
-/** Référence PV : baseProduction * ce multiplicateur (aléatoire autour). */
+/** Référence de difficulté pour calculer les récompenses selon les PV vaincus. */
 const MONSTER_HP_BASE_SECONDS = 12;
-/** Borne min/max du multiplicateur de PV (ex. 1.5 à 3.2 = combats très durs possibles). */
+/** Borne min/max du multiplicateur de PV des monstres normaux. */
 const MONSTER_HP_MULT_MIN = 1.5;
 const MONSTER_HP_MULT_MAX = 3.2;
 /** Temps imparti : aléatoire entre ces deux valeurs (secondes). */
@@ -48,8 +54,13 @@ export interface CurrentMonsterView {
   imageUrl?: string;
   currentHp: number;
   maxHp: number;
+  healthBars?: {
+    current: PlannedCombatHealthBars;
+    max: PlannedCombatHealthBars;
+  };
   timeLimitSeconds: number;
   remainingSeconds: number;
+  damageMode?: PlannedCombat['damageMode'];
   plannedCombatEnemyNumber?: number;
   plannedCombatEnemyCount?: number;
   /** True si spawn "DANGER BOSS" (1/10, combat plus dur). */
@@ -62,6 +73,8 @@ export class MonsterStateService {
   private currentMonsterId: string | null = null;
   private currentHp = 0;
   private maxHp = 0;
+  private currentHealthBars: PlannedCombatHealthBars = { click: 0, afk: 0, pet: 0 };
+  private maxHealthBars: PlannedCombatHealthBars = { click: 0, afk: 0, pet: 0 };
   private spawnTime = 0;
   /** Temps imparti pour ce combat (ms) — aléatoire à chaque spawn. */
   private timeLimitMs = 30000;
@@ -79,6 +92,16 @@ export class MonsterStateService {
   private currentPlannedCombatId: string | null = null;
   private currentPlannedCombatEnemyIndex = 0;
   private selectedBiome: MonsterBiomeId = 'forest';
+  /** Horloge injectable pour simuler le temps réel quand l’onglet est inactif. */
+  private nowProvider: (() => number) | null = null;
+
+  setNowProvider(provider: (() => number) | null): void {
+    this.nowProvider = provider;
+  }
+
+  private now(): number {
+    return this.nowProvider ? this.nowProvider() : Date.now();
+  }
 
   constructor(
     private resources: ResourcesService,
@@ -86,6 +109,7 @@ export class MonsterStateService {
     private rewardNotify: MonsterRewardNotificationService,
     private essenceShopState: EssenceShopStateService,
     private missionState: MissionStateService,
+    private lotteryState: LotteryStateService,
     @Optional() private unlockUpgrades?: UnlockUpgradeService
   ) {}
 
@@ -103,14 +127,14 @@ export class MonsterStateService {
     if (!monster) return;
 
     const lootMult = Math.max(0.1, monster.lootMultiplier ?? 1);
+    this.clearHealthBars();
     this.isBoss = Math.random() < 1 / BOSS_CHANCE;
     const baseProduction = this.workerState.getBaseProductionPerSecond();
-
     const shopStats = this.essenceShopState.getStats();
-    const hpMult = (this.isBoss
+    const hpMultiplier = (this.isBoss
       ? randomBetween(BOSS_HP_MULT_MIN, BOSS_HP_MULT_MAX)
       : randomBetween(MONSTER_HP_MULT_MIN, MONSTER_HP_MULT_MAX)) * shopStats.hp;
-    const hpBase = baseProduction * MONSTER_HP_BASE_SECONDS * hpMult * lootMult;
+    const hpBase = baseProduction * MONSTER_HP_BASE_SECONDS * hpMultiplier * lootMult;
     this.maxHp = Math.max(1, Math.floor(hpBase));
     this.currentHp = this.maxHp;
 
@@ -120,20 +144,20 @@ export class MonsterStateService {
     this.timeLimitSeconds = Math.max(1, Math.floor(baseTimeLimit * shopStats.time));
     this.timeLimitMs = this.timeLimitSeconds * 1000;
     this.currentMonsterId = monster.id;
-    this.spawnTime = Date.now();
+    this.spawnTime = this.now();
   }
 
   getPlannedCombats(workers: WorkerAutoData[], workersAvailable: WorkerAutoData[]): PlannedCombatView[] {
     return listPlannedCombat.map((combat) => ({
       ...combat,
-      totalHp: combat.enemies.reduce((total, enemy) => total + enemy.maxHp, 0),
+      totalHp: combat.enemies.reduce((total, enemy) => total + this.getTotalHealth(enemy.healthBars), 0),
       unlocked: isExplorerUnlocked(workers, workersAvailable)
         && this.isBiomeUnlocked(combat.biome)
         && this.isPlannedCombatUnlocked(combat, workers, workersAvailable),
       wins: this.plannedCombatWins[combat.id] ?? 0,
       cooldownRemainingSeconds: Math.max(
         0,
-        Math.ceil(((this.plannedCombatCooldownEnds[combat.id] ?? 0) - Date.now()) / 1000)
+        Math.ceil(((this.plannedCombatCooldownEnds[combat.id] ?? 0) - this.now()) / 1000)
       ),
     }));
   }
@@ -149,17 +173,16 @@ export class MonsterStateService {
       || !this.isBiomeUnlocked(combat.biome)
       || !this.isPlannedCombatUnlocked(combat, workers, workersAvailable)
     ) return false;
-    if ((this.plannedCombatCooldownEnds[combat.id] ?? 0) > Date.now()) return false;
+    if ((this.plannedCombatCooldownEnds[combat.id] ?? 0) > this.now()) return false;
 
     this.currentPlannedCombatId = combat.id;
     this.currentPlannedCombatEnemyIndex = 0;
     this.currentMonsterId = combat.id;
-    this.maxHp = combat.enemies[0].maxHp;
-    this.currentHp = this.maxHp;
+    this.setCurrentEnemyHealth(combat, 0);
     this.timeLimitSeconds = combat.timeLimitSeconds;
     this.timeLimitMs = combat.timeLimitSeconds * 1000;
     this.isBoss = true;
-    this.spawnTime = Date.now();
+    this.spawnTime = this.now();
     return true;
   }
 
@@ -169,26 +192,26 @@ export class MonsterStateService {
     workersAvailable: WorkerAutoData[]
   ): boolean {
     const combat = listPlannedCombat.find((entry) => entry.id === id);
-    const baitEncounter = combat?.baitEncounter;
+    const trapEncounter = combat?.trapEncounter;
     if (
       !combat
-      || !baitEncounter
+      || !trapEncounter
       || this.currentMonsterId != null
       || combat.biome !== this.selectedBiome
       || !this.isBiomeUnlocked(combat.biome)
       || !isExplorerUnlocked(workers, workersAvailable)
       || !this.isPlannedCombatUnlocked(combat, workers, workersAvailable)
-      || (this.plannedCombatWins[id] ?? 0) < baitEncounter.unlockWins
-      || (this.plannedCombatCooldownEnds[id] ?? 0) > Date.now()
-      || !this.resources.spendResources([{ resourceId: 'bait', amount: baitEncounter.baitCost }])
+      || (this.plannedCombatWins[id] ?? 0) < trapEncounter.unlockWins
+      || (this.plannedCombatCooldownEnds[id] ?? 0) > this.now()
+      || !this.resources.spendResources([{ resourceId: 'trap', amount: trapEncounter.trapCost }])
     ) {
       return false;
     }
 
-    baitEncounter.rewards.forEach((reward) => this.resources.addResource(reward.resourceId, reward.amount));
+    trapEncounter.rewards.forEach((reward) => this.resources.addResource(reward.resourceId, reward.amount));
     this.missionState.recordBaitUse();
-    this.plannedCombatCooldownEnds[id] = Date.now() + combat.cooldownSeconds * 1000;
-    this.rewardNotify.notifyReward(0, 0, baitEncounter.rewards);
+    this.plannedCombatCooldownEnds[id] = this.now() + combat.cooldownSeconds * 1000;
+    this.rewardNotify.notifyReward(0, 0, trapEncounter.rewards);
     return true;
   }
 
@@ -200,6 +223,7 @@ export class MonsterStateService {
     this.currentPlannedCombatEnemyIndex = 0;
     this.currentHp = 0;
     this.maxHp = 0;
+    this.clearHealthBars();
     this.isBoss = false;
 
     if (!this.spawnQueuedMonster(workers, workersAvailable)) this.encounterMeter = 0;
@@ -272,25 +296,40 @@ export class MonsterStateService {
     amount: number,
     workers: WorkerAutoData[],
     workersAvailable: WorkerAutoData[],
-    source: 'click' | 'afk' = 'click'
+    source: 'click' | 'afk' | 'pet' = 'click'
   ): boolean {
     if (this.currentMonsterId == null) return false;
     if (this.currentPlannedCombatId != null) {
       const combat = listPlannedCombat.find((entry) => entry.id === this.currentPlannedCombatId);
       const damageMode = combat?.damageMode ?? 'any';
-      if (damageMode !== 'any' && damageMode !== source) return false;
+      if (damageMode !== 'any' && damageMode !== source) {
+        return false;
+      }
+    } else {
+      const monster = listMonster.find((entry) => entry.id === this.currentMonsterId);
+      const damageMode = monster?.damageMode ?? 'any';
+      if (damageMode !== 'any' && damageMode !== source) {
+        return false;
+      }
     }
-    this.currentHp = Math.max(0, this.currentHp - amount);
+    if (this.currentPlannedCombatId != null) {
+      if (this.currentHealthBars[source] <= 0) return false;
+      this.currentHealthBars[source] = Math.max(0, this.currentHealthBars[source] - amount);
+      this.currentHp = this.getTotalHealth(this.currentHealthBars);
+    } else {
+      this.currentHp = Math.max(0, this.currentHp - amount);
+    }
     if (this.currentHp <= 0) {
       this.missionState.recordMonsterKill();
       if (this.advanceToNextPlannedCombatEnemy()) return true;
 
-      const remainingMs = this.spawnTime + this.timeLimitMs - Date.now();
+      const remainingMs = this.spawnTime + this.timeLimitMs - this.now();
       const remainingSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
-      this.onMonsterKill(remainingSeconds);
+      this.onMonsterKill(remainingSeconds, workers, workersAvailable);
       this.currentMonsterId = null;
       this.currentPlannedCombatId = null;
       this.currentPlannedCombatEnemyIndex = 0;
+      this.clearHealthBars();
       if (!this.spawnQueuedMonster(workers, workersAvailable)) this.encounterMeter = 0;
       return true;
     }
@@ -307,17 +346,43 @@ export class MonsterStateService {
     if (!nextEnemy) return false;
 
     this.currentPlannedCombatEnemyIndex = nextIndex;
-    this.maxHp = nextEnemy.maxHp;
-    this.currentHp = nextEnemy.maxHp;
+    this.setCurrentEnemyHealth(combat, nextIndex);
     return true;
+  }
+
+  private setCurrentEnemyHealth(combat: PlannedCombat, enemyIndex: number): void {
+    const enemy = combat.enemies[enemyIndex];
+    if (!enemy) {
+      this.clearHealthBars();
+      this.currentHp = 0;
+      this.maxHp = 0;
+      return;
+    }
+    this.maxHealthBars = { ...enemy.healthBars };
+    this.currentHealthBars = { ...enemy.healthBars };
+    this.maxHp = this.getTotalHealth(this.maxHealthBars);
+    this.currentHp = this.maxHp;
+  }
+
+  private getTotalHealth(healthBars: PlannedCombatHealthBars): number {
+    return healthBars.click + healthBars.afk + healthBars.pet;
+  }
+
+  private clearHealthBars(): void {
+    this.currentHealthBars = { click: 0, afk: 0, pet: 0 };
+    this.maxHealthBars = { click: 0, afk: 0, pet: 0 };
   }
 
   /**
    * Récompense : or + essence + 50 % des gains équivalents ; tout scale avec lootMultiplier du monstre.
    */
-  private onMonsterKill(remainingSeconds: number): void {
+  private onMonsterKill(
+    remainingSeconds: number,
+    workers: WorkerAutoData[],
+    workersAvailable: WorkerAutoData[]
+  ): void {
     if (this.currentPlannedCombatId != null) {
-      this.onPlannedCombatKill(this.currentPlannedCombatId);
+      this.onPlannedCombatKill(this.currentPlannedCombatId, workers, workersAvailable);
       return;
     }
     const monster = listMonster.find((m) => m.id === this.currentMonsterId);
@@ -353,10 +418,20 @@ export class MonsterStateService {
         + (Math.random() < ((drop.amount * dropsMultiplier) % 1) ? lootMult : 0),
   }));
     resourceRewards.forEach((reward) => this.resources.addResource(reward.resourceId, reward.amount));
-    this.rewardNotify.notifyReward(totalGold, essenceReward, resourceRewards);
+    const chestRewards = this.lotteryState.tryDropFromMonster(this.getUnlockContext(workers, workersAvailable));
+    this.rewardNotify.notifyReward(
+      totalGold,
+      essenceReward,
+      resourceRewards.concat(chestRewards),
+      chestRewards.length > 0 ? 'Récompense et coffre !' : undefined
+    );
   }
 
-  private onPlannedCombatKill(combatId: string): void {
+  private onPlannedCombatKill(
+    combatId: string,
+    workers: WorkerAutoData[],
+    workersAvailable: WorkerAutoData[]
+  ): void {
     const combat = listPlannedCombat.find((entry) => entry.id === combatId);
     if (!combat) return;
     const reward = (this.plannedCombatWins[combatId] ?? 0) === 0
@@ -364,14 +439,31 @@ export class MonsterStateService {
       : combat.repeatReward;
     this.plannedCombatWins[combatId] = (this.plannedCombatWins[combatId] ?? 0) + 1;
     this.missionState.recordPlannedMission();
-    this.plannedCombatCooldownEnds[combatId] = Date.now() + combat.cooldownSeconds * 1000;
+    this.plannedCombatCooldownEnds[combatId] = this.now() + combat.cooldownSeconds * 1000;
     const clicks = Math.max(0, reward.clicks ?? 0);
     const essence = Math.max(0, reward.essence ?? 0);
     const resources = (reward.resources ?? []).map((entry) => ({ ...entry }));
+    const chestRewards = this.lotteryState.tryDropFromMonster(this.getUnlockContext(workers, workersAvailable));
     this.resources.addClicks(clicks);
     this.resources.addMonsterEssence(essence);
-    resources.forEach((reward) => this.resources.addResource(reward.resourceId, reward.amount));
-    this.rewardNotify.notifyReward(clicks, essence, resources);
+    resources.forEach((entry) => this.resources.addResource(entry.resourceId, entry.amount));
+    this.rewardNotify.notifyReward(
+      clicks,
+      essence,
+      resources.concat(chestRewards),
+      chestRewards.length > 0 ? 'Récompense et coffre !' : undefined
+    );
+  }
+
+  private getUnlockContext(
+    workers: WorkerAutoData[],
+    workersAvailable: WorkerAutoData[]
+  ): UnlockContext {
+    return {
+      clicks: 0,
+      getWorkerLevel: (workerIndex) => workersAvailable[workerIndex]?.level ?? workers[workerIndex]?.level ?? null,
+      getPlannedCombatWins: (combatId) => this.plannedCombatWins[combatId] ?? 0,
+    };
   }
 
   getKillCounts(): Record<string, number> {
@@ -409,11 +501,12 @@ export class MonsterStateService {
     additionalSpawnRateMultiplier = 1
   ): void {
     if (this.currentMonsterId != null) {
-      const remaining = this.spawnTime + this.timeLimitMs - Date.now();
+      const remaining = this.spawnTime + this.timeLimitMs - this.now();
       if (remaining <= 0) {
         this.currentMonsterId = null;
         this.currentPlannedCombatId = null;
         this.currentPlannedCombatEnemyIndex = 0;
+        this.clearHealthBars();
         if (!this.spawnQueuedMonster(workers, workersAvailable)) this.encounterMeter = 0;
       }
       return;
@@ -461,15 +554,22 @@ export class MonsterStateService {
       ? listMonster.find((m) => m.id === this.currentMonsterId)
       : plannedEnemy;
     if (!monster) return null;
-    const remaining = Math.max(0, this.spawnTime + this.timeLimitMs - Date.now());
+    const remaining = Math.max(0, this.spawnTime + this.timeLimitMs - this.now());
     return {
       monsterId: monster.id,
       name: monster.name,
       imageUrl: monster.imageUrl,
       currentHp: this.currentHp,
       maxHp: this.maxHp,
+      healthBars: plannedCombat ? {
+        current: { ...this.currentHealthBars },
+        max: { ...this.maxHealthBars },
+      } : undefined,
       timeLimitSeconds: this.timeLimitSeconds,
       remainingSeconds: Math.ceil(remaining / 1000),
+      damageMode: plannedCombat
+        ? plannedCombat.damageMode ?? 'any'
+        : listMonster.find((entry) => entry.id === monster.id)?.damageMode ?? 'any',
       isBoss: plannedCombat != null || this.isBoss,
       isPlannedCombat: plannedCombat != null,
       plannedCombatEnemyNumber: plannedCombat == null ? undefined : this.currentPlannedCombatEnemyIndex + 1,

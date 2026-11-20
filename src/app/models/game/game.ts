@@ -10,6 +10,8 @@ import { ResourceStock } from "../resource";
 import type { PlannedCombatView } from "../monsters/planned-combat.model";
 import type { MonsterBiomeId } from "../monsters/monster-biome.model";
 import type { MissionSlotView } from "../missions/mission.model";
+import type { ResourceTradeView } from "../resource-trade";
+import type { LotteryView } from "../monsters/lottery.model";
 
 /**
  * Vue agrégée du jeu pour l'UI. Les données réelles sont dans Resources, WorkerState, ShopState, PowerState.
@@ -80,6 +82,8 @@ export class Game {
     missionSlots?: MissionSlotView[];
     missionSlotsUnlocked?: number;
     nextMissionSlotCost?: { essence?: number; tickets?: number } | null;
+    resourceTrades?: ResourceTradeView[];
+    lottery?: LotteryView;
     /** Vaisseaux débloqués (Géomètre). */
     vesselUnlocked?: boolean;
     /** Vaisseaux en cours de traversée (gauche → droite). */

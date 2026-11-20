@@ -99,16 +99,24 @@ describe('GameStateService solar bonuses', () => {
     expect(gameState.getState().missionsUnlocked).toBeTrue();
   });
 
-  it('trades three tickets for one bait', () => {
-    resources.setResourceAmounts({ ticket: 2 });
-    expect(gameState.tradeTicketsForBait()).toBeFalse();
-    expect(resources.getResourceAmount('ticket')).toBe(2);
-    expect(resources.getResourceAmount('bait')).toBe(0);
+  it('unlocks each resource trade from its planned combat', () => {
+    resources.setResourceAmounts({ ticket: 6 });
+    expect(gameState.getState().resourceTrades?.every((trade) => !trade.unlocked)).toBeTrue();
+    expect(gameState.tradeResource('tickets-for-bait', 1)).toBeFalse();
 
-    resources.setResourceAmounts({ ticket: 3 });
-    expect(gameState.tradeTicketsForBait()).toBeTrue();
+    monsterState.setPlannedCombatWins({ 'planned-forest-10': 1 });
+    const afterForest = gameState.getState().resourceTrades ?? [];
+    expect(afterForest.find((trade) => trade.id === 'tickets-for-trap')?.unlocked).toBeTrue();
+    expect(afterForest.find((trade) => trade.id === 'tickets-for-bait')?.unlocked).toBeFalse();
+    expect(gameState.tradeResource('tickets-for-trap', 1)).toBeTrue();
+    expect(gameState.tradeResource('tickets-for-bait', 1)).toBeFalse();
+
+    monsterState.setPlannedCombatWins({ 'planned-forest-10': 1, 'planned-beach-05': 1 });
+    expect(gameState.getState().resourceTrades?.find((trade) => trade.id === 'tickets-for-bait')?.unlocked).toBeTrue();
+    expect(gameState.tradeResource('tickets-for-bait', 1)).toBeTrue();
     expect(resources.getResourceAmount('ticket')).toBe(0);
     expect(resources.getResourceAmount('bait')).toBe(1);
+    expect(gameState.getResourceTradeCost('tickets-for-bait', 1)).toBe(3);
   });
 
   it('changes passive damage and click transfer with the active solar phase', () => {
@@ -405,7 +413,7 @@ describe('GameStateService solar bonuses', () => {
     expect(gameState.cancelPlannedCombat()).toBeTrue();
   });
 
-  it('exchanges bait for a configured planned-combat reward after the required wins and starts cooldown', () => {
+  it('exchanges traps for a configured planned-combat reward after the required wins and starts cooldown', () => {
     const workersAvailable = workerState.getWorkersAvailable();
     const alchemist = workersAvailable[6];
     const explorer = workersAvailable[8];
@@ -416,17 +424,17 @@ describe('GameStateService solar bonuses', () => {
       'planned-forest-04': 1,
       'planned-forest-05': 9,
     });
-    resources.setResourceAmounts({ bait: 5 });
+    resources.setResourceAmounts({ trap: 5 });
 
     expect(gameState.usePlannedCombatBait('planned-forest-05')).toBeFalse();
-    expect(resources.getResourceAmount('bait')).toBe(5);
+    expect(resources.getResourceAmount('trap')).toBe(5);
 
     monsterState.setPlannedCombatWins({
       'planned-forest-04': 1,
       'planned-forest-05': 10,
     });
     expect(gameState.usePlannedCombatBait('planned-forest-05')).toBeTrue();
-    expect(resources.getResourceAmount('bait')).toBe(0);
+    expect(resources.getResourceAmount('trap')).toBe(0);
     expect(resources.getResourceAmount('mosh-paw')).toBe(1);
     expect(monsterState.getPlannedCombatWins()['planned-forest-05']).toBe(10);
     expect(monsterState.getPlannedCombatCooldownEnds()['planned-forest-05'])

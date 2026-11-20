@@ -2,29 +2,54 @@ import { Injectable } from '@angular/core';
 import { Mission, MissionObjectiveType, MissionSaveData, MissionSlot, MissionSlotView,
   MISSION_REROLL_COOLDOWN_SECONDS, MISSION_SLOT_COOLDOWN_SECONDS, MAX_MISSION_SLOTS } from '../missions/mission.model';
 import { ResourcesService } from './resources.service';
+import { UnlockContext, UnlockMethod } from '../unlocks/unlock-method';
+import { MONSTER_WORKER_INDEX } from '../unlocks/monster-unlock';
+import { POWER_WORKER_INDEX } from '../unlocks/worker-indexes';
+import { VESSEL_WORKER_INDEX } from '../unlocks/vessel';
+import { SMITH_WORKER_INDEX, STREAK_LEVEL_REQUIRED } from '../unlocks/streak';
+import { EXPLORER_WORKER_INDEX } from '../unlocks/explorer-unlock';
 
 interface MissionTemplate {
   type: MissionObjectiveType;
-  target: number;
+  target: number; 
   reward: number;
   description: (target: number) => string;
+  unlockMethod?: () => UnlockMethod;
 }
 
 const MISSION_TEMPLATES: MissionTemplate[] = [
-  { type: 'defeat-monsters', target: 5, reward: 1, description: (n) => `Vaincre ${n} monstres` },
-  { type: 'defeat-monsters', target: 10, reward: 2, description: (n) => `Vaincre ${n} monstres` },
-  { type: 'defeat-monsters', target: 20, reward: 3, description: (n) => `Vaincre ${n} monstres` },
-  { type: 'complete-missions', target: 1, reward: 1, description: (n) => `Terminer ${n} mission` },
-  { type: 'complete-missions', target: 2, reward: 2, description: (n) => `Terminer ${n} missions` },
-  { type: 'complete-missions', target: 3, reward: 3, description: (n) => `Terminer ${n} missions` },
-  { type: 'use-bait', target: 1, reward: 2, description: (n) => `Utiliser ${n} appât sur un boss` },
-  { type: 'use-bait', target: 2, reward: 3, description: (n) => `Utiliser ${n} appâts sur des boss` },
-  { type: 'hold-clicks', target: 100, reward: 1, description: (n) => `Avoir ${n} clics en réserve` },
-  { type: 'hold-clicks', target: 100, reward: 2, description: (n) => `Avoir ${n} clics en réserve` },
-  { type: 'collect-vessels', target: 1, reward: 1, description: (n) => `Récupérer ${n} vaisseau` },
-  { type: 'collect-vessels', target: 3, reward: 2, description: (n) => `Récupérer ${n} vaisseaux` },
-  { type: 'activate-streak', target: 1, reward: 1, description: (n) => `Activer la barre de streak ${n} fois` },
-  { type: 'activate-streak', target: 3, reward: 2, description: (n) => `Activer la barre de streak ${n} fois` },
+  { type: 'defeat-monsters', target: 10, reward: 1, description: (n) => `Vaincre ${n} monstres`,
+    unlockMethod: () => UnlockMethod.workerLevel(MONSTER_WORKER_INDEX, 1) },
+  { type: 'defeat-monsters', target: 20, reward: 2, description: (n) => `Vaincre ${n} monstres`,
+    unlockMethod: () => UnlockMethod.workerLevel(MONSTER_WORKER_INDEX, 1) },
+  { type: 'defeat-monsters', target: 30, reward: 3, description: (n) => `Vaincre ${n} monstres`,
+    unlockMethod: () => UnlockMethod.workerLevel(MONSTER_WORKER_INDEX, 1) },
+  { type: 'use-bait', target: 5, reward: 2, description: (n) => `Utiliser ${n} appât sur un boss`,
+    unlockMethod: () => UnlockMethod.all(
+      UnlockMethod.workerLevel(POWER_WORKER_INDEX, 1),
+      UnlockMethod.workerLevel(MONSTER_WORKER_INDEX, 1)
+    ) },
+  { type: 'use-bait', target: 10, reward: 3, description: (n) => `Utiliser ${n} appâts sur des boss`,
+    unlockMethod: () => UnlockMethod.all(
+      UnlockMethod.workerLevel(POWER_WORKER_INDEX, 1),
+      UnlockMethod.workerLevel(MONSTER_WORKER_INDEX, 1)
+    ) },
+  { type: 'collect-vessels', target: 5, reward: 1, description: (n) => `Récupérer ${n} vaisseau`,
+    unlockMethod: () => UnlockMethod.workerLevel(VESSEL_WORKER_INDEX, 1) },
+  { type: 'collect-vessels', target: 15, reward: 2, description: (n) => `Récupérer ${n} vaisseaux`,
+    unlockMethod: () => UnlockMethod.workerLevel(VESSEL_WORKER_INDEX, 1) },
+  { type: 'activate-streak', target: 1, reward: 1, description: (n) => `Activer la barre de streak ${n} fois`,
+    unlockMethod: () => UnlockMethod.workerLevel(SMITH_WORKER_INDEX, STREAK_LEVEL_REQUIRED) },
+  { type: 'activate-streak', target: 3, reward: 3, description: (n) => `Activer la barre de streak ${n} fois`,
+    unlockMethod: () => UnlockMethod.workerLevel(SMITH_WORKER_INDEX, STREAK_LEVEL_REQUIRED) },
+  { type: 'clicks', target: 250, reward: 1, description: (n) => `Cliquer ${n} fois` },
+  { type: 'clicks', target: 1250, reward: 3, description: (n) => `Cliquer ${n} fois` },
+  { type: 'complete-missions', target: 2, reward: 2, description: (n) => `Terminer ${n} missions`,
+    unlockMethod: () => UnlockMethod.workerLevel(EXPLORER_WORKER_INDEX, 1) },
+  { type: 'complete-missions', target: 3, reward: 3, description: (n) => `Terminer ${n} missions`,
+    unlockMethod: () => UnlockMethod.workerLevel(EXPLORER_WORKER_INDEX, 1) },
+  // { type: 'hold-clicks', target: 100, reward: 1, description: (n) => `Avoir ${n} clics en réserve` },
+  // { type: 'hold-clicks', target: 100, reward: 2, description: (n) => `Avoir ${n} clics en réserve` },
 ];
 
 @Injectable({ providedIn: 'root' })
@@ -34,11 +59,20 @@ export class MissionStateService {
   private unlockedSlots = 1;
   private unseen = false;
   private nextMissionId = 0;
+  private unlockContext: UnlockContext = {
+    clicks: 0,
+    getWorkerLevel: () => null,
+  };
 
   constructor(private resources: ResourcesService) {}
 
-  getView(beachUnlocked: boolean): MissionSlotView[] {
-    if (!beachUnlocked) return [];
+  getView(beachUnlocked: boolean, unlockContext?: UnlockContext): MissionSlotView[] {
+    if (!beachUnlocked) {
+      return [];
+    }
+    if (unlockContext) {
+      this.unlockContext = unlockContext;
+    }
     if (this.slots.length === 0) {
       this.slots.push(this.createSlot(0));
       this.unseen = true;
@@ -127,6 +161,10 @@ export class MissionStateService {
   recordStreakActivation(): void {
     this.record('activate-streak');
   }
+  
+  recordClickActivation(): void {
+    this.record('clicks');
+  }
 
   getSaveData(): MissionSaveData {
     return {
@@ -142,7 +180,10 @@ export class MissionStateService {
     };
   }
 
-  setSaveData(data?: MissionSaveData): void {
+  setSaveData(data?: MissionSaveData, unlockContext?: UnlockContext): void {
+    if (unlockContext) {
+      this.unlockContext = unlockContext;
+    }
     if (!data) {
       this.slots = [];
       this.unlockedSlots = 1;
@@ -157,7 +198,7 @@ export class MissionStateService {
         .filter((slot) => slot && Number.isInteger(slot.id) && slot.id >= 0 && slot.id < this.unlockedSlots)
         .map((slot) => ({
           id: slot.id,
-          mission: slot.mission,
+          mission: this.normalizeMission(slot.mission),
           cooldownEndsAt: Number.isFinite(slot.cooldownEndsAt) ? slot.cooldownEndsAt : 0,
           cooldownReason: slot.cooldownReason === 'completed' || slot.cooldownReason === 'rerolled'
             ? slot.cooldownReason
@@ -173,6 +214,21 @@ export class MissionStateService {
     this.refreshSlots();
   }
 
+  private normalizeMission(mission: Mission | null): Mission | null {
+    if (!mission) {
+      return null;
+    }
+    const normalized = {
+      ...mission,
+      objective: { ...mission.objective },
+    };
+    if (normalized.objective.type === 'complete-missions' && normalized.objective.target < 2) {
+      normalized.objective.target = 2;
+      normalized.objective.description = 'Terminer 2 missions';
+    }
+    return normalized;
+  }
+
   private record(type: MissionObjectiveType): void {
     this.slots.forEach((slot) => {
       if (slot.mission && slot.mission.objective.type === type) {
@@ -184,6 +240,13 @@ export class MissionStateService {
 
   private refreshSlots(): void {
     this.slots.forEach((slot) => {
+      if (slot.mission && !this.isMissionTypeUnlocked(slot.mission.objective.type)) {
+        slot.mission = this.createMission();
+        slot.cooldownEndsAt = 0;
+        slot.cooldownReason = null;
+        slot.lastReward = 0;
+        this.unseen = true;
+      }
       if (!slot.mission && slot.cooldownEndsAt <= Date.now()) {
         slot.mission = this.createMission();
         slot.cooldownReason = null;
@@ -220,20 +283,30 @@ export class MissionStateService {
   }
 
   private createMission(): Mission {
-    const template = MISSION_TEMPLATES[Math.floor(Math.random() * MISSION_TEMPLATES.length)];
-    const target = template.type === 'hold-clicks'
-      ? Math.max(template.target, Math.ceil(this.resources.getClicks() * 1.1))
-      : template.target;
+    const availableTemplates = MISSION_TEMPLATES.filter((candidate) =>
+      !candidate.unlockMethod || candidate.unlockMethod().isUnlocked(this.unlockContext)
+    );
+    const selectedTemplate = availableTemplates[Math.floor(Math.random() * availableTemplates.length)];
+    const target = selectedTemplate.type === 'hold-clicks'
+      ? Math.max(selectedTemplate.target, Math.ceil(this.resources.getClicks() * 1.1))
+      : selectedTemplate.target;
     return {
       id: `mission-${this.nextMissionId++}`,
       objective: {
-        type: template.type,
+        type: selectedTemplate.type,
         target,
-        progress: template.type === 'hold-clicks' ? this.resources.getClicks() : 0,
-        description: template.description(target),
+        progress: selectedTemplate.type === 'hold-clicks' ? this.resources.getClicks() : 0,
+        description: selectedTemplate.description(target),
       },
-      ticketReward: template.reward,
+      ticketReward: selectedTemplate.reward,
     };
+  }
+
+  private isMissionTypeUnlocked(type: MissionObjectiveType): boolean {
+    return MISSION_TEMPLATES.some((template) =>
+      template.type === type
+      && (!template.unlockMethod || template.unlockMethod().isUnlocked(this.unlockContext))
+    );
   }
 
   private areViewsEqual(left: MissionSlotView, right: MissionSlotView): boolean {

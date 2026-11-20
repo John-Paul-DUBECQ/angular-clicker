@@ -18,6 +18,12 @@ import { listMonster } from './models/monsters/list-monster';
 import { Monster } from './models/monsters/monster.model';
 import { MONSTER_BIOMES, MonsterBiomeId } from './models/monsters/monster-biome.model';
 import { MissionSlotView } from './models/missions/mission.model';
+import { LIST_CHEST, LOTTERY_LOOT, getLotteryDropChance } from './models/monsters/lottery.model';
+import {
+  getResourceTradeCost,
+  ResourceTradeQuantity,
+  ResourceTradeView,
+} from './models/resource-trade';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -31,7 +37,11 @@ export class AppComponent implements OnInit, OnDestroy {
   mobileMenuVisible = false;
   workerView: 'workers' | 'essenceShop' | 'quests' = 'workers';
   desktopView: 'characters' | 'houses' | 'shop' | 'essenceShop' | 'quests' | 'kitchen' | 'garden' | 'missions' | 'lottery' = 'characters';
+  readonly resourceTradeQuantities: ResourceTradeQuantity[] = [1, 10, 100, 1000, 'max'];
+  tradeQuantity: ResourceTradeQuantity = 1;
   readonly monsterBiomes = MONSTER_BIOMES;
+  readonly lotteryChests = LIST_CHEST;
+  readonly lotteryLoot = LOTTERY_LOOT;
   private refreshInterval: ReturnType<typeof setInterval> | null = null;
   private vesselAnimationFrame: number | null = null;
   @ViewChild('vesselLane') private vesselLane?: ElementRef<HTMLDivElement>;
@@ -71,9 +81,14 @@ export class AppComponent implements OnInit, OnDestroy {
   private stablePlannedCombats: NonNullable<Game['plannedCombats']> = [];
   private stableMissionSlots: MissionSlotView[] = [];
   private stableResources: ResourceStock[] = [];
+  private stableShopItems: ShopItem[] = [];
+  private stableResourceTrades: ResourceTradeView[] = [];
+  private visibleResourceTradesCache: ResourceTradeView[] = [];
+  private sortedShopItemsCache: { item: ShopItem; index: number }[] = [];
   private readonly seenShopItemKeys = new Set<string>();
   private readonly seenHouseIds = new Set<string>();
   private essenceShopSeen = false;
+  private lotterySeen = false;
   resources: ResourceStock[] = [];
   resourcesVisible = false;
   selectedHouseTag: string | null = null;
@@ -84,14 +99,39 @@ export class AppComponent implements OnInit, OnDestroy {
   private vesselRewardSub: Subscription | null = null;
   private loreSub: Subscription | null = null;
   private loreQueue: LorePayload[] = [];
-
   /** Historique complet des messages de lore vus. */
   get loreHistory(): LorePayload[] {
     return this.game.loreHistory || [];
   }
 
-  tradeTicketsForBait(): void {
-    if (this.gameState.tradeTicketsForBait()) {
+  get visibleResourceTrades(): ResourceTradeView[] {
+    return this.visibleResourceTradesCache;
+  }
+
+  getResourceTradeQuantity(trade: ResourceTradeView): number {
+    return this.tradeQuantity === 'max'
+      ? this.gameState.getMaxResourceTradeQuantity(trade.id)
+      : this.tradeQuantity;
+  }
+
+  getResourceTradeCost(trade: ResourceTradeView): number {
+    return getResourceTradeCost(
+      trade,
+      this.getResourceTradeQuantity(trade),
+      trade.tradedCount
+    );
+  }
+
+  canTradeResource(trade: ResourceTradeView): boolean {
+    const quantity = this.getResourceTradeQuantity(trade);
+    const cost = this.getResourceTradeCost(trade);
+    return quantity > 0 && Number.isFinite(cost)
+      && this.getResourceAmount(trade.inputResourceId) >= cost;
+  }
+
+  tradeResource(trade: ResourceTradeView): void {
+    const quantity = this.getResourceTradeQuantity(trade);
+    if (this.canTradeResource(trade) && this.gameState.tradeResource(trade.id, quantity)) {
       this.refreshGameState();
     }
   }
@@ -116,6 +156,7 @@ export class AppComponent implements OnInit, OnDestroy {
     notificationState.seenShopItemKeys.forEach((key) => this.seenShopItemKeys.add(key));
     notificationState.seenHouseIds.forEach((id) => this.seenHouseIds.add(id));
     this.essenceShopSeen = notificationState.essenceShopSeen;
+    this.lotterySeen = notificationState.lotterySeen === true;
   }
 
   ngOnInit(): void {
@@ -177,7 +218,12 @@ export class AppComponent implements OnInit, OnDestroy {
     return `translate3d(${centerX - 40}px, -50%, 0)`;
   }
 
-  private showMonsterReward(reward: { gold: number; essence: number; resources: ResourceReward[] }): void {
+  private showMonsterReward(reward: {
+    gold: number;
+    essence: number;
+    resources: ResourceReward[];
+    title?: string;
+  }): void {
     const goldStr = formatNumberValue(reward.gold, 0);
     const essenceStr = formatNumberValue(reward.essence, 0);
     const goldLine = reward.gold > 0 ? `<p>+${goldStr} clics</p>` : '';
@@ -186,7 +232,7 @@ export class AppComponent implements OnInit, OnDestroy {
       .map((resource) => `<p>+${formatNumberValue(resource.amount, 0)} ${this.getResourceName(resource.resourceId)}</p>`)
       .join('');
     Swal.fire({
-      title: 'Récompense !',
+      title: reward.title || 'Récompense !',
       html: `${goldLine}${essenceLine}${resourceLines}`,
       timer: 2000,
       timerProgressBar: true,
@@ -236,6 +282,8 @@ export class AppComponent implements OnInit, OnDestroy {
     this.stablePlannedCombats = this.reuseViewItems(this.stablePlannedCombats, state.plannedCombats ?? []);
     this.stableMissionSlots = this.reuseViewItems(this.stableMissionSlots, state.missionSlots ?? []);
     this.stableResources = this.reuseViewItems(this.stableResources, state.resources ?? []);
+    this.stableShopItems = this.reuseViewItems(this.stableShopItems, state.shopItems ?? []);
+    this.stableResourceTrades = this.reuseViewItems(this.stableResourceTrades, state.resourceTrades ?? []);
     this.resources = this.stableResources;
     this.game = {
       ...state,
@@ -245,9 +293,23 @@ export class AppComponent implements OnInit, OnDestroy {
       houses: this.stableHouses,
       plannedCombats: this.stablePlannedCombats,
       missionSlots: this.stableMissionSlots,
+      shopItems: this.stableShopItems,
+      resourceTrades: this.stableResourceTrades,
     };
+    this.syncShopViewCaches();
     this.workersAvailable = this.stableWorkersAvailable;
     this.powersAvailable = state.powersAvailable ?? [];
+    if (this.game.lottery?.unlocked && this.gameState.claimLotteryUnlockNotification()) {
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: 'Loterie débloquée !',
+        showConfirmButton: false,
+        timer: 3500,
+        timerProgressBar: true,
+      });
+    }
     this.markCurrentSectionItemsAsSeen();
   }
 
@@ -492,6 +554,36 @@ export class AppComponent implements OnInit, OnDestroy {
     return entry.index;
   }
 
+  trackByResourceTrade(_index: number, trade: ResourceTradeView): string {
+    return trade.id;
+  }
+
+  /** Garde les mêmes tableaux tant que les objets affichés n'ont pas changé. */
+  private syncShopViewCaches(): void {
+    const trades = this.stableResourceTrades.filter((trade) => trade.unlocked);
+    const previousTrades = this.visibleResourceTradesCache;
+    if (
+      previousTrades.length !== trades.length
+      || trades.some((trade, index) => trade !== previousTrades[index])
+    ) {
+      this.visibleResourceTradesCache = trades;
+    }
+
+    const shopEntries = this.stableShopItems
+      .map((item, index) => ({ item, index }))
+      .filter((entry) => entry.item.doesAppearInGame && !entry.item.bought)
+      .sort((a, b) => a.item.price - b.item.price);
+    const previousEntries = this.sortedShopItemsCache;
+    if (
+      previousEntries.length !== shopEntries.length
+      || shopEntries.some((entry, index) =>
+        entry.item !== previousEntries[index].item || entry.index !== previousEntries[index].index
+      )
+    ) {
+      this.sortedShopItemsCache = shopEntries;
+    }
+  }
+
   trackByEssenceShopEntry(_i: number, entry: { item: EssenceShopItem; index: number }): number {
     return entry.index;
   }
@@ -530,10 +622,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
   /** Shop affiché par ordre de prix (croissant), avec index d’origine pour l’achat. */
   get sortedShopItemsWithIndex(): { item: ShopItem; index: number }[] {
-    return (this.game.shopItems ?? [])
-      .map((item, index) => ({ item, index }))
-      .filter((entry) => entry.item.doesAppearInGame && !entry.item.bought)
-      .sort((a, b) => a.item.price - b.item.price);
+    return this.sortedShopItemsCache;
   }
 
   get hasNewShopItems(): boolean {
@@ -555,6 +644,10 @@ export class AppComponent implements OnInit, OnDestroy {
 
   get hasNewMissions(): boolean {
     return !!this.game.missionsUnlocked && this.gameState.hasUnseenMissions();
+  }
+
+  get hasNewLottery(): boolean {
+    return !!this.game.lottery?.unlocked && !this.lotterySeen;
   }
 
   unlockNextMissionSlot(): void {
@@ -611,6 +704,7 @@ export class AppComponent implements OnInit, OnDestroy {
       seenShopItemKeys: Array.from(this.seenShopItemKeys),
       seenHouseIds: Array.from(this.seenHouseIds),
       essenceShopSeen: this.essenceShopSeen,
+      lotterySeen: this.lotterySeen,
     });
   }
 
@@ -652,6 +746,17 @@ export class AppComponent implements OnInit, OnDestroy {
     return Math.min(100, (100 * m.currentHp) / m.maxHp);
   }
 
+  getHealthBarTotal(current: { click: number; afk: number; pet: number }): number {
+    return current.click + current.afk + current.pet;
+  }
+
+  getHealthBarPercent(kind: 'click' | 'afk' | 'pet'): number {
+    const monster = this.game.currentMonster;
+    const bars = monster?.healthBars;
+    if (!monster || !bars || monster.maxHp <= 0) return 0;
+    return Math.max(0, Math.min(100, (100 * bars.current[kind]) / monster.maxHp));
+  }
+
   formatResourceValue(value: number): string {
     return formatNumberValue(value, 2);
   }
@@ -659,6 +764,10 @@ export class AppComponent implements OnInit, OnDestroy {
   formatPercent(multiplier: number): string {
     const percent = Math.round((multiplier - 1) * 100);
     return `${percent >= 0 ? '+' : ''}${percent}%`;
+  }
+
+  formatChance(probability: number): string {
+    return `${Math.round(probability * 100)}%`;
   }
 
   getEffectRemainingPercent(powerId: string): number | null {
@@ -744,7 +853,54 @@ export class AppComponent implements OnInit, OnDestroy {
     if (view === 'quests') {
       this.workerView = 'quests';
     }
+    if (view === 'lottery' && !this.lotterySeen) {
+      this.lotterySeen = true;
+      this.gameState.markLotterySeen();
+    }
     this.markCurrentSectionItemsAsSeen();
+  }
+
+  activateLottery(): void {
+    const rewards = this.gameState.activateLottery();
+    if (rewards == null) {
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'info',
+        title: 'La loterie est en recharge.',
+        showConfirmButton: false,
+        timer: 2500,
+      });
+      return;
+    }
+    if (rewards.length === 0) {
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'info',
+        title: 'Pas de chance cette fois.',
+        showConfirmButton: false,
+        timer: 2500,
+      });
+    }
+    this.refreshGameState();
+  }
+
+  getLotteryDropChance(drop: (typeof LOTTERY_LOOT)[number]): number {
+    return getLotteryDropChance(drop, this.game.lottery?.luckMultiplier ?? 1);
+  }
+
+  formatLotteryChance(probability: number): string {
+    const percent = probability * 100;
+    if (percent >= 1) return `${Math.round(percent * 10) / 10} %`;
+    if (percent >= 0.01) return `${Math.round(percent * 100) / 100} %`;
+    return `${percent.toFixed(3)} %`;
+  }
+
+  openLotteryChest(chestId: string): void {
+    if (this.gameState.openLotteryChest(chestId)) {
+      this.refreshGameState();
+    }
   }
 
   get selectedLore(): LorePayload | null {

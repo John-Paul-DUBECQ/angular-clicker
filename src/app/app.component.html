@@ -85,6 +85,9 @@
           <div class="planned-combat__meta" *ngIf="combat.damageMode === 'afk'">
             Dégâts AFK uniquement
           </div>
+          <div class="planned-combat__meta" *ngIf="combat.damageMode === 'pet'">
+            Dégâts de familier uniquement
+          </div>
           
           <div class="planned-combat__meta" *ngIf="combat.cooldownRemainingSeconds > 0">
             Relance possible dans {{ formatCooldown(combat.cooldownRemainingSeconds) }}
@@ -108,12 +111,12 @@
           <button type="button" [disabled]="!combat.unlocked || !!game.currentMonster || combat.cooldownRemainingSeconds > 0" (click)="startPlannedCombat(combat.id)">
             {{ game.currentMonster ? 'Combat en cours' : (combat.cooldownRemainingSeconds > 0 ? 'En recharge...' : 'Lancer le combat') }}
           </button>
-          <ng-container *ngIf="combat.baitEncounter && combat.wins >= combat.baitEncounter.unlockWins">
+          <ng-container *ngIf="combat.trapEncounter && combat.wins >= combat.trapEncounter.unlockWins">
             <button
               type="button"
-              [disabled]="!!game.currentMonster || combat.cooldownRemainingSeconds > 0 || getResourceAmount('bait') < combat.baitEncounter.baitCost"
+              [disabled]="!!game.currentMonster || combat.cooldownRemainingSeconds > 0 || getResourceAmount('trap') < combat.trapEncounter.trapCost"
               (click)="usePlannedCombatBait(combat.id)">
-              {{ combat.cooldownRemainingSeconds > 0 ? 'Boss en recharge...' : 'Utiliser ' + combat.baitEncounter.baitCost + ' appât(s) pour ' + combat.baitEncounter.rewards[0].amount + ' ' + getResourceName(combat.baitEncounter.rewards[0].resourceId) }}
+              {{ combat.cooldownRemainingSeconds > 0 ? 'Boss en recharge...' : 'Utiliser ' + combat.trapEncounter.trapCost + ' piège(s) pour ' + combat.trapEncounter.rewards[0].amount + ' ' + getResourceName(combat.trapEncounter.rewards[0].resourceId) }}
             </button>
           </ng-container>
         </article>
@@ -174,22 +177,37 @@
           (click)="unlockNextMissionSlot()">
           Débloquer
         </button>
-      </div>
+      </div>  
     </div>
   </ng-template>
   <ng-template #shopTrades>
     <section class="shop-trades" *ngIf="game.missionsUnlocked">
       <h2>Échanges</h2>
       <p>Échange tes tickets contre des ressources · Solde : {{ formatResourceValue(getResourceAmount('ticket')) }}</p>
-      <div class="shop-trades__item">
-        <div>
-          <strong>1 appât</strong>
-          <span>3 tickets</span>
-        </div>
-        <button type="button" [disabled]="getResourceAmount('ticket') < 3" (click)="tradeTicketsForBait()">
-          Échanger
+      <div class="shop-trades__quantities" aria-label="Quantité à échanger">
+        <button
+          type="button"
+          *ngFor="let quantity of resourceTradeQuantities"
+          [attr.aria-pressed]="tradeQuantity === quantity"
+          [class.shop-trades__quantity--active]="tradeQuantity === quantity"
+          (click)="tradeQuantity = quantity">
+          {{ quantity === 'max' ? 'Max' : '×' + quantity }}
         </button>
       </div>
+      <article class="shop-trades__item" *ngFor="let trade of visibleResourceTrades; trackBy: trackByResourceTrade">
+        <div>
+          <span>
+            Coût : {{ formatResourceValue(getResourceTradeCost(trade)) }} 
+            {{ getResourceName(trade.inputResourceId) }} ({{ formatResourceValue(getResourceAmount(trade.inputResourceId)) }})
+          </span>
+        </div>
+        <button type="button" [disabled]="!canTradeResource(trade)" (click)="tradeResource(trade)">
+          Échanger
+        </button>
+        <strong>{{ formatResourceValue(trade.outputAmount * getResourceTradeQuantity(trade)) }}
+          {{ getResourceName(trade.outputResourceId) }} ({{ formatResourceValue(getResourceAmount(trade.outputResourceId)) }})</strong>
+      </article>
+      <p *ngIf="visibleResourceTrades.length === 0">Aucun échange disponible pour le moment.</p>
     </section>
   </ng-template>
 
@@ -257,8 +275,9 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="m14.2 9.8 5-5"/></svg><span>Missions</span>
         <i class="desktop-section-rail__notification" *ngIf="hasNewMissions" aria-hidden="true"></i>
       </button>
-      <button type="button" [class.desktop-section-rail__item--active]="desktopView === 'lottery'" title="Loterie" (click)="setDesktopView('lottery')">
+      <button type="button" *ngIf="game.lottery?.unlocked" [class.desktop-section-rail__item--active]="desktopView === 'lottery'" title="Loterie" (click)="setDesktopView('lottery')">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v16H3z"/><circle cx="8" cy="9" r="1"/><circle cx="16" cy="9" r="1"/><circle cx="8" cy="15" r="1"/><circle cx="16" cy="15" r="1"/><circle cx="12" cy="12" r="1"/></svg><span>Loterie</span>
+        <i class="desktop-section-rail__notification" *ngIf="hasNewLottery" aria-hidden="true"></i>
       </button>
       <button type="button" class="desktop-section-rail__settings" title="Paramètres" aria-label="Paramètres" (click)="openSettings($event)">⚙</button>
     </nav>
@@ -267,6 +286,7 @@
         <div><span>Essence</span><strong>{{ formatResourceValue(game.monsterEssence != null ? game.monsterEssence : 0) }}</strong></div>
         <div><span>Appât</span><strong>{{ formatResourceValue(getResourceAmount('bait')) }}</strong></div>
         <div><span>Tickets</span><strong>{{ formatResourceValue(getResourceAmount('ticket')) }}</strong></div>
+        <div><span>Pièges</span><strong>{{ formatResourceValue(getResourceAmount('trap')) }}</strong></div>
       </div>
       <ng-container *ngIf="desktopView === 'shop'">
         <div class="shop-items-list" *ngIf="sortedShopItemsWithIndex.length > 0">
@@ -350,10 +370,37 @@
       <ng-container *ngIf="desktopView === 'missions' && game.missionsUnlocked">
         <ng-container *ngTemplateOutlet="missionsSection"></ng-container>
       </ng-container>
-      <section class="future-section-panel" *ngIf="desktopView === 'lottery'">
-        <h2>Loterie</h2>
-        <p>Cette section sera ajoutée prochainement.</p>
-      </section>
+      <ng-container *ngIf="desktopView === 'lottery' && game.lottery as lottery">
+        <section class="lottery-panel" *ngIf="lottery.unlocked">
+          <h2>Loterie</h2>
+          <p>Chaque monstre vaincu peut laisser apparaître un coffre. La chance augmente les chances d’apparition et les coffres rares.</p>
+          <p>Chance de coffre par monstre : <strong>{{ formatChance(lottery.monsterChestChance * lottery.luckMultiplier) }}</strong></p>
+          <p>Chance ×{{ lottery.luckMultiplier }} · Multiplicateur des drops ×{{ lottery.dropsMultiplier }}</p>
+          <ul>
+            <li *ngFor="let chest of lotteryChests">
+              {{ chest.name }} — poids {{ chest.weight }} · {{ formatResourceValue(getResourceAmount(chest.resourceId)) }} disponible(s)
+              <button
+                type="button"
+                [disabled]="getResourceAmount(chest.resourceId) < 1"
+                (click)="openLotteryChest(chest.id)">
+                Ouvrir
+              </button>
+            </li>
+          </ul>
+          <p *ngIf="lottery.cooldownRemainingSeconds > 0">
+            Prochaine loterie dans {{ formatCooldown(lottery.cooldownRemainingSeconds) }}
+          </p>
+          <p>Une tentative toutes les {{ lottery.cooldownMinutes }} minutes. Chaque récompense est tirée à part : la chance est faible, et le tirage peut ne rien donner.</p>
+          <ul>
+            <li *ngFor="let drop of lotteryLoot">
+              {{ getResourceName(drop.resourceId) }} ×{{ drop.amount }} — {{ formatLotteryChance(getLotteryDropChance(drop)) }}
+            </li>
+          </ul>
+          <button type="button" [disabled]="lottery.cooldownRemainingSeconds > 0" (click)="activateLottery()">
+            {{ lottery.cooldownRemainingSeconds > 0 ? 'Loterie en recharge…' : 'Activer la loterie' }}
+          </button>
+        </section>
+      </ng-container>
     </div>
     
     <div
@@ -438,14 +485,38 @@
             </button>
           </div>
           <div class="monster-title__details">
-            <span class="monster-title__hp">{{ formatMonsterHp(game.currentMonster.currentHp) }} HP</span>
+            <span class="monster-title__hp" *ngIf="!game.currentMonster.healthBars">
+              {{ formatMonsterHp(game.currentMonster.currentHp) }} HP
+            </span>
+            <ng-container *ngIf="game.currentMonster.healthBars as healthBars">
+              <span class="monster-title__hp">{{ formatMonsterHp(getHealthBarTotal(healthBars.current)) }} HP</span>
+              <span class="monster-title__hp monster-title__hp--click" *ngIf="healthBars.max.click > 0">
+                {{ formatMonsterHp(healthBars.current.click) }}
+              </span>
+              <span class="monster-title__hp-separator" *ngIf="healthBars.max.afk > 0 && healthBars.max.click > 0">+</span>
+              <span class="monster-title__hp monster-title__hp--afk" *ngIf="healthBars.max.afk > 0">
+                {{ formatMonsterHp(healthBars.current.afk) }}
+              </span>
+              <span class="monster-title__hp-separator" *ngIf="healthBars.max.pet > 0 && (healthBars.max.click > 0 || healthBars.max.afk > 0)">+</span>
+              <span class="monster-title__hp monster-title__hp--pet" *ngIf="healthBars.max.pet > 0">
+                {{ formatMonsterHp(healthBars.current.pet) }}
+              </span>
+            </ng-container>
+            <span *ngIf="game.currentMonster.damageMode === 'click'">Clics uniquement</span>
+            <span *ngIf="game.currentMonster.damageMode === 'afk'">AFK uniquement</span>
+            <span *ngIf="game.currentMonster.damageMode === 'pet'">Familier uniquement</span>
             <span *ngIf="game.currentMonster.plannedCombatEnemyCount">
               Ennemi {{ game.currentMonster.plannedCombatEnemyNumber }}/{{ game.currentMonster.plannedCombatEnemyCount }}
             </span>
             <span class="monster-title__timer">{{ game.currentMonster.remainingSeconds }} s</span>
           </div>
-          <div class="monster-title__hp-track">
+          <div class="monster-title__hp-track" *ngIf="!game.currentMonster.healthBars">
             <div class="monster-title__hp-fill" [style.width.%]="getMonsterHpPercent()"></div>
+          </div>
+          <div class="monster-title__hp-track monster-title__hp-track--split" *ngIf="game.currentMonster.healthBars">
+            <div class="monster-title__hp-fill monster-title__hp-fill--click" [style.width.%]="getHealthBarPercent('click')"></div>
+            <div class="monster-title__hp-fill monster-title__hp-fill--afk" [style.width.%]="getHealthBarPercent('afk')"></div>
+            <div class="monster-title__hp-fill monster-title__hp-fill--pet" [style.width.%]="getHealthBarPercent('pet')"></div>
           </div>
         </div>
         <div class="score-area">
@@ -478,11 +549,16 @@
               class="monster-area__img"
             />
             <span *ngIf="!game.currentMonster.imageUrl" class="monster-area__placeholder">{{ game.currentMonster.name.charAt(0) }}</span>
-            <div class="monster-area__hp-track">
+            <div class="monster-area__hp-track" *ngIf="!game.currentMonster.healthBars">
               <div
                 class="monster-area__hp-fill"
                 [style.width.%]="getMonsterHpPercent()">
               </div>
+            </div>
+            <div class="monster-area__hp-track monster-area__hp-track--split" *ngIf="game.currentMonster.healthBars">
+              <div class="monster-area__hp-fill monster-area__hp-fill--click" [style.width.%]="getHealthBarPercent('click')"></div>
+              <div class="monster-area__hp-fill monster-area__hp-fill--afk" [style.width.%]="getHealthBarPercent('afk')"></div>
+              <div class="monster-area__hp-fill monster-area__hp-fill--pet" [style.width.%]="getHealthBarPercent('pet')"></div>
             </div>
             <div class="monster-area__timer">{{ game.currentMonster.remainingSeconds }}s</div>
           </div>
@@ -550,14 +626,38 @@
             </button>
           </div>
           <div class="mobile-monster-title__details">
-            <strong>{{ formatMonsterHp(game.currentMonster.currentHp) }} HP</strong>
+            <strong *ngIf="!game.currentMonster.healthBars">
+              {{ formatMonsterHp(game.currentMonster.currentHp) }} HP
+            </strong>
+            <ng-container *ngIf="game.currentMonster.healthBars as healthBars">
+              <strong>{{ formatMonsterHp(getHealthBarTotal(healthBars.current)) }} HP</strong>
+              <strong class="monster-title__hp--click" *ngIf="healthBars.max.click > 0">
+                {{ formatMonsterHp(healthBars.current.click) }}
+              </strong>
+              <span class="monster-title__hp-separator" *ngIf="healthBars.max.afk > 0 && healthBars.max.click > 0">+</span>
+              <strong class="monster-title__hp--afk" *ngIf="healthBars.max.afk > 0">
+                {{ formatMonsterHp(healthBars.current.afk) }}
+              </strong>
+              <span class="monster-title__hp-separator" *ngIf="healthBars.max.pet > 0 && (healthBars.max.click > 0 || healthBars.max.afk > 0)">+</span>
+              <strong class="monster-title__hp--pet" *ngIf="healthBars.max.pet > 0">
+                {{ formatMonsterHp(healthBars.current.pet) }}
+              </strong>
+            </ng-container>
+            <span *ngIf="game.currentMonster.damageMode === 'click'">Clics uniquement</span>
+            <span *ngIf="game.currentMonster.damageMode === 'afk'">AFK uniquement</span>
+            <span *ngIf="game.currentMonster.damageMode === 'pet'">Familier uniquement</span>
             <span *ngIf="game.currentMonster.plannedCombatEnemyCount">
               {{ game.currentMonster.plannedCombatEnemyNumber }}/{{ game.currentMonster.plannedCombatEnemyCount }}
             </span>
             <span>{{ game.currentMonster.remainingSeconds }} s</span>
           </div>
-          <div class="mobile-monster-title__hp-track">
+          <div class="mobile-monster-title__hp-track" *ngIf="!game.currentMonster.healthBars">
             <div [style.width.%]="getMonsterHpPercent()"></div>
+          </div>
+          <div class="mobile-monster-title__hp-track mobile-monster-title__hp-track--split" *ngIf="game.currentMonster.healthBars">
+            <div class="monster-title__hp-fill--click" [style.width.%]="getHealthBarPercent('click')"></div>
+            <div class="monster-title__hp-fill--afk" [style.width.%]="getHealthBarPercent('afk')"></div>
+            <div class="monster-title__hp-fill--pet" [style.width.%]="getHealthBarPercent('pet')"></div>
           </div>
         </div>
         <div class="mobile-center-zone center-zone-wrapper">
@@ -565,7 +665,12 @@
           <div *ngIf="game.monsterUnlocked && game.currentMonster" id="monster-area" class="monster-area" [class.monster-area--boss]="game.currentMonster.isBoss" (click)="!game.solarAreaExpanded && click($event)">
             <img *ngIf="game.currentMonster.imageUrl" [src]="game.currentMonster.imageUrl" [alt]="game.currentMonster.name" class="monster-area__img" />
             <span *ngIf="!game.currentMonster.imageUrl" class="monster-area__placeholder">{{ game.currentMonster.name.charAt(0) }}</span>
-            <div class="monster-area__hp-track"><div class="monster-area__hp-fill" [style.width.%]="getMonsterHpPercent()"></div></div>
+            <div class="monster-area__hp-track" *ngIf="!game.currentMonster.healthBars"><div class="monster-area__hp-fill" [style.width.%]="getMonsterHpPercent()"></div></div>
+            <div class="monster-area__hp-track monster-area__hp-track--split" *ngIf="game.currentMonster.healthBars">
+              <div class="monster-area__hp-fill monster-area__hp-fill--click" [style.width.%]="getHealthBarPercent('click')"></div>
+              <div class="monster-area__hp-fill monster-area__hp-fill--afk" [style.width.%]="getHealthBarPercent('afk')"></div>
+              <div class="monster-area__hp-fill monster-area__hp-fill--pet" [style.width.%]="getHealthBarPercent('pet')"></div>
+            </div>
             <div class="monster-area__timer">{{ game.currentMonster.remainingSeconds }}s</div>
           </div>
         </div>

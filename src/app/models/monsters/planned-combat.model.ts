@@ -8,9 +8,9 @@ export interface PlannedCombatReward {
   resources?: ResourceReward[];
 }
 
-export interface PlannedCombatBaitEncounter {
+export interface PlannedCombatTrapEncounter {
   unlockWins: number;
-  baitCost: number;
+  trapCost: number;
   rewards: ResourceReward[];
 }
 
@@ -18,10 +18,18 @@ export interface PlannedCombatEnemy {
   id: string;
   name: string;
   imageUrl?: string;
+  /** Somme de healthBars. */
   maxHp: number;
+  healthBars: PlannedCombatHealthBars;
 }
 
-export type PlannedCombatDamageMode = 'any' | 'click' | 'afk';
+export type PlannedCombatDamageMode = 'any' | 'click' | 'afk' | 'pet';
+
+export interface PlannedCombatHealthBars {
+  click: number;
+  afk: number;
+  pet: number;
+}
 
 export interface PlannedCombat {
   id: string;
@@ -36,7 +44,7 @@ export interface PlannedCombat {
   unlockMethod?: UnlockMethod;
   firstReward: PlannedCombatReward;
   repeatReward: PlannedCombatReward;
-  baitEncounter?: PlannedCombatBaitEncounter;
+  trapEncounter?: PlannedCombatTrapEncounter;
 }
 
 export interface PlannedCombatView extends PlannedCombat {

@@ -22,9 +22,28 @@ export interface ResourceReward {
 
 export const RESOURCE_DEFINITIONS: GameResource[] = [
   {
+    id: 'chest-common',
+    name: 'Coffre commun',
+    description: 'Un coffre commun à ouvrir dans la loterie.',
+  },
+  {
+    id: 'chest-rare',
+    name: 'Coffre rare',
+    description: 'Un coffre rare à ouvrir dans la loterie.',
+  },
+  {
+    id: 'chest-epic',
+    name: 'Coffre épique',
+    description: 'Un coffre épique à ouvrir dans la loterie.',
+  },
+  {
     id: 'bait',
     name: 'Appât',
     description: 'Consommé par le sort Invocation pour attirer un monstre.',
+  },{
+    id: 'trap',
+    name: 'Piège',
+    description: 'Utilisé pour capturer des monstres.',
   },
   {
     id: 'ticket',

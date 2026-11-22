@@ -16,17 +16,19 @@ export interface ShopUnlockContext extends UnlockContext {
 export type ShopUnlockCondition = UnlockMethod;
 
 export interface ShopItem {
-
   name: string;
   description: string;
-  imageUrl?: string;
   price: number;
-  doesAppearInGame: boolean;
-  bought: boolean;
-  value: number;
-  workerIndex?: number;
-  /** Optionnel : identifiant pour les conditions requireBought(id). Sinon utiliser l'index dans la liste. */
+  /** Identifiant pour requireBought(id). Sinon la condition utilise l'index dans la liste. */
   id?: string;
+  imageUrl?: string;
+  /** Multiplicateur du worker ciblé. Sans `workerIndex`, ce champ n'a pas d'effet. */
+  value?: number;
+  workerIndex?: number;
+  /** État d'affichage, recalculé par le shop. Inutile à renseigner dans la liste. */
+  doesAppearInGame?: boolean;
+  /** État d'achat, restauré par la sauvegarde. Inutile à renseigner dans la liste. */
+  bought?: boolean;
   /**
    * Condition optionnelle : l'item n'apparaît que si cette fonction retourne true
    * (en plus de la règle de base clicks >= price/2, sauf si l'apparition immédiate

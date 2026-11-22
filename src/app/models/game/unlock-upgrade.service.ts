@@ -10,12 +10,21 @@ export class UnlockUpgradeService {
   }
 
   getBonus(unlockId: string, type: string): number {
+    return this.sumBonus((item) =>
+      item.unlockUpgrade?.unlockId === unlockId && item.unlockUpgrade?.type === type
+    );
+  }
+
+  /** Somme des bonus achetés d'un type, filtrés par identifiant. */
+  sumBonusByType(type: string, acceptUnlockId: (unlockId: string) => boolean): number {
+    return this.sumBonus((item) =>
+      item.unlockUpgrade?.type === type && acceptUnlockId(item.unlockUpgrade.unlockId)
+    );
+  }
+
+  private sumBonus(matches: (item: ShopItem) => boolean): number {
     return this.shopItems
-      .filter((item) =>
-        item.bought &&
-        item.unlockUpgrade?.unlockId === unlockId &&
-        item.unlockUpgrade?.type === type
-      )
+      .filter((item) => item.bought && item.unlockUpgrade != null && matches(item))
       .reduce((total, item) => total + (item.unlockUpgrade?.value ?? 0), 0);
   }
 

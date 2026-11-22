@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Optional } from '@angular/core';
 import { Mission, MissionObjectiveType, MissionSaveData, MissionSlot, MissionSlotView,
   MISSION_REROLL_COOLDOWN_SECONDS, MISSION_SLOT_COOLDOWN_SECONDS, MAX_MISSION_SLOTS } from '../missions/mission.model';
 import { ResourcesService } from './resources.service';
@@ -8,7 +8,9 @@ import { POWER_WORKER_INDEX } from '../unlocks/worker-indexes';
 import { VESSEL_WORKER_INDEX } from '../unlocks/vessel';
 import { SMITH_WORKER_INDEX, STREAK_LEVEL_REQUIRED } from '../unlocks/streak';
 import { EXPLORER_WORKER_INDEX } from '../unlocks/explorer-unlock';
-
+import { KitchenStateService } from '../kitchen/kitchen-state.service';
+import { scaleResourceAmount } from '../kitchen/dish.model';
+import { LOTTERY_WORKER_INDEX } from '../monsters/lottery.model';
 interface MissionTemplate {
   type: MissionObjectiveType;
   target: number; 
@@ -24,30 +26,28 @@ const MISSION_TEMPLATES: MissionTemplate[] = [
     unlockMethod: () => UnlockMethod.workerLevel(MONSTER_WORKER_INDEX, 1) },
   { type: 'defeat-monsters', target: 30, reward: 3, description: (n) => `Vaincre ${n} monstres`,
     unlockMethod: () => UnlockMethod.workerLevel(MONSTER_WORKER_INDEX, 1) },
-  { type: 'use-bait', target: 5, reward: 2, description: (n) => `Utiliser ${n} appât sur un boss`,
-    unlockMethod: () => UnlockMethod.all(
-      UnlockMethod.workerLevel(POWER_WORKER_INDEX, 1),
-      UnlockMethod.workerLevel(MONSTER_WORKER_INDEX, 1)
-    ) },
-  { type: 'use-bait', target: 10, reward: 3, description: (n) => `Utiliser ${n} appâts sur des boss`,
-    unlockMethod: () => UnlockMethod.all(
-      UnlockMethod.workerLevel(POWER_WORKER_INDEX, 1),
-      UnlockMethod.workerLevel(MONSTER_WORKER_INDEX, 1)
-    ) },
+  { type: 'use-trap', target: 2, reward: 2, description: (n) => `Capturer ${n} boss avec un piège`,
+    unlockMethod: () => UnlockMethod.workerLevel(POWER_WORKER_INDEX, 1) },
+  { type: 'use-trap', target: 5, reward: 3, description: (n) => `Capturer ${n} boss avec un piège`,
+    unlockMethod: () => UnlockMethod.workerLevel(POWER_WORKER_INDEX, 1) },
   { type: 'collect-vessels', target: 5, reward: 1, description: (n) => `Récupérer ${n} vaisseau`,
     unlockMethod: () => UnlockMethod.workerLevel(VESSEL_WORKER_INDEX, 1) },
   { type: 'collect-vessels', target: 15, reward: 2, description: (n) => `Récupérer ${n} vaisseaux`,
     unlockMethod: () => UnlockMethod.workerLevel(VESSEL_WORKER_INDEX, 1) },
+  { type: 'chest-opening', target: 3, reward: 1, description: (n) => `Ouvrir ${n} coffre`,
+    unlockMethod: () => UnlockMethod.workerLevel(LOTTERY_WORKER_INDEX, 1) },
+  { type: 'chest-opening', target: 15, reward: 3, description: (n) => `Ouvrir ${n} coffres`,
+    unlockMethod: () => UnlockMethod.workerLevel(LOTTERY_WORKER_INDEX, 1) },
   { type: 'activate-streak', target: 1, reward: 1, description: (n) => `Activer la barre de streak ${n} fois`,
     unlockMethod: () => UnlockMethod.workerLevel(SMITH_WORKER_INDEX, STREAK_LEVEL_REQUIRED) },
   { type: 'activate-streak', target: 3, reward: 3, description: (n) => `Activer la barre de streak ${n} fois`,
     unlockMethod: () => UnlockMethod.workerLevel(SMITH_WORKER_INDEX, STREAK_LEVEL_REQUIRED) },
   { type: 'clicks', target: 250, reward: 1, description: (n) => `Cliquer ${n} fois` },
   { type: 'clicks', target: 1250, reward: 3, description: (n) => `Cliquer ${n} fois` },
-  { type: 'complete-missions', target: 2, reward: 2, description: (n) => `Terminer ${n} missions`,
-    unlockMethod: () => UnlockMethod.workerLevel(EXPLORER_WORKER_INDEX, 1) },
-  { type: 'complete-missions', target: 3, reward: 3, description: (n) => `Terminer ${n} missions`,
-    unlockMethod: () => UnlockMethod.workerLevel(EXPLORER_WORKER_INDEX, 1) },
+  // { type: 'complete-missions', target: 2, reward: 2, description: (n) => `Terminer ${n} missions`,
+  //   unlockMethod: () => UnlockMethod.workerLevel(EXPLORER_WORKER_INDEX, 1) },
+  // { type: 'complete-missions', target: 3, reward: 3, description: (n) => `Terminer ${n} missions`,
+  //   unlockMethod: () => UnlockMethod.workerLevel(EXPLORER_WORKER_INDEX, 1) },
   // { type: 'hold-clicks', target: 100, reward: 1, description: (n) => `Avoir ${n} clics en réserve` },
   // { type: 'hold-clicks', target: 100, reward: 2, description: (n) => `Avoir ${n} clics en réserve` },
 ];
@@ -64,7 +64,10 @@ export class MissionStateService {
     getWorkerLevel: () => null,
   };
 
-  constructor(private resources: ResourcesService) {}
+  constructor(
+    private resources: ResourcesService,
+    @Optional() private kitchen?: KitchenStateService
+  ) {}
 
   getView(beachUnlocked: boolean, unlockContext?: UnlockContext): MissionSlotView[] {
     if (!beachUnlocked) {
@@ -150,8 +153,8 @@ export class MissionStateService {
     this.record('complete-missions');
   }
 
-  recordBaitUse(): void {
-    this.record('use-bait');
+  recordTrapUse(): void {
+    this.record('use-trap');
   }
 
   recordVesselCollection(): void {
@@ -164,6 +167,10 @@ export class MissionStateService {
   
   recordClickActivation(): void {
     this.record('clicks');
+  }
+
+  recordChestOpening(): void {
+    this.record('chest-opening');
   }
 
   getSaveData(): MissionSaveData {
@@ -263,8 +270,12 @@ export class MissionStateService {
     this.slots.forEach((slot) => {
       const mission = slot.mission;
       if (!mission || mission.objective.progress < mission.objective.target) return;
-      this.resources.addResource('ticket', mission.ticketReward);
-      slot.lastReward = mission.ticketReward;
+      const ticketReward = scaleResourceAmount(
+        mission.ticketReward,
+        this.kitchen?.getModifiers().ticketRewardMultiplier ?? 1
+      );
+      this.resources.addResource('ticket', ticketReward);
+      slot.lastReward = ticketReward;
       slot.mission = null;
       slot.cooldownEndsAt = Date.now() + MISSION_SLOT_COOLDOWN_SECONDS * 1000;
       slot.cooldownReason = 'completed';

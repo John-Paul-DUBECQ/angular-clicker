@@ -19,6 +19,7 @@ import { powerUnlockDefinition, POWER_MANA_UPGRADES } from '../unlocks/power-unl
 import { monsterUnlockDefinition, MONSTER_UPGRADES } from '../unlocks/monster-unlock';
 import { vesselUnlockDefinition, VESSEL_UPGRADES } from '../unlocks/vessel';
 import { houseUnlockDefinition } from '../unlocks/house-unlock';
+import { eggUnlockDefinition } from '../monsters/egg.model';
 import { ResourcesService } from './resources.service';
 import { LoreNotificationService } from '../lore/lore-notification.service';
 import { WORKER_LORE_BY_NAME, WORKER_LORE_BY_LEVEL } from '../lore/worker-lore';
@@ -75,7 +76,7 @@ export class WorkerStateService {
     this.workersAvailable = [
       createClickWorker('Épée', 1.5, 1.05, 25, 1.10,
         "L'épée n'est plus en très bon état, il faudra trouver un moyen de la réparer de toute urgence."),
-      createAutoWorker('Fermier', 5, 1.10, 125, 1.16, undefined, 1, [houseUnlockDefinition], { workerIndex: 0, minLevel: 1 }),
+      createAutoWorker('Fermier', 5, 1.10, 125, 1.16, undefined, 1, [houseUnlockDefinition, eggUnlockDefinition], { workerIndex: 0, minLevel: 1 }),
       createAutoWorker('Mineur', 15, 1.15, 375, 1.22, undefined, 1, [criticalHitUnlockDefinition, ...CRITICAL_HIT_UPGRADES,], { workerIndex: 1, minLevel: 3 }),
       createAutoWorker('Forgeron', 50, 1.20, 2537, 1.27, undefined, 2, [streakUnlockDefinition, ...STREAK_UPGRADES], { workerIndex: 2, minLevel: 5 }),
       createAutoWorker('Astrologue', 500, 1.25, 12500, 1.33, undefined, 1, [sunUnlockDefinition, ...SUN_UPGRADES], { workerIndex: 3, minLevel: 8 }),

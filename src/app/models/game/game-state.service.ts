@@ -39,8 +39,11 @@ import {
 } from '../resource-trade';
 import { LotteryStateService } from './lottery-state.service';
 import { LOTTERY_UNLOCK_METHOD } from '../monsters/lottery.model';
+import { areEggsUnlocked, isEggResourceId } from '../monsters/egg.model';
 import { ResourceReward } from '../resource';
 import { MonsterRewardNotificationService } from './monster-reward-notification.service';
+import { KitchenSaveData, KitchenStateService } from '../kitchen/kitchen-state.service';
+import { KITCHEN_EXPLORER_INDEX } from '../kitchen/kitchen-unlock';
 
 const TICKS_PER_SECOND = 10;
 const TICK_MS = 1000 / TICKS_PER_SECOND;
@@ -59,6 +62,7 @@ export interface WorkerInfoStats {
 export interface NavigationNotificationState {
   seenShopItemKeys: string[];
   seenHouseIds: string[];
+  seenDishIds: string[];
   essenceShopSeen: boolean;
   lotterySeen?: boolean;
 }
@@ -91,6 +95,8 @@ export interface SaveData {
   resourceTradeCounts?: Record<string, number>;
   showDamageNumbers?: boolean;
   showCriticalHitNumbers?: boolean;
+  kitchenStock?: Record<string, number>;
+  kitchenBuffEndsAt?: Record<string, number>;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -106,6 +112,7 @@ export class GameStateService {
   private navigationNotificationState: NavigationNotificationState = {
     seenShopItemKeys: [],
     seenHouseIds: [],
+    seenDishIds: [],
     essenceShopSeen: false,
     lotterySeen: false,
   };
@@ -126,7 +133,8 @@ export class GameStateService {
     private lotteryState: LotteryStateService,
     private vesselState: VesselService,
     private missionState: MissionStateService,
-    private monsterRewardNotify: MonsterRewardNotificationService
+    private monsterRewardNotify: MonsterRewardNotificationService,
+    private kitchen: KitchenStateService
   ) {
     this.monsterState.setNowProvider(() => (this.catchingUp ? this.simulatedNow : Date.now()));
     this.startTickLoop();
@@ -136,6 +144,14 @@ export class GameStateService {
 
   private getShopMult = (workerIndex: number): number =>
     this.shopState.getShopMultiplierForWorker(workerIndex);
+
+  private getDamageMultiplier(): number {
+    return this.powerState.getDamageMultiplier() * this.kitchen.getModifiers().damageMultiplier;
+  }
+
+  private getKitchenSaveData(): KitchenSaveData {
+    return this.kitchen.getSaveData();
+  }
 
   private getUnlockContext(): UnlockContext {
     return {
@@ -190,7 +206,7 @@ export class GameStateService {
     const workers = this.workerState.getWorkers();
     const workersAvailable = this.workerState.getWorkersAvailable();
     const streakMult = this.streakState.getMultiplier(workers, workersAvailable);
-    const damageMult = this.powerState.getDamageMultiplier();
+    const damageMult = this.getDamageMultiplier();
     const solarBonuses = this.houseState.getSolarBonuses();
     const baseAutoPerSecond =
       this.workerState.calculateClicksPerSecond(this.getShopMult) * damageMult;
@@ -224,7 +240,7 @@ export class GameStateService {
     const clicks = this.resources.getClicks();
     const workers = this.workerState.getWorkers();
     const workersAvailable = this.workerState.getWorkersAvailable();
-    const damageMult = this.powerState.getDamageMultiplier();
+    const damageMult = this.getDamageMultiplier();
     const streakMultiplier = this.streakState.getMultiplier(workers, workersAvailable);
     const solarBonuses = this.houseState.getSolarBonuses();
     const baseAutoPerSecond =
@@ -358,15 +374,20 @@ export class GameStateService {
       houses: farmerLevel >= HOUSE_LEVEL_REQUIRED || vesselUnlocked || astrologueLevel >= 75
         ? this.houseState.getHousesView(
           workersAvailable[VESSEL_WORKER_INDEX]?.level ?? 0,
-          astrologueLevel
+          astrologueLevel,
+          this.workerState.getWorkerLevel(KITCHEN_EXPLORER_INDEX) ?? 0
         )
         : undefined,
-      resources: this.resources.getResourceStocks(),
+      resources: this.resources.getResourceStocks().filter((resource) =>
+        areEggsUnlocked((workerIndex) => this.workerState.getWorkerLevel(workerIndex))
+        || !isEggResourceId(resource.id)
+      ),
       plannedCombats: this.monsterState.getPlannedCombats(workers, workersAvailable),
       missionsUnlocked,
       missionSlots,
       resourceTrades: this.getResourceTradesView(),
-      lottery: this.lotteryState.getView(this.getUnlockContext()),
+      lottery: this.lotteryState.getView(this.getUnlockContext(), this.monsterState.getSelectedBiome()),
+      kitchen: this.kitchen.getView(this.getUnlockContext()),
       missionSlotsUnlocked: this.missionState.getUnlockedSlots(),
       nextMissionSlotCost: this.missionState.getNextSlotCost(),
       vesselUnlocked,
@@ -383,8 +404,9 @@ export class GameStateService {
     this.resources.incrementTotalManualClicks();
     const workers = this.workerState.getWorkers();
     const workersAvailable = this.workerState.getWorkersAvailable();
-    const damageMultiplier = this.powerState.getDamageMultiplier();
+    const damageMultiplier = this.getDamageMultiplier();
     const solarBonuses = this.houseState.getSolarBonuses();
+    const kitchenModifiers = this.kitchen.getModifiers();
     const baseClickValue =
       this.workerState.getCurrentClickValue(this.getShopMult) * damageMultiplier;
     const baseAutoPerSecond =
@@ -404,6 +426,7 @@ export class GameStateService {
       || solarBonuses.criticalChanceBonus > 0
       || shopChanceBonus > 0
       || sunChanceBonus > 0
+      || kitchenModifiers.criticalChanceBonus > 0
     ) {
       const miner = workersAvailable[MINER_WORKER_INDEX];
       const minerLevel = miner?.level ?? 0;
@@ -414,9 +437,11 @@ export class GameStateService {
         + shopChanceBonus
         + houseChanceBonus
         + sunChanceBonus
-        + solarBonuses.criticalChanceBonus;
+        + solarBonuses.criticalChanceBonus
+        + kitchenModifiers.criticalChanceBonus;
       const criticalMultiplier = (criticalHitUnlocked ? totalMultiplier : 1)
         * (1 + shopDamageBonus)
+        * (1 + kitchenModifiers.criticalDamageBonus)
         * solarBonuses.criticalDamageMultiplier;
       if (Math.random() < criticalChance) {
         value *= criticalMultiplier;
@@ -503,12 +528,14 @@ export class GameStateService {
       const shopDamageBonus = this.shopState.getUnlockBonus('critical-hit', 'damage');
       const houseChanceBonus = this.houseState.getCriticalHitChanceBonus();
       const sunChanceBonus = this.shopState.getUnlockBonus('sun', 'chance');
+      const kitchenModifiers = this.kitchen.getModifiers();
       const chancePercent = (
         totalChance + shopChanceBonus + houseChanceBonus + sunChanceBonus
+        + kitchenModifiers.criticalChanceBonus
       ) * 100;
       lines.push(
         { label: 'Chance de coup critique', value: `${chancePercent.toFixed(1)} %` },
-        { label: 'Dégâts critique', value: `×${(totalMultiplier * (1 + shopDamageBonus)).toFixed(2)}` }
+        { label: 'Dégâts critique', value: `×${(totalMultiplier * (1 + shopDamageBonus) * (1 + kitchenModifiers.criticalDamageBonus)).toFixed(2)}` }
       );
     }
 
@@ -596,7 +623,20 @@ export class GameStateService {
   buyHouse(houseIndex: number): boolean {
     const geometerLevel = this.workerState.getWorkerLevel(VESSEL_WORKER_INDEX) ?? 0;
     const astrologueLevel = this.workerState.getWorkerLevel(SUN_WORKER_INDEX) ?? 0;
-    return this.houseState.buy(houseIndex, geometerLevel, astrologueLevel);
+    const explorerLevel = this.workerState.getWorkerLevel(KITCHEN_EXPLORER_INDEX) ?? 0;
+    return this.houseState.buy(houseIndex, geometerLevel, astrologueLevel, explorerLevel);
+  }
+
+  cookDish(dishId: string): boolean {
+    const cooked = this.kitchen.cook(dishId, this.getUnlockContext());
+    if (cooked) this.saveToLocalStorage();
+    return cooked;
+  }
+
+  useDish(dishId: string): boolean {
+    const used = this.kitchen.use(dishId, this.getUnlockContext());
+    if (used) this.saveToLocalStorage();
+    return used;
   }
 
   getCanBuyPower(price: number): boolean {
@@ -799,6 +839,7 @@ export class GameStateService {
     return {
       seenShopItemKeys: [...this.navigationNotificationState.seenShopItemKeys],
       seenHouseIds: [...this.navigationNotificationState.seenHouseIds],
+      seenDishIds: [...this.navigationNotificationState.seenDishIds],
       essenceShopSeen: this.navigationNotificationState.essenceShopSeen,
       lotterySeen: this.navigationNotificationState.lotterySeen === true,
     };
@@ -808,6 +849,7 @@ export class GameStateService {
     this.navigationNotificationState = {
       seenShopItemKeys: [...state.seenShopItemKeys],
       seenHouseIds: [...state.seenHouseIds],
+      seenDishIds: [...(state.seenDishIds ?? [])],
       essenceShopSeen: state.essenceShopSeen,
       lotterySeen: state.lotterySeen === true,
     };
@@ -828,7 +870,10 @@ export class GameStateService {
   }
 
   activateLottery(): ResourceReward[] | null {
-    const rewards = this.lotteryState.tryActivate(this.getUnlockContext());
+    const rewards = this.lotteryState.tryActivate(
+      this.getUnlockContext(),
+      this.monsterState.getSelectedBiome()
+    );
     if (!rewards) return null;
     if (rewards.length > 0) {
       this.monsterRewardNotify.notifyReward(0, 0, rewards, 'Loterie !');
@@ -902,7 +947,7 @@ export class GameStateService {
         mana: this.resources.getMana(),
         workersAvailable: this.workerState.getWorkersAvailable(),
         workerIndicesOwned: this.workerState.getWorkers().map(w => this.workerState.getWorkersAvailable().indexOf(w)),
-        shopItemsBought: this.shopState.getShopItems().map(item => item.bought),
+        shopItemsBought: this.shopState.getShopItems().map(item => item.bought === true),
         essenceShopItemsBought: this.essenceShopState.getItems().map(item => item.bought),
         essenceShopLevels: this.essenceShopState.getLevels(),
         houseLevels: this.houseState.getLevels(),
@@ -924,6 +969,8 @@ export class GameStateService {
         resourceTradeCounts: this.resourceTradeCounts,
         showDamageNumbers: this.showDamageNumbers,
         showCriticalHitNumbers: this.showCriticalHitNumbers,
+        kitchenStock: this.getKitchenSaveData().stock,
+        kitchenBuffEndsAt: this.getKitchenSaveData().buffEndsAt,
       };
       const dataStr = JSON.stringify(saveData);
       localStorage.setItem('clickerGameSave', dataStr);
@@ -973,6 +1020,10 @@ export class GameStateService {
       }
       this.showDamageNumbers = saveData.showDamageNumbers ?? false;
       this.showCriticalHitNumbers = saveData.showCriticalHitNumbers ?? true;
+      this.kitchen.setSaveData({
+        stock: saveData.kitchenStock,
+        buffEndsAt: saveData.kitchenBuffEndsAt,
+      });
     } catch (e) {
       console.error('Failed to load from localStorage:', e);
     }
@@ -985,7 +1036,7 @@ export class GameStateService {
       mana: this.resources.getMana(),
       workersAvailable: this.workerState.getWorkersAvailable(),
       workerIndicesOwned: this.workerState.getWorkers().map(w => this.workerState.getWorkersAvailable().indexOf(w)),
-      shopItemsBought: this.shopState.getShopItems().map(item => item.bought),
+      shopItemsBought: this.shopState.getShopItems().map(item => item.bought === true),
       essenceShopItemsBought: this.essenceShopState.getItems().map(item => item.bought),
       essenceShopLevels: this.essenceShopState.getLevels(),
       houseLevels: this.houseState.getLevels(),
@@ -1007,6 +1058,8 @@ export class GameStateService {
       resourceTradeCounts: this.resourceTradeCounts,
       showDamageNumbers: this.showDamageNumbers,
       showCriticalHitNumbers: this.showCriticalHitNumbers,
+      kitchenStock: this.getKitchenSaveData().stock,
+      kitchenBuffEndsAt: this.getKitchenSaveData().buffEndsAt,
     };
 
     const dataStr = JSON.stringify(saveData, null, 2);
@@ -1069,6 +1122,10 @@ export class GameStateService {
       }
       this.showDamageNumbers = saveData.showDamageNumbers ?? false;
       this.showCriticalHitNumbers = saveData.showCriticalHitNumbers ?? true;
+      this.kitchen.setSaveData({
+        stock: saveData.kitchenStock,
+        buffEndsAt: saveData.kitchenBuffEndsAt,
+      });
 
       return true;
     } catch (e) {
@@ -1082,6 +1139,7 @@ export class GameStateService {
     return {
       seenShopItemKeys: state && Array.isArray(state.seenShopItemKeys) ? [...state.seenShopItemKeys] : [],
       seenHouseIds: state && Array.isArray(state.seenHouseIds) ? [...state.seenHouseIds] : [],
+      seenDishIds: state && Array.isArray(state.seenDishIds) ? [...state.seenDishIds] : [],
       essenceShopSeen: state?.essenceShopSeen === true,
       lotterySeen: state?.lotterySeen === true,
     };

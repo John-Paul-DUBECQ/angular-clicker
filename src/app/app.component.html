@@ -182,8 +182,6 @@
   </ng-template>
   <ng-template #shopTrades>
     <section class="shop-trades" *ngIf="game.missionsUnlocked">
-      <h2>Échanges</h2>
-      <p>Échange tes tickets contre des ressources · Solde : {{ formatResourceValue(getResourceAmount('ticket')) }}</p>
       <div class="shop-trades__quantities" aria-label="Quantité à échanger">
         <button
           type="button"
@@ -265,11 +263,15 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16v10H4z"/><path d="M7 8V6h10v2M8 12h8M8 15h5"/></svg>
         <span>Aventures</span>
       </button>
-      <button type="button" [class.desktop-section-rail__item--active]="desktopView === 'kitchen'" title="Cuisine" (click)="setDesktopView('kitchen')">
+      <button type="button" *ngIf="game.kitchen?.unlocked" [class.desktop-section-rail__item--active]="desktopView === 'kitchen'" title="Cuisine" (click)="setDesktopView('kitchen')">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3v18M5 7h7v7H5M12 7h7v11h-7"/></svg><span>Cuisine</span>
+        <i class="desktop-section-rail__notification" *ngIf="hasNewKitchenDishes" aria-hidden="true"></i>
       </button>
       <button type="button" [class.desktop-section-rail__item--active]="desktopView === 'garden'" title="Jardin" (click)="setDesktopView('garden')">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21V9M12 12c-4 0-7-2.5-7-6 4 0 7 2.5 7 6ZM12 15c4 0 7-2.5 7-6-4 0-7 2.5-7 6Z"/></svg><span>Jardin</span>
+      </button>
+      <button type="button" [class.desktop-section-rail__item--active]="desktopView === 'breeding'" title="Élevage" (click)="setDesktopView('breeding')">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="13" rx="6" ry="7.5"/><path d="M12 5.5c.8-2 2.6-2.8 3.6-1.6 1 1.2-.2 2.6-1.6 3"/></svg><span>Élevage</span>
       </button>
       <button type="button" *ngIf="game.missionsUnlocked" [class.desktop-section-rail__item--active]="desktopView === 'missions'" title="Missions" (click)="setDesktopView('missions')">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="m14.2 9.8 5-5"/></svg><span>Missions</span>
@@ -287,6 +289,9 @@
         <div><span>Appât</span><strong>{{ formatResourceValue(getResourceAmount('bait')) }}</strong></div>
         <div><span>Tickets</span><strong>{{ formatResourceValue(getResourceAmount('ticket')) }}</strong></div>
         <div><span>Pièges</span><strong>{{ formatResourceValue(getResourceAmount('trap')) }}</strong></div>
+      </div>
+      <div class="kitchen-buff-bar" *ngIf="game.kitchen?.activeDishes?.length">
+        <span *ngFor="let dish of game.kitchen?.activeDishes || []; trackBy: trackByDish">{{ dish.name }} {{ formatCooldown(dish.remainingSeconds) }}</span>
       </div>
       <ng-container *ngIf="desktopView === 'shop'">
         <div class="shop-items-list" *ngIf="sortedShopItemsWithIndex.length > 0">
@@ -359,13 +364,51 @@
       <ng-container *ngIf="desktopView === 'essenceShop' || desktopView === 'quests'">
         <ng-container *ngTemplateOutlet="workerSectionMenu"></ng-container>
       </ng-container>
-      <section class="future-section-panel" *ngIf="desktopView === 'kitchen'">
+      <section class="kitchen-panel" *ngIf="desktopView === 'kitchen' && game.kitchen as kitchen">
         <h2>Cuisine</h2>
-        <p>Cette section sera ajoutée prochainement.</p>
+        <p *ngIf="kitchen.luck > 0">Chance des plats actifs : <span class="luck-bonus">{{ kitchen.luck }}</span>. Elle s'ajoute à la chance de la loterie.</p>
+        <div class="kitchen-panel__filters" aria-label="Filtrer les plats">
+          <button type="button" [class.kitchen-panel__filter--active]="selectedKitchenTag === null" (click)="selectedKitchenTag = null">Tous</button>
+          <button type="button" *ngFor="let tag of kitchenTags" [class.kitchen-panel__filter--active]="selectedKitchenTag === tag" (click)="selectedKitchenTag = tag">{{ tag }}</button>
+        </div>
+        <article class="kitchen-dish" *ngFor="let dish of visibleKitchenDishes; trackBy: trackByDish">
+          <header>
+            <h3>{{ dish.name }}</h3>
+            <span *ngIf="dish.active">{{ formatCooldown(dish.remainingSeconds) }}</span>
+          </header>
+          <p>{{ dish.description }} - Durée : {{ dish.baseDurationSeconds }} s<span *ngIf="dish.durationBonusSeconds"> + {{ dish.durationBonusSeconds }} s</span></p>
+          <ul>
+            <li *ngFor="let effect of dish.effectLabels; trackBy: trackByPosition">{{ effect }}</li>
+          </ul>
+          
+          <div class="dishBottomInfo">
+            <div class="leftInfodish">
+              <p class="kitchen-dish__costs">
+                <span *ngFor="let ingredient of dish.ingredients; trackBy: trackByIngredient" [class.kitchen-dish__cost--missing]="ingredient.owned < ingredient.amount">
+                  {{ ingredient.name }} {{ ingredient.amount }} ({{ formatResourceValue(ingredient.owned) }})
+                </span>
+              </p>
+              <p>En réserve : {{ dish.stock }}</p>
+            </div>
+            <div class="kitchen-dish__actions">
+              <button type="button" [disabled]="!dish.canCook" (click)="cookDish(dish.id)">Préparer</button>
+              <button type="button" [disabled]="dish.stock < 1" (click)="useDish(dish.id)">Manger</button>
+            </div>
+          </div>
+        </article>
       </section>
       <section class="future-section-panel" *ngIf="desktopView === 'garden'">
         <h2>Jardin</h2>
         <p>Cette section sera ajoutée prochainement.</p>
+      </section>
+      <section class="breeding-panel" *ngIf="desktopView === 'breeding'">
+        <h2>Élevage</h2>
+        <nav class="breeding-panel__tabs" aria-label="Élevage">
+          <button type="button" [class.breeding-panel__tab--active]="breedingView === 'monsters'" (click)="breedingView = 'monsters'">Liste des monstres</button>
+          <button type="button" [class.breeding-panel__tab--active]="breedingView === 'eggs'" (click)="breedingView = 'eggs'">Œufs</button>
+        </nav>
+        <div class="breeding-panel__body" *ngIf="breedingView === 'monsters'" aria-label="Liste des monstres"></div>
+        <div class="breeding-panel__body" *ngIf="breedingView === 'eggs'" aria-label="Œufs"></div>
       </section>
       <ng-container *ngIf="desktopView === 'missions' && game.missionsUnlocked">
         <ng-container *ngTemplateOutlet="missionsSection"></ng-container>
@@ -373,9 +416,9 @@
       <ng-container *ngIf="desktopView === 'lottery' && game.lottery as lottery">
         <section class="lottery-panel" *ngIf="lottery.unlocked">
           <h2>Loterie</h2>
-          <p>Chaque monstre vaincu peut laisser apparaître un coffre. La chance augmente les chances d’apparition et les coffres rares.</p>
-          <p>Chance de coffre par monstre : <strong>{{ formatChance(lottery.monsterChestChance * lottery.luckMultiplier) }}</strong></p>
-          <p>Chance ×{{ lottery.luckMultiplier }} · Multiplicateur des drops ×{{ lottery.dropsMultiplier }}</p>
+          <p>Chaque monstre vaincu peut laisser apparaître un coffre. La chance ajoute 0,01 % par point et multiplie les gains.</p>
+          <p>Chance : <span class="luck-bonus">{{ lottery.luck }}</span></p>
+          <p>Chance de coffre par monstre : <strong>{{ formatLuckPercent(lottery.monsterChestChance) }}</strong><span class="luck-bonus">+{{ formatLuckPercent(lottery.chestLuckBonus) }} (luck)</span></p>
           <ul>
             <li *ngFor="let chest of lotteryChests">
               {{ chest.name }} — poids {{ chest.weight }} · {{ formatResourceValue(getResourceAmount(chest.resourceId)) }} disponible(s)
@@ -393,7 +436,10 @@
           <p>Une tentative toutes les {{ lottery.cooldownMinutes }} minutes. Chaque récompense est tirée à part : la chance est faible, et le tirage peut ne rien donner.</p>
           <ul>
             <li *ngFor="let drop of lotteryLoot">
-              {{ getResourceName(drop.resourceId) }} ×{{ drop.amount }} — {{ formatLotteryChance(getLotteryDropChance(drop)) }}
+              {{ getResourceName(drop.resourceId) }} ×{{ drop.amount }} — {{ formatLuckPercent(drop.chance) }}<span class="luck-bonus">+{{ formatLuckPercent(lotteryLuckBonus(drop.chance)) }} (luck)</span>
+            </li>
+            <li *ngIf="lottery.biomeEggAvailable">
+              Œuf aléatoire ({{ lottery.biomeName }}) ×1 — {{ formatLuckPercent(lottery.biomeEggChance) }}<span class="luck-bonus">+{{ formatLuckPercent(lotteryLuckBonus(lottery.biomeEggChance)) }} (luck)</span>
             </li>
           </ul>
           <button type="button" [disabled]="lottery.cooldownRemainingSeconds > 0" (click)="activateLottery()">

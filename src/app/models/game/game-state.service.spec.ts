@@ -14,6 +14,7 @@ import { getSunUpgradeStats } from '../unlocks/sun-unlock';
 import { getCriticalHitStats } from '../unlocks/critical-hit';
 import { ShopItem } from '../shop-item';
 import { listPower } from '../powers/list-power';
+import { LOTTERY_STATS } from '../monsters/lottery.model';
 
 describe('GameStateService solar bonuses', () => {
   let gameState: GameStateService;
@@ -447,6 +448,7 @@ describe('GameStateService solar bonuses', () => {
     const notificationState = {
       seenShopItemKeys: ['shop-item-a'],
       seenHouseIds: ['house-a'],
+      seenDishIds: ['dish-a'],
       essenceShopSeen: true,
     };
     gameState.setNavigationNotificationState(notificationState);
@@ -456,6 +458,7 @@ describe('GameStateService solar bonuses', () => {
     gameState.setNavigationNotificationState({
       seenShopItemKeys: [],
       seenHouseIds: [],
+      seenDishIds: [],
       essenceShopSeen: false,
     });
 
@@ -662,5 +665,69 @@ describe('GameStateService solar bonuses', () => {
     } finally {
       shopItems.pop();
     }
+  });
+
+  it('unlocks the kitchen at Explorateur level 60 and applies a eaten dish', () => {
+    const workersAvailable = workerState.getWorkersAvailable();
+    const explorer = workersAvailable[9];
+    explorer.level = 59;
+    workerState.setWorkers([explorer]);
+    resources.setResourceAmounts({ 'mosh-paw': 5, 'mosh-tooth': 2, 'super-mosh-core': 1 });
+
+    expect(gameState.getState().kitchen?.unlocked).toBeFalse();
+    expect(gameState.cookDish('ragout-de-mosh')).toBeFalse();
+
+    explorer.level = 60;
+    expect(gameState.getState().kitchen?.unlocked).toBeTrue();
+    expect(gameState.getState().kitchen?.dishes.some((dish) => dish.id === 'noyau-saute')).toBeFalse();
+    const before = gameState.getState().clickValue;
+    expect(gameState.cookDish('ragout-de-mosh')).toBeTrue();
+    expect(gameState.useDish('ragout-de-mosh')).toBeTrue();
+    expect(gameState.getState().kitchen?.activeDishes[0].remainingSeconds).toBe(60);
+    expect(gameState.getState().clickValue / before).toBeCloseTo(1, 5);
+
+    explorer.level = 70;
+    resources.setResourceAmounts({ 'super-mosh-core': 1, 'mosh-paw': 3 });
+    const damageBefore = gameState.getState().clickValue;
+    expect(gameState.cookDish('noyau-saute')).toBeTrue();
+    expect(gameState.useDish('noyau-saute')).toBeTrue();
+    expect(gameState.getState().clickValue / damageBefore).toBeCloseTo(1.5, 5);
+  });
+
+  it('shortens adventure and trap cooldowns while the dish is active and leaves luck unused', () => {
+    const workersAvailable = workerState.getWorkersAvailable();
+    const alchemist = workersAvailable[6];
+    const legacyExplorer = workersAvailable[8];
+    const explorer = workersAvailable[9];
+    alchemist.level = 1;
+    legacyExplorer.level = 1;
+    explorer.level = 90;
+    workerState.setWorkers([alchemist, legacyExplorer, explorer]);
+    monsterState.setPlannedCombatWins({
+      'planned-forest-04': 1,
+      'planned-forest-05': 10,
+    });
+    resources.setResourceAmounts({
+      food: 2,
+      trap: 6,
+      bait: 1,
+      'peji-tongue': 1,
+      'mosh-tooth': 2,
+      bulb: 1,
+    });
+
+    expect(gameState.cookDish('gamelle-du-voyageur')).toBeTrue();
+    expect(gameState.useDish('gamelle-du-voyageur')).toBeTrue();
+    expect(gameState.usePlannedCombatBait('planned-forest-05')).toBeTrue();
+    expect(monsterState.getPlannedCombatCooldownEnds()['planned-forest-05'])
+      .toBe(Date.now() + 5 * 60 * 1000 * 0.75);
+
+    expect(gameState.cookDish('dessert-de-la-chance')).toBeTrue();
+    expect(gameState.useDish('dessert-de-la-chance')).toBeTrue();
+    const state = gameState.getState();
+    expect(state.kitchen?.luck).toBe(8);
+    expect(state.lottery?.unlocked).toBeFalse();
+    expect(state.lottery?.luck).toBe(0);
+    expect(state.lottery?.luckMultiplier).toBe(LOTTERY_STATS.luckMultiplier);
   });
 });

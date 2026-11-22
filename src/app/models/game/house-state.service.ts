@@ -10,6 +10,9 @@ import { UnlockMethod } from '../unlocks/unlock-method';
 import { VESSEL_WORKER_INDEX } from '../unlocks/vessel';
 import { SUN_WORKER_INDEX } from '../unlocks/sun-unlock';
 import { UnlockUpgradeService } from './unlock-upgrade.service';
+import { LIST_DISH } from '../kitchen/list-dish';
+import { KITCHEN_EXPLORER_INDEX } from '../kitchen/kitchen-unlock';
+import { DISH_EFFECT_MODIFIER, DishEffectKind, KitchenModifiers, describeDishEffect } from '../kitchen/dish.model';
 
 const CRITICAL_HOUSE_ID = 'critical-house';
 const CRITICAL_HOUSE_BASE_PRICE = 10;
@@ -65,7 +68,10 @@ const VESSEL_REWARD_HOUSE_MAX_LEVEL = 10;
 const SOLAR_BALANCE_HOUSE_ID = 'solar-balance-house';
 const SOLAR_BLUE_HOUSE_ID = 'solar-blue-house';
 const SOLAR_YELLOW_HOUSE_ID = 'solar-yellow-house';
+const DELAY_KITCHEN_HOUSE_ID = 'delay-kitchen-house';
 const SOLAR_HOUSE_MAX_LEVEL = 10;
+const DELAY_KITCHEN_HOUSE_MAX_LEVEL = 100;
+const DELAY_KITCHEN_HOUSE_DURATION_PER_LEVEL_SECONDS = 10;
 const SOLAR_AFK_TO_CLICK_PER_LEVEL = 0.001;
 const SOLAR_CLICK_TO_AFK_PER_LEVEL = 0.05;
 const SOLAR_BLUE_CLICK_REWARD_PER_LEVEL = 1.05;
@@ -221,6 +227,27 @@ export class HouseStateService {
       ],
       unlocked: false,
       maxLevel: SOLAR_HOUSE_MAX_LEVEL,
+    },{
+      id: DELAY_KITCHEN_HOUSE_ID,
+      name: 'Maison du délai de consommation',
+      description: 'Augmente la durée de tous les plats de 10 secondes par niveau.',
+      imageUrl: 'assets/img/House/House1.png',
+      tags: ['Cuisine'],
+      level: 0,
+      bonusPerLevel: 0,
+      price: 5,
+      costs: [
+        { resourceId: 'food', amount: 2 },
+        { resourceId: 'mosh-tail', amount: 1 },
+      ],
+      unlockPrice: 10,
+      unlockCosts: [
+        { resourceId: 'food', amount: 4 },
+        { resourceId: 'mosh-tail', amount: 2 },
+      ],
+      unlocked: false,
+      maxLevel: DELAY_KITCHEN_HOUSE_MAX_LEVEL,
+      unlockMethod: UnlockMethod.workerLevel(9, 60),
     },
   ];
 
@@ -229,13 +256,14 @@ export class HouseStateService {
     @Optional() private unlockUpgrades?: UnlockUpgradeService
   ) {}
 
-  getHousesView(geometerLevel = 0, astrologueLevel = 0): House[] {
+  getHousesView(geometerLevel = 0, astrologueLevel = 0, explorerLevel = 0): House[] {
     return this.houses
       .map((house, houseIndex) => ({ house, houseIndex }))
-      .filter(({ house }) => this.isHouseAvailable(house, geometerLevel, astrologueLevel))
+      .filter(({ house }) => this.isHouseAvailable(house, geometerLevel, astrologueLevel, explorerLevel))
       .map(({ house, houseIndex }) => ({
       ...house,
       houseIndex,
+      description: this.describeHouse(house),
       price: this.getPrice(house),
       costs: house.costs.map((cost) => ({
         ...cost,
@@ -262,6 +290,9 @@ export class HouseStateService {
         : undefined,
       vesselSpawnIntervalFactor: house.id === VESSEL_REWARD_HOUSE_ID
         ? this.getVesselSpawnIntervalFactor(house)
+        : undefined,
+      delayKitchenDurationBonusSeconds: house.id === DELAY_KITCHEN_HOUSE_ID
+        ? this.getConsumptionDurationBonusSeconds()
         : undefined,
     }));
   }
@@ -338,6 +369,26 @@ export class HouseStateService {
     };
   }
 
+  getDishUpgradeBonuses(dishId: string): { duration: number; modifiers: Partial<KitchenModifiers> } {
+    const modifiers: Partial<KitchenModifiers> = {};
+    let duration = 0;
+    this.houses.forEach((house) => {
+      const upgrade = house.dishUpgrade;
+      if (!upgrade || upgrade.dishId !== dishId || !house.unlocked) return;
+      duration += house.level * (upgrade.durationPerLevel ?? 0);
+      if (!upgrade.modifier || upgrade.bonusPerLevel == null) return;
+      modifiers[upgrade.modifier] = (modifiers[upgrade.modifier] ?? 0) + house.level * upgrade.bonusPerLevel;
+    });
+    return { duration, modifiers };
+  }
+
+  /** Secondes ajoutées à la durée de chaque plat. */
+  getConsumptionDurationBonusSeconds(): number {
+    const house = this.houses.find((item) => item.id === DELAY_KITCHEN_HOUSE_ID);
+    if (!house?.unlocked) return 0;
+    return this.getDelayKitchenDurationBonusSeconds(house);
+  }
+
   getCriticalHitChanceBonus(): number {
     const house = this.houses.find((item) => item.id === CRITICAL_HOUSE_ID);
     return (house ? house.level * house.bonusPerLevel : 0)
@@ -359,9 +410,9 @@ export class HouseStateService {
     return this.houses.find((house) => house.id === BAIT_HOUSE_ID)?.nextBaitInSeconds;
   }
 
-  canBuy(index: number, geometerLevel = 0, astrologueLevel = 0): boolean {
+  canBuy(index: number, geometerLevel = 0, astrologueLevel = 0, explorerLevel = 0): boolean {
     const house = this.houses[index];
-    if (!house || !this.isHouseAvailable(house, geometerLevel, astrologueLevel)) return false;
+    if (!house || !this.isHouseAvailable(house, geometerLevel, astrologueLevel, explorerLevel)) return false;
     if (!house.unlocked) {
       return this.resources.getMonsterEssence() >= (house.unlockPrice ?? 0)
         && this.resources.canSpendResources(house.unlockCosts ?? []);
@@ -371,9 +422,9 @@ export class HouseStateService {
       && this.resources.canSpendResources(this.getCostsForNextLevel(house));
   }
 
-  buy(index: number, geometerLevel = 0, astrologueLevel = 0): boolean {
+  buy(index: number, geometerLevel = 0, astrologueLevel = 0, explorerLevel = 0): boolean {
     const house = this.houses[index];
-    if (!house || !this.isHouseAvailable(house, geometerLevel, astrologueLevel)) return false;
+    if (!house || !this.isHouseAvailable(house, geometerLevel, astrologueLevel, explorerLevel)) return false;
     if (!house.unlocked) {
       const unlockPrice = house.unlockPrice ?? 0;
       const unlockCosts = house.unlockCosts ?? [];
@@ -465,12 +516,40 @@ export class HouseStateService {
     );
   }
 
+  private getDelayKitchenDurationBonusSeconds(house: House): number {
+    return house.level * DELAY_KITCHEN_HOUSE_DURATION_PER_LEVEL_SECONDS
+      + (this.unlockUpgrades?.getBonus('house:delay-kitchen', 'duration') ?? 0);
+  }
+
   private getUnlockedHouseLevel(id: string): number {
     const house = this.houses.find((item) => item.id === id);
     return house?.unlocked ? house.level : 0;
   }
 
-  private isHouseAvailable(house: House, geometerLevel: number, astrologueLevel: number): boolean {
+  private describeHouse(house: House): string {
+    if (house.id === DELAY_KITCHEN_HOUSE_ID) {
+      const bonus = this.getConsumptionDurationBonusSeconds();
+      return `${house.description} Actuel : +${Math.round(bonus)} s.`;
+    }
+    const upgrade = house.dishUpgrade;
+    if (!upgrade) return house.description;
+    const level = house.unlocked ? house.level : 0;
+    const parts: string[] = [];
+    if (upgrade.modifier && upgrade.bonusPerLevel != null) {
+      parts.push(describeHouseModifier(upgrade.modifier, level * upgrade.bonusPerLevel));
+    }
+    if (upgrade.durationPerLevel) {
+      parts.push(`durée +${Math.round(level * upgrade.durationPerLevel)} s`);
+    }
+    return parts.length > 0 ? `${house.description} Actuel : ${parts.join(', ')}.` : house.description;
+  }
+
+  private isHouseAvailable(
+    house: House,
+    geometerLevel: number,
+    astrologueLevel: number,
+    explorerLevel: number
+  ): boolean {
     if (house.id === SOLAR_BALANCE_HOUSE_ID) return astrologueLevel >= 75;
     if (house.id === SOLAR_BLUE_HOUSE_ID || house.id === SOLAR_YELLOW_HOUSE_ID) {
       return astrologueLevel >= 75 && this.isSolarHubUnlocked();
@@ -481,8 +560,16 @@ export class HouseStateService {
       getWorkerLevel: (workerIndex) => {
         if (workerIndex === VESSEL_WORKER_INDEX) return geometerLevel;
         if (workerIndex === SUN_WORKER_INDEX) return astrologueLevel;
+        if (workerIndex === KITCHEN_EXPLORER_INDEX) return explorerLevel;
         return null;
       },
     });
   }
 }
+
+function describeHouseModifier(type: keyof KitchenModifiers, value: number): string {
+  const kinds = Object.keys(DISH_EFFECT_MODIFIER) as DishEffectKind[];
+  const kind = kinds.find((entry) => DISH_EFFECT_MODIFIER[entry] === type);
+  return kind ? describeDishEffect(kind, value) : type;
+}
+

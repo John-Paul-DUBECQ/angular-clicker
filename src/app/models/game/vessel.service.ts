@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Optional } from '@angular/core';
 import { WorkerAutoData } from '../worker-auto-model';
 import { Vessel } from './vessels/vessel.model';
 import { listVessel } from './vessels/list-vessel';
@@ -11,6 +11,7 @@ import { VesselRewardNotificationService } from './vessel-reward-notification.se
 import { HouseStateService } from './house-state.service';
 import { ShopStateService } from './shop-state.service';
 import { MissionStateService } from './mission-state.service';
+import { KitchenStateService } from '../kitchen/kitchen-state.service';
 
 const VESSEL_SPAWN_INTERVAL_MS_MIN = 50000;
 const VESSEL_SPAWN_INTERVAL_MS_MAX = 140000;
@@ -61,7 +62,8 @@ export class VesselService {
     private vesselRewardNotify: VesselRewardNotificationService,
     private houseState: HouseStateService,
     private shopState: ShopStateService,
-    private missionState: MissionStateService
+    private missionState: MissionStateService,
+    @Optional() private kitchen?: KitchenStateService
   ) {}
 
   /** Tick : retirer les vaisseaux sortis (position = temps), en faire spawn si débloqué. */
@@ -80,10 +82,12 @@ export class VesselService {
     if (now < this.nextSpawnAt) return;
     const { spawnIntervalFactor } = getVesselUpgradeStats(workers, workersAvailable);
     const houseBonuses = this.houseState.getVesselUpgradeBonuses();
+    const kitchenSpawnRate = Math.max(1, this.kitchen?.getModifiers().vesselSpawnRateMultiplier ?? 1);
     const intervalMs =
       (VESSEL_SPAWN_INTERVAL_MS_MIN + Math.random() * (VESSEL_SPAWN_INTERVAL_MS_MAX - VESSEL_SPAWN_INTERVAL_MS_MIN)) *
       spawnIntervalFactor *
-      houseBonuses.spawnIntervalFactor;
+      houseBonuses.spawnIntervalFactor /
+      kitchenSpawnRate;
     this.nextSpawnAt = now + intervalMs;
     this.spawnVessel();
   }

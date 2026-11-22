@@ -33,7 +33,7 @@ export class ShopStateService {
   getShopMultiplierForWorker(workerIndex: number): number {
     return this.shopItems
       .filter((i) => i.bought && i.workerIndex === workerIndex)
-      .reduce((p, i) => p * i.value, 1);
+      .reduce((p, i) => p * (i.value ?? 1), 1);
   }
 
   getShopContext(

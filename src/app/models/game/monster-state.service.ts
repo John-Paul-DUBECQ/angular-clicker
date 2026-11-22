@@ -21,6 +21,8 @@ import { EXPLORER_WORKER_INDEX, isExplorerUnlocked } from '../unlocks/explorer-u
 import { UnlockUpgradeService } from './unlock-upgrade.service';
 import { MissionStateService } from './mission-state.service';
 import { LotteryStateService } from './lottery-state.service';
+import { KitchenStateService } from '../kitchen/kitchen-state.service';
+import { emptyKitchenModifiers, scaleResourceAmount } from '../kitchen/dish.model';
 
 /** Référence de difficulté pour calculer les récompenses selon les PV vaincus. */
 const MONSTER_HP_BASE_SECONDS = 12;
@@ -110,7 +112,8 @@ export class MonsterStateService {
     private essenceShopState: EssenceShopStateService,
     private missionState: MissionStateService,
     private lotteryState: LotteryStateService,
-    @Optional() private unlockUpgrades?: UnlockUpgradeService
+    @Optional() private unlockUpgrades?: UnlockUpgradeService,
+    @Optional() private kitchen?: KitchenStateService
   ) {}
 
   /** True si la zone monstre est débloquée (Alchimiste niveau requis). */
@@ -208,10 +211,11 @@ export class MonsterStateService {
       return false;
     }
 
-    trapEncounter.rewards.forEach((reward) => this.resources.addResource(reward.resourceId, reward.amount));
-    this.missionState.recordBaitUse();
-    this.plannedCombatCooldownEnds[id] = this.now() + combat.cooldownSeconds * 1000;
-    this.rewardNotify.notifyReward(0, 0, trapEncounter.rewards);
+    const trapRewards = trapEncounter.rewards.map((reward) => this.scaleResourceReward(reward));
+    trapRewards.forEach((reward) => this.resources.addResource(reward.resourceId, reward.amount));
+    this.missionState.recordTrapUse();
+    this.plannedCombatCooldownEnds[id] = this.now() + this.getPlannedCombatCooldownMs(combat);
+    this.rewardNotify.notifyReward(0, 0, trapRewards);
     return true;
   }
 
@@ -408,21 +412,26 @@ export class MonsterStateService {
     const essenceBase = MONSTER_ESSENCE_BASE * Math.min(encounterDifficulty / 2, 2) * lootMult;
     const essenceReward = Math.max(0, Math.floor(
       essenceBase * difficultyTime * this.essenceShopState.getEssenceMultiplier()
+      * this.getKitchenModifiers().essenceDropMultiplier
     ));
     this.resources.addMonsterEssence(essenceReward);
 
-    const dropsMultiplier = 1 + (this.unlockUpgrades?.getBonus('monster', 'drops') ?? 0);
+    const dropsMultiplier = (1 + (this.unlockUpgrades?.getBonus('monster', 'drops') ?? 0))
+      * this.getKitchenModifiers().resourceDropMultiplier;
     const resourceRewards: ResourceReward[] = (monster?.drops ?? []).map((drop) => ({
       resourceId: drop.resourceId,
       amount: Math.floor(drop.amount * dropsMultiplier) * lootMult
         + (Math.random() < ((drop.amount * dropsMultiplier) % 1) ? lootMult : 0),
   }));
     resourceRewards.forEach((reward) => this.resources.addResource(reward.resourceId, reward.amount));
-    const chestRewards = this.lotteryState.tryDropFromMonster(this.getUnlockContext(workers, workersAvailable));
+    const context = this.getUnlockContext(workers, workersAvailable);
+    const chestRewards = this.lotteryState.tryDropFromMonster(context);
+    const eggRewards = this.lotteryState.tryDropEgg(monster, context);
+    const bonusRewards = chestRewards.concat(eggRewards);
     this.rewardNotify.notifyReward(
       totalGold,
       essenceReward,
-      resourceRewards.concat(chestRewards),
+      resourceRewards.concat(bonusRewards),
       chestRewards.length > 0 ? 'Récompense et coffre !' : undefined
     );
   }
@@ -439,20 +448,42 @@ export class MonsterStateService {
       : combat.repeatReward;
     this.plannedCombatWins[combatId] = (this.plannedCombatWins[combatId] ?? 0) + 1;
     this.missionState.recordPlannedMission();
-    this.plannedCombatCooldownEnds[combatId] = this.now() + combat.cooldownSeconds * 1000;
+    this.plannedCombatCooldownEnds[combatId] = this.now() + this.getPlannedCombatCooldownMs(combat);
     const clicks = Math.max(0, reward.clicks ?? 0);
-    const essence = Math.max(0, reward.essence ?? 0);
-    const resources = (reward.resources ?? []).map((entry) => ({ ...entry }));
-    const chestRewards = this.lotteryState.tryDropFromMonster(this.getUnlockContext(workers, workersAvailable));
+    const essence = scaleResourceAmount(Math.max(0, reward.essence ?? 0), this.getKitchenModifiers().essenceDropMultiplier);
+    const resources = (reward.resources ?? []).map((entry) => this.scaleResourceReward(entry));
+    const context = this.getUnlockContext(workers, workersAvailable);
+    const chestRewards = this.lotteryState.tryDropFromMonster(context);
+    const eggRewards: ResourceReward[] = [];
+    combat.enemies.forEach((enemy) => {
+      const monster = listMonster.find((entry) => entry.name === enemy.name);
+      this.lotteryState.tryDropEgg(monster, context).forEach((reward) => eggRewards.push(reward));
+    });
     this.resources.addClicks(clicks);
     this.resources.addMonsterEssence(essence);
     resources.forEach((entry) => this.resources.addResource(entry.resourceId, entry.amount));
+    const bonusRewards = chestRewards.concat(eggRewards);
     this.rewardNotify.notifyReward(
       clicks,
       essence,
-      resources.concat(chestRewards),
+      resources.concat(bonusRewards),
       chestRewards.length > 0 ? 'Récompense et coffre !' : undefined
     );
+  }
+
+  private getKitchenModifiers() {
+    return this.kitchen?.getModifiers(this.now()) ?? emptyKitchenModifiers();
+  }
+
+  private getPlannedCombatCooldownMs(combat: PlannedCombat): number {
+    return combat.cooldownSeconds * 1000 * this.getKitchenModifiers().adventureCooldownFactor;
+  }
+
+  private scaleResourceReward(reward: ResourceReward): ResourceReward {
+    return {
+      resourceId: reward.resourceId,
+      amount: scaleResourceAmount(reward.amount, this.getKitchenModifiers().resourceDropMultiplier),
+    };
   }
 
   private getUnlockContext(
@@ -513,7 +544,8 @@ export class MonsterStateService {
     }
     if (!this.isMonsterUnlocked(workers, workersAvailable)) return;
     const spawnRate = this.essenceShopState.getSpawnRateMultiplier()
-      * Math.max(0, additionalSpawnRateMultiplier);
+      * Math.max(0, additionalSpawnRateMultiplier)
+      * this.getKitchenModifiers().monsterSpawnRateMultiplier;
     this.encounterMeter = Math.min(100, this.encounterMeter + (100 * spawnRate) / (ENCOUNTER_FILL_SECONDS * TICKS_PER_SECOND));
     if (this.encounterMeter >= 100) {
       this.encounterMeter = 0;

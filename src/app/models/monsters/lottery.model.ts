@@ -1,6 +1,8 @@
 import { ResourceReward } from '../resource';
 import { UnlockMethod } from '../unlocks/unlock-method';
 
+export const LOTTERY_WORKER_INDEX = 8;
+
 export interface ChestDrop extends ResourceReward {
   probability: number;
   unlockMethod?: UnlockMethod;
@@ -26,6 +28,63 @@ export interface LotteryStats {
 export interface LotteryView extends LotteryStats {
   unlocked: boolean;
   cooldownRemainingSeconds: number;
+  /** 1 dès le déblocage, plus la chance des plats actifs. */
+  luck: number;
+  /** Bonus additif de coffre : +0,01 point de pourcentage par point de chance. */
+  chestLuckBonus: number;
+  biomeName: string;
+  biomeEggAvailable: boolean;
+  biomeEggChance: number;
+}
+
+/** Chance de départ une fois la loterie débloquée. */
+export const BASE_LUCK = 1;
+/** +0,01 % de chance de coffre par point de chance. */
+export const CHEST_CHANCE_PER_LUCK = 0.001;
+
+export function getEffectiveLuck(kitchenLuck: number, lotteryUnlocked: boolean): number {
+  if (!lotteryUnlocked) return 0;
+  return BASE_LUCK + Math.max(0, kitchenLuck);
+}
+
+export function getChestLuckBonus(luck: number): number {
+  return Math.max(0, luck) * CHEST_CHANCE_PER_LUCK;
+}
+
+/**
+ * Succès d'un tirage. Au-delà de 100 %, chaque tranche entière est un gain de plus,
+ * et le reste garde sa chance d'en ajouter un.
+ */
+export function rollSuccesses(chance: number, random: () => number = Math.random): number {
+  if (chance <= 0) return 0;
+  const guaranteed = Math.floor(chance);
+  const fraction = chance - guaranteed;
+  return guaranteed + (random() < fraction ? 1 : 0);
+}
+
+export interface ChanceRewardEntry {
+  resourceId: string;
+  amount: number;
+  chance: number;
+}
+
+/** La chance multiplie la probabilité. Un tirage au-dessus de 100 % peut donner plusieurs exemplaires. */
+export function collectChanceRewards(
+  entries: ChanceRewardEntry[],
+  luck: number,
+  random: () => number = Math.random
+): ResourceReward[] {
+  const multiplier = Math.max(0, luck);
+  const rewards: ResourceReward[] = [];
+  for (const entry of entries) {
+    const hits = rollSuccesses(Math.max(0, entry.chance) * multiplier, random);
+    if (hits <= 0) continue;
+    const scaled = Math.max(0, entry.amount) * hits;
+    const whole = Math.floor(scaled);
+    const amount = whole + (random() < scaled - whole ? 1 : 0);
+    if (amount > 0) rewards.push({ resourceId: entry.resourceId, amount });
+  }
+  return rewards;
 }
 
 /** Loot de la loterie : chaque entrée est tirée seule, la chance n’est pas garantie. */
@@ -35,8 +94,12 @@ export interface LotteryLootDrop extends ResourceReward {
   unlockMethod?: UnlockMethod;
 }
 
-export function getLotteryDropChance(drop: LotteryLootDrop, luckMultiplier: number): number {
-  return Math.min(1, Math.max(0, drop.chance) * Math.max(0, luckMultiplier));
+export function getLotteryDropChance(drop: LotteryLootDrop, luck: number): number {
+  return Math.max(0, drop.chance) * Math.max(0, luck);
+}
+
+export function getLotteryLuckBonus(baseChance: number, luck: number): number {
+  return Math.max(0, baseChance) * Math.max(0, luck - 1);
 }
 
 export const LOTTERY_UNLOCK_METHOD = UnlockMethod.plannedCombatCompleted('planned-mosh-hunt');

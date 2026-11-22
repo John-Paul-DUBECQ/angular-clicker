@@ -1,5 +1,8 @@
 import { Injectable } from '@angular/core';
 import { RESOURCE_DEFINITIONS, ResourceCost, ResourceStock } from '../resource';
+import { EGG_RESOURCES } from '../monsters/egg.model';
+
+const RESOURCE_CATALOG = [...RESOURCE_DEFINITIONS, ...EGG_RESOURCES];
 
 export const DEFAULT_MAX_MANA = 600;
 /** Régénération de base par tick (10 ticks/s → 0.5 mana/s). */
@@ -142,7 +145,7 @@ export class ResourcesService {
   }
 
   getResourceStocks(): ResourceStock[] {
-    return RESOURCE_DEFINITIONS.map((resource) => ({
+    return RESOURCE_CATALOG.map((resource) => ({
       ...resource,
       amount: this.getResourceAmount(resource.id),
     }));
@@ -154,7 +157,7 @@ export class ResourcesService {
 
   setResourceAmounts(amounts: Record<string, number> | undefined): void {
     this.resourceAmounts = {};
-    for (const resource of RESOURCE_DEFINITIONS) {
+    for (const resource of RESOURCE_CATALOG) {
       this.resourceAmounts[resource.id] = Math.max(0, amounts?.[resource.id] ?? 0);
     }
   }

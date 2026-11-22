@@ -9,6 +9,7 @@ import { Power } from './models/powers/power.model';
 import { EssenceShopItem } from './models/essence-shop-item';
 import { House } from './models/house';
 import { ResourceReward, ResourceStock } from './models/resource';
+import { DishIngredientView, DishView } from './models/kitchen/dish.model';
 import { formatNumberValue } from './pipes/format-number.pipe';
 import { MonsterRewardNotificationService } from './models/game/monster-reward-notification.service';
 import { VesselRewardNotificationService } from './models/game/vessel-reward-notification.service';
@@ -18,7 +19,7 @@ import { listMonster } from './models/monsters/list-monster';
 import { Monster } from './models/monsters/monster.model';
 import { MONSTER_BIOMES, MonsterBiomeId } from './models/monsters/monster-biome.model';
 import { MissionSlotView } from './models/missions/mission.model';
-import { LIST_CHEST, LOTTERY_LOOT, getLotteryDropChance } from './models/monsters/lottery.model';
+import { LIST_CHEST, LOTTERY_LOOT, getLotteryLuckBonus } from './models/monsters/lottery.model';
 import {
   getResourceTradeCost,
   ResourceTradeQuantity,
@@ -36,7 +37,8 @@ export class AppComponent implements OnInit, OnDestroy {
   mobileScreen: 'game' | 'shop' | 'workers' | 'combat' | 'settings' | 'missions' = 'game';
   mobileMenuVisible = false;
   workerView: 'workers' | 'essenceShop' | 'quests' = 'workers';
-  desktopView: 'characters' | 'houses' | 'shop' | 'essenceShop' | 'quests' | 'kitchen' | 'garden' | 'missions' | 'lottery' = 'characters';
+  desktopView: 'characters' | 'houses' | 'shop' | 'essenceShop' | 'quests' | 'kitchen' | 'garden' | 'breeding' | 'missions' | 'lottery' = 'characters';
+  breedingView: 'monsters' | 'eggs' = 'monsters';
   readonly resourceTradeQuantities: ResourceTradeQuantity[] = [1, 10, 100, 1000, 'max'];
   tradeQuantity: ResourceTradeQuantity = 1;
   readonly monsterBiomes = MONSTER_BIOMES;
@@ -82,16 +84,20 @@ export class AppComponent implements OnInit, OnDestroy {
   private stableMissionSlots: MissionSlotView[] = [];
   private stableResources: ResourceStock[] = [];
   private stableShopItems: ShopItem[] = [];
+  private stableKitchenDishes: DishView[] = [];
+  private stableActiveKitchenDishesCache: DishView[] = [];
   private stableResourceTrades: ResourceTradeView[] = [];
   private visibleResourceTradesCache: ResourceTradeView[] = [];
   private sortedShopItemsCache: { item: ShopItem; index: number }[] = [];
   private readonly seenShopItemKeys = new Set<string>();
   private readonly seenHouseIds = new Set<string>();
+  private readonly seenDishIds = new Set<string>();
   private essenceShopSeen = false;
   private lotterySeen = false;
   resources: ResourceStock[] = [];
   resourcesVisible = false;
   selectedHouseTag: string | null = null;
+  selectedKitchenTag: string | null = null;
   hideMaxLevelHouses = false;
   collapsedHouseIds: { [houseId: string]: boolean } = {};
   importError = false;
@@ -155,6 +161,7 @@ export class AppComponent implements OnInit, OnDestroy {
     const notificationState = this.gameState.getNavigationNotificationState();
     notificationState.seenShopItemKeys.forEach((key) => this.seenShopItemKeys.add(key));
     notificationState.seenHouseIds.forEach((id) => this.seenHouseIds.add(id));
+    notificationState.seenDishIds.forEach((id) => this.seenDishIds.add(id));
     this.essenceShopSeen = notificationState.essenceShopSeen;
     this.lotterySeen = notificationState.lotterySeen === true;
   }
@@ -284,6 +291,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.stableResources = this.reuseViewItems(this.stableResources, state.resources ?? []);
     this.stableShopItems = this.reuseViewItems(this.stableShopItems, state.shopItems ?? []);
     this.stableResourceTrades = this.reuseViewItems(this.stableResourceTrades, state.resourceTrades ?? []);
+    this.stableKitchenDishes = this.reuseViewItems(this.stableKitchenDishes, state.kitchen?.dishes ?? []);
     this.resources = this.stableResources;
     this.game = {
       ...state,
@@ -295,6 +303,13 @@ export class AppComponent implements OnInit, OnDestroy {
       missionSlots: this.stableMissionSlots,
       shopItems: this.stableShopItems,
       resourceTrades: this.stableResourceTrades,
+      kitchen: state.kitchen
+        ? {
+          ...state.kitchen,
+          dishes: this.stableKitchenDishes,
+          activeDishes: this.stableActiveKitchenDishes(this.stableKitchenDishes),
+        }
+        : state.kitchen,
     };
     this.syncShopViewCaches();
     this.workersAvailable = this.stableWorkersAvailable;
@@ -461,6 +476,19 @@ export class AppComponent implements OnInit, OnDestroy {
     )));
   }
 
+  get kitchenTags(): string[] {
+    return Array.from(new Set((this.game.kitchen?.dishes ?? []).reduce(
+      (tags, dish) => tags.concat(dish.tags ?? []),
+      [] as string[]
+    )));
+  }
+
+  get visibleKitchenDishes(): DishView[] {
+    return (this.game.kitchen?.dishes ?? []).filter((dish) =>
+      !this.selectedKitchenTag || dish.tags.includes(this.selectedKitchenTag)
+    );
+  }
+
   get visibleHouses(): House[] {
     return (this.game.houses ?? []).filter((house) =>
       (!this.selectedHouseTag || (house.tags ?? []).includes(this.selectedHouseTag))
@@ -546,6 +574,10 @@ export class AppComponent implements OnInit, OnDestroy {
     return index;
   }
 
+  trackByPosition(index: number): number {
+    return index;
+  }
+
   trackByShopIndex(index: number, _item: ShopItem): number {
     return index;
   }
@@ -592,6 +624,24 @@ export class AppComponent implements OnInit, OnDestroy {
     return house.id;
   }
 
+  trackByDish(_index: number, dish: DishView): string {
+    return dish.id;
+  }
+
+  trackByIngredient(_index: number, ingredient: DishIngredientView): string {
+    return ingredient.resourceId;
+  }
+
+  private stableActiveKitchenDishes(dishes: DishView[]): DishView[] {
+    const active = dishes.filter((dish) => dish.active);
+    const previous = this.stableActiveKitchenDishesCache;
+    if (previous.length === active.length && active.every((dish, index) => dish === previous[index])) {
+      return previous;
+    }
+    this.stableActiveKitchenDishesCache = active;
+    return active;
+  }
+
   trackByResource(_i: number, resource: ResourceStock): string {
     return resource.id;
   }
@@ -629,6 +679,11 @@ export class AppComponent implements OnInit, OnDestroy {
     return this.sortedShopItemsWithIndex.some(({ item, index }) =>
       !this.seenShopItemKeys.has(this.getShopItemNotificationKey(item, index))
     );
+  }
+
+  get hasNewKitchenDishes(): boolean {
+    if (!this.game.kitchen?.unlocked) return false;
+    return this.game.kitchen.dishes.some((dish) => !this.seenDishIds.has(dish.id));
   }
 
   get hasNewHouses(): boolean {
@@ -683,6 +738,13 @@ export class AppComponent implements OnInit, OnDestroy {
           changed = true;
         }
       });
+    } else if (this.desktopView === 'kitchen') {
+      (this.game.kitchen?.dishes ?? []).forEach((dish) => {
+        if (!this.seenDishIds.has(dish.id)) {
+          this.seenDishIds.add(dish.id);
+          changed = true;
+        }
+      });
     }
     if (
       (this.desktopView === 'essenceShop' || this.workerView === 'essenceShop')
@@ -703,6 +765,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.gameState.setNavigationNotificationState({
       seenShopItemKeys: Array.from(this.seenShopItemKeys),
       seenHouseIds: Array.from(this.seenHouseIds),
+      seenDishIds: Array.from(this.seenDishIds),
       essenceShopSeen: this.essenceShopSeen,
       lotterySeen: this.lotterySeen,
     });
@@ -842,7 +905,7 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
-  setDesktopView(view: 'characters' | 'houses' | 'shop' | 'essenceShop' | 'quests' | 'kitchen' | 'garden' | 'missions' | 'lottery'): void {
+  setDesktopView(view: 'characters' | 'houses' | 'shop' | 'essenceShop' | 'quests' | 'kitchen' | 'garden' | 'breeding' | 'missions' | 'lottery'): void {
     this.desktopView = view;
     if (view === 'characters') {
       this.workerView = 'workers';
@@ -858,6 +921,16 @@ export class AppComponent implements OnInit, OnDestroy {
       this.gameState.markLotterySeen();
     }
     this.markCurrentSectionItemsAsSeen();
+  }
+
+  cookDish(dishId: string): void {
+    if (!this.gameState.cookDish(dishId)) return;
+    this.refreshGameState();
+  }
+
+  useDish(dishId: string): void {
+    if (!this.gameState.useDish(dishId)) return;
+    this.refreshGameState();
   }
 
   activateLottery(): void {
@@ -886,15 +959,22 @@ export class AppComponent implements OnInit, OnDestroy {
     this.refreshGameState();
   }
 
-  getLotteryDropChance(drop: (typeof LOTTERY_LOOT)[number]): number {
-    return getLotteryDropChance(drop, this.game.lottery?.luckMultiplier ?? 1);
+  lotteryLuckBonus(baseChance: number): number {
+    return getLotteryLuckBonus(baseChance, this.game.lottery?.luck ?? 0);
   }
 
-  formatLotteryChance(probability: number): string {
+  formatLuckPercent(probability: number): string {
     const percent = probability * 100;
-    if (percent >= 1) return `${Math.round(percent * 10) / 10} %`;
-    if (percent >= 0.01) return `${Math.round(percent * 100) / 100} %`;
-    return `${percent.toFixed(3)} %`;
+    if (percent === 0) return '0%';
+    if (percent >= 1) {
+      const rounded = Math.round(percent * 10) / 10;
+      return `${Number.isInteger(rounded) ? rounded : rounded.toFixed(1)}%`;
+    }
+    if (percent >= 0.01) {
+      const rounded = Math.round(percent * 100) / 100;
+      return `${Number.isInteger(rounded) ? rounded : rounded}%`;
+    }
+    return `${percent.toFixed(3)}%`;
   }
 
   openLotteryChest(chestId: string): void {

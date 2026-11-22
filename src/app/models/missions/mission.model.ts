@@ -1,11 +1,12 @@
 export type MissionObjectiveType =
   | 'defeat-monsters'
   | 'complete-missions'
-  | 'use-bait'
+  | 'use-trap'
   | 'hold-clicks'
   | 'collect-vessels'
   | 'clicks'
-  | 'activate-streak';
+  | 'activate-streak'
+  | 'chest-opening';
 
 export interface MissionObjective {
   type: MissionObjectiveType;

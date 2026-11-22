@@ -1,4 +1,6 @@
 import { requirePlannedCombatWins, requireAll, requireBought, requirePower, requireWorkerLevel, ShopItem } from "./shop-item";
+import { dishUpgradeId } from "./kitchen/dish.model";
+import { LIST_DISH } from "./kitchen/list-dish";
 /*
 Recap des workers :
 - Épée : 0
@@ -411,8 +413,45 @@ export const listShopItem: Array<ShopItem> = [
     appearImmediatelyOnUnlock: true,
     unlockMethod: requirePlannedCombatWins('planned-forest-10', 2),
     unlockUpgrade: { unlockId: 'house:bait', type: 'interval-seconds', value: 10 },
+  },{
+    id: 'hunter-beacon-upgrade1',
+    name: 'Beacon de chasseur',
+    description: 'Augmente la vitesse de spawn des vaisseaux de 30% pour les ration de chasseur.',
+    imageUrl: 'assets/img/Hunter/Hunter1.png',
+    price: 1e25,
+    appearImmediatelyOnUnlock: true,
+    unlockMethod: requireWorkerLevel(8,60),
+    unlockUpgrade: { unlockId: dishUpgradeId('ration-de-chasseur'), type: 'vesselSpawnRateMultiplier', value: 0.3 },
+  },{
+    id: 'hunter-beacon-upgrade2',
+    name: 'Beacon de chasseur',
+    description: 'Augmente la vitesse de spawn des vaisseaux de 30% pour les ration de chasseur.',
+    imageUrl: 'assets/img/Hunter/Hunter1.png',
+    price: 1e28,
+    appearImmediatelyOnUnlock: true,
+    unlockMethod: requireAll(requireBought('hunter-beacon-upgrade1'), requireWorkerLevel(8,60)),
+    unlockUpgrade: { unlockId: dishUpgradeId('ration-de-chasseur'), type: 'vesselSpawnRateMultiplier', value: 0.3 },
+  },{
+    id: 'hunter-beacon-upgrade3',
+    name: 'Beacon de chasseur',
+    description: 'Augmente la durée de la ration de chasseur de 10 secondes.',
+    imageUrl: 'assets/img/Hunter/Hunter1.png',
+    price: 1e28,
+    appearImmediatelyOnUnlock: true,
+    unlockMethod: requireAll(requireBought('hunter-beacon-upgrade1'), requireWorkerLevel(8,60)),
+    unlockUpgrade: { unlockId: dishUpgradeId('ration-de-chasseur'), type: 'duration', value: 10 },
+  },{
+    id: 'hunter-beacon-upgrade4',
+    name: 'Beacon de chasseur',
+    description: 'Augmente la vitesse de spawn des vaisseaux de 30% pour les ration de chasseur.',
+    imageUrl: 'assets/img/Hunter/Hunter1.png',
+    price: 1e28,
+    appearImmediatelyOnUnlock: true,
+    unlockMethod: requireAll(requireBought('hunter-beacon-upgrade2'), requireWorkerLevel(8,65)),
+    unlockUpgrade: { unlockId: dishUpgradeId('ration-de-chasseur'), type: 'vesselSpawnRateMultiplier', value: 0.3 },
   },
 ];
+
 
 /*
 UnlockUpgrade disponibles (appliques quand l'item est achete) :
@@ -454,5 +493,13 @@ UnlockUpgrade disponibles (appliques quand l'item est achete) :
 - power:<id> / duration : augmentation de la duree des effets temporises (10 % avec 0.1).
 - power:<id> / strength : augmentation de la puissance (10 % avec 0.1; degats et weakness).
   IDs de sorts : power, weakness, spawn-mob, monster-time, vessel-rush.
+- dish:<id> / duration : secondes ajoutees a la duree du plat tant qu'il est actif (+10 s avec 10).
+- dish:<id> / <propriete> : bonus d'une seule propriete, ajoute seulement pendant que ce plat est actif.
+  Exemple : { unlockId: 'dish:ration-de-chasseur', type: 'vesselSpawnRateMultiplier', value: 0.3 }.
+  Proprietes : monsterSpawnRateMultiplier, vesselSpawnRateMultiplier, damageMultiplier,
+  criticalChanceBonus, criticalDamageBonus, luck, essenceDropMultiplier,
+  resourceDropMultiplier, ticketRewardMultiplier, adventureCooldownFactor.
+  0.3 sur un taux = +30 %. damageMultiplier s'ajoute au multiplicateur du plat.
+  adventureCooldownFactor se retranche (0.25 = -25 %). luck s'ajoute a la chance de la loterie.
 */
 

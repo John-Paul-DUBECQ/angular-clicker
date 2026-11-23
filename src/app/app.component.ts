@@ -25,6 +25,8 @@ import {
   ResourceTradeQuantity,
   ResourceTradeView,
 } from './models/resource-trade';
+import { PrimeOfferView, PrimeTradeView, PrimeTraderView } from './models/primes/prime.model';
+import { FEATURE_COLOR_OPTIONS, HOUSE_TAG_COLOR_OPTIONS } from './models/feature-colors';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -34,13 +36,20 @@ import Swal from 'sweetalert2';
 })
 export class AppComponent implements OnInit, OnDestroy {
   title = 'Clicker Game';
-  mobileScreen: 'game' | 'shop' | 'workers' | 'combat' | 'settings' | 'missions' = 'game';
+  mobileScreen: 'game' | 'shop' | 'workers' | 'combat' | 'settings' | 'missions' | 'traders' = 'game';
   mobileMenuVisible = false;
   workerView: 'workers' | 'essenceShop' | 'quests' = 'workers';
-  desktopView: 'characters' | 'houses' | 'shop' | 'essenceShop' | 'quests' | 'kitchen' | 'garden' | 'breeding' | 'missions' | 'lottery' = 'characters';
+  desktopView: 'characters' | 'houses' | 'shop' | 'essenceShop' | 'quests' | 'kitchen' | 'garden' | 'breeding' | 'missions' | 'lottery' | 'traders' = 'characters';
+  selectedTraderId: string | null = null;
+  devCommand = '';
+  devCommandMessage = '';
   breedingView: 'monsters' | 'eggs' = 'monsters';
   readonly resourceTradeQuantities: ResourceTradeQuantity[] = [1, 10, 100, 1000, 'max'];
   tradeQuantity: ResourceTradeQuantity = 1;
+  traderQuantity: ResourceTradeQuantity = 1;
+  readonly featureColorOptions = FEATURE_COLOR_OPTIONS;
+  readonly houseTagColorOptions = HOUSE_TAG_COLOR_OPTIONS;
+  traderPopup: { trade: PrimeTradeView; left: string; top: string } | null = null;
   readonly monsterBiomes = MONSTER_BIOMES;
   readonly lotteryChests = LIST_CHEST;
   readonly lotteryLoot = LOTTERY_LOOT;
@@ -82,6 +91,8 @@ export class AppComponent implements OnInit, OnDestroy {
   private stableHouses: House[] = [];
   private stablePlannedCombats: NonNullable<Game['plannedCombats']> = [];
   private stableMissionSlots: MissionSlotView[] = [];
+  private stablePrimeOffers: PrimeOfferView[] = [];
+  private stablePrimeTraders: PrimeTraderView[] = [];
   private stableResources: ResourceStock[] = [];
   private stableShopItems: ShopItem[] = [];
   private stableKitchenDishes: DishView[] = [];
@@ -287,7 +298,21 @@ export class AppComponent implements OnInit, OnDestroy {
     this.stableEssenceShopItems = this.reuseViewItems(this.stableEssenceShopItems, state.essenceShopItems ?? []);
     this.stableHouses = this.reuseViewItems(this.stableHouses, state.houses ?? []);
     this.stablePlannedCombats = this.reuseViewItems(this.stablePlannedCombats, state.plannedCombats ?? []);
-    this.stableMissionSlots = this.reuseViewItems(this.stableMissionSlots, state.missionSlots ?? []);
+    this.stableMissionSlots = this.reuseViewItems(
+      this.stableMissionSlots,
+      state.missionSlots ?? [],
+      ['cooldownRemainingSeconds', 'rerollAvailable']
+    );
+    this.stablePrimeOffers = this.reuseViewItems(
+      this.stablePrimeOffers,
+      state.primeBoard?.offers ?? [],
+      ['remainingSeconds']
+    );
+    this.stablePrimeTraders = this.reuseViewItems(
+      this.stablePrimeTraders,
+      state.primeBoard?.traders ?? [],
+      ['remainingSeconds']
+    );
     this.stableResources = this.reuseViewItems(this.stableResources, state.resources ?? []);
     this.stableShopItems = this.reuseViewItems(this.stableShopItems, state.shopItems ?? []);
     this.stableResourceTrades = this.reuseViewItems(this.stableResourceTrades, state.resourceTrades ?? []);
@@ -301,6 +326,9 @@ export class AppComponent implements OnInit, OnDestroy {
       houses: this.stableHouses,
       plannedCombats: this.stablePlannedCombats,
       missionSlots: this.stableMissionSlots,
+      primeBoard: state.primeBoard
+        ? { ...state.primeBoard, offers: this.stablePrimeOffers, traders: this.stablePrimeTraders }
+        : state.primeBoard,
       shopItems: this.stableShopItems,
       resourceTrades: this.stableResourceTrades,
       kitchen: state.kitchen
@@ -326,26 +354,53 @@ export class AppComponent implements OnInit, OnDestroy {
       });
     }
     this.markCurrentSectionItemsAsSeen();
+    this.paintFeatureColors();
   }
 
-  /** Conserve les objets de vue tant que leurs valeurs affichées restent identiques. */
-  private reuseViewItems<T extends object>(previous: T[], next: T[]): T[] {
-    return next.map((item, index) => {
+  /**
+   * Conserve les objets de vue tant que leurs valeurs affichées restent identiques.
+   * Les clés volatiles (minuteurs) sont recopiées sur l'objet déjà affiché pour ne pas
+   * recréer le DOM, et donc ne pas recharger les images, à chaque seconde.
+   */
+  private reuseViewItems<T extends object>(previous: T[], next: T[], volatileKeys: (keyof T)[] = []): T[] {
+    let unchanged = previous.length === next.length;
+    const reused = next.map((item, index) => {
       const previousItem = previous[index];
-      if (!previousItem) return item;
-      const previousKeys = Object.keys(previousItem) as (keyof T)[];
-      const nextKeys = Object.keys(item) as (keyof T)[];
-      if (
-        previousKeys.length === nextKeys.length &&
-        previousKeys.every((key) =>
-          typeof previousItem[key] === 'object' || typeof item[key] === 'object'
-            ? JSON.stringify(previousItem[key]) === JSON.stringify(item[key])
-            : previousItem[key] === item[key]
-        )
-      ) {
-        return previousItem;
+      if (!previousItem || !this.sameViewItem(previousItem, item, volatileKeys)) {
+        unchanged = false;
+        return item;
       }
-      return item;
+      volatileKeys.forEach((key) => {
+        previousItem[key] = item[key];
+      });
+      return previousItem;
+    });
+    return unchanged ? previous : reused;
+  }
+
+  private sameViewItem<T extends object>(previousItem: T, item: T, volatileKeys: (keyof T)[]): boolean {
+    const ignore = new Set<string>(volatileKeys.map((key) => String(key)));
+    const previousKeys = Object.keys(previousItem).filter((key) => !ignore.has(key));
+    const nextKeys = Object.keys(item).filter((key) => !ignore.has(key));
+    if (previousKeys.length !== nextKeys.length) return false;
+    return previousKeys.every((key) => {
+      const left = previousItem[key as keyof T];
+      const right = item[key as keyof T];
+      return typeof left === 'object' || typeof right === 'object'
+        ? JSON.stringify(left) === JSON.stringify(right)
+        : left === right;
+    });
+  }
+
+  private paintFeatureColors(): void {
+    const colors = this.game.featureColors;
+    if (!colors) return;
+    const root = document.documentElement;
+    Object.entries(colors.features).forEach(([id, color]) => {
+      root.style.setProperty(`--feature-${id}`, color);
+    });
+    Object.entries(colors.houseTags).forEach(([tag, color]) => {
+      root.style.setProperty(`--house-${this.houseTagSlug(tag)}`, color);
     });
   }
 
@@ -666,6 +721,62 @@ export class AppComponent implements OnInit, OnDestroy {
     return slot.id;
   }
 
+  trackByPrimeOffer(_index: number, offer: PrimeOfferView): string {
+    return offer.id;
+  }
+
+  trackByPrimeTrader(_index: number, trader: PrimeTraderView): string {
+    return trader.instanceId;
+  }
+
+  trackByPrimeTrade(_index: number, trade: PrimeTradeView): string {
+    return trade.id;
+  }
+
+  showTraderPopup(trade: PrimeTradeView, event: MouseEvent): void {
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    this.traderPopup = {
+      trade,
+      left: `${rect.right + 12}px`,
+      top: `${rect.top + rect.height / 2}px`,
+    };
+  }
+
+  hideTraderPopup(): void {
+    this.traderPopup = null;
+  }
+
+  featureColor(id: string): string {
+    return this.game.featureColors?.features[id]
+      ?? this.featureColorOptions.find((option) => option.id === id)?.color
+      ?? '#ffffff';
+  }
+
+  houseTagColor(tag: string): string {
+    return this.game.featureColors?.houseTags[tag]
+      ?? this.houseTagColorOptions.find((option) => option.id === tag)?.color
+      ?? '#47e88f';
+  }
+
+  houseAccent(house: House): string | null {
+    const tag = house.tags?.[0];
+    return tag ? this.houseTagColor(tag) : null;
+  }
+
+  setFeatureColor(id: string, color: string): void {
+    this.gameState.setFeatureColor(id, color);
+    this.refreshGameState();
+  }
+
+  setHouseTagColor(tag: string, color: string): void {
+    this.gameState.setHouseTagColor(tag, color);
+    this.refreshGameState();
+  }
+
+  houseTagSlug(tag: string): string {
+    return tag.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  }
+
   trackByPowerIndex(index: number, _power: Power): number {
     return index;
   }
@@ -698,7 +809,12 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   get hasNewMissions(): boolean {
-    return !!this.game.missionsUnlocked && this.gameState.hasUnseenMissions();
+    return !!this.game.missionsUnlocked && (this.gameState.hasUnseenMissions() || this.gameState.hasUnseenPrimes());
+  }
+
+  get selectedTrader(): PrimeTraderView | null {
+    const traders = this.game.primeBoard?.traders ?? [];
+    return traders.find((trader) => trader.instanceId === this.selectedTraderId) ?? traders[0] ?? null;
   }
 
   get hasNewLottery(): boolean {
@@ -715,6 +831,36 @@ export class AppComponent implements OnInit, OnDestroy {
     if (this.gameState.rerollMission(slotId)) {
       this.refreshGameState();
     }
+  }
+
+  startPrime(offerId: string): void {
+    if (!this.gameState.startPrime(offerId)) return;
+    if (this.mobileScreen === 'missions') this.mobileScreen = 'game';
+    this.refreshGameState();
+  }
+
+  cancelPrime(event: MouseEvent): void {
+    event.stopPropagation();
+    if (this.gameState.cancelPrime()) {
+      this.refreshGameState();
+    }
+  }
+
+  applyDevCommand(): void {
+    this.devCommandMessage = this.gameState.applyDevCommand(this.devCommand);
+    this.refreshGameState();
+  }
+
+  buyPrimeTrade(trade: PrimeTradeView): void {
+    const requested = this.traderQuantity === 'max' ? trade.remaining : this.traderQuantity;
+    const quantity = Math.min(requested, trade.remaining);
+    if (this.gameState.buyPrimeTrade(trade.id, quantity)) {
+      this.refreshGameState();
+    }
+  }
+
+  selectTrader(instanceId: string): void {
+    this.selectedTraderId = instanceId;
   }
 
   private getShopItemNotificationKey(item: ShopItem, index: number): string {
@@ -905,7 +1051,7 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
-  setDesktopView(view: 'characters' | 'houses' | 'shop' | 'essenceShop' | 'quests' | 'kitchen' | 'garden' | 'breeding' | 'missions' | 'lottery'): void {
+  setDesktopView(view: 'characters' | 'houses' | 'shop' | 'essenceShop' | 'quests' | 'kitchen' | 'garden' | 'breeding' | 'missions' | 'lottery' | 'traders'): void {
     this.desktopView = view;
     if (view === 'characters') {
       this.workerView = 'workers';
@@ -1001,7 +1147,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.settingsVisible = false;
   }
 
-  setMobileScreen(screen: 'game' | 'shop' | 'workers' | 'combat' | 'settings' | 'missions'): void {
+  setMobileScreen(screen: 'game' | 'shop' | 'workers' | 'combat' | 'settings' | 'missions' | 'traders'): void {
     this.mobileScreen = screen;
     this.mobileMenuVisible = false;
     if (screen === 'missions' && this.hasNewMissions) {

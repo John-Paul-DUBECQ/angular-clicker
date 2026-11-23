@@ -11,6 +11,7 @@ export class HouseAreaComponent {
   @Input() house!: House;
   @Input() essence = 0;
   @Input() resources: ResourceStock[] = [];
+  @Input() respect = 0;
   @Input() collapsed = false;
   @Output() upgraded = new EventEmitter<void>();
   @Output() collapsedChange = new EventEmitter<boolean>();
@@ -23,12 +24,12 @@ export class HouseAreaComponent {
     const costs = this.house.unlocked ? this.house.costs : (this.house.unlockCosts ?? []);
     const price = this.house.unlocked ? this.house.price : (this.house.unlockPrice ?? 0);
     if (this.house.maxLevel != null && (this.house.level >= this.house.maxLevel || !this.house.unlocked)) {
-      return !this.house.unlocked && this.essence >= price && costs.every((cost) => {
+      return !this.house.unlocked && this.essence >= price && this.respect >= (this.house.respectRequired ?? 0) && costs.every((cost) => {
         const stock = this.resources.find((resource) => resource.id === cost.resourceId);
         return (stock?.amount ?? 0) >= cost.amount;
       });
     }
-    return this.essence >= price && costs.every((cost) => {
+    return this.essence >= price && this.respect >= (this.house.respectRequired ?? 0) && costs.every((cost) => {
       const stock = this.resources.find((resource) => resource.id === cost.resourceId);
       return (stock?.amount ?? 0) >= cost.amount;
     });

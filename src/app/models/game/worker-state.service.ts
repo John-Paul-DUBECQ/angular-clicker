@@ -20,6 +20,7 @@ import { monsterUnlockDefinition, MONSTER_UPGRADES } from '../unlocks/monster-un
 import { vesselUnlockDefinition, VESSEL_UPGRADES } from '../unlocks/vessel';
 import { houseUnlockDefinition } from '../unlocks/house-unlock';
 import { eggUnlockDefinition } from '../monsters/egg.model';
+import { primeUnlockDefinition } from '../unlocks/prime-unlock';
 import { ResourcesService } from './resources.service';
 import { LoreNotificationService } from '../lore/lore-notification.service';
 import { WORKER_LORE_BY_NAME, WORKER_LORE_BY_LEVEL } from '../lore/worker-lore';
@@ -83,7 +84,7 @@ export class WorkerStateService {
       createAutoWorker('Magicien', 1000, 1.30, 35000, 1.39, undefined, 1, [powerUnlockDefinition, ...POWER_MANA_UPGRADES], { workerIndex: 4, minLevel: 10 }),
       createAutoWorker('Alchimiste', 4500, 1.35, 512500, 1.45, undefined, 1, [monsterUnlockDefinition, ...MONSTER_UPGRADES], { workerIndex: 5, minLevel: 10 }),
       createAutoWorker('Géomètre', 20000, 1.40, 1e7, 1.51, undefined, 1, [vesselUnlockDefinition, ...VESSEL_UPGRADES], { workerIndex: 6, minLevel: 12 }),
-      createAutoWorker('Architecte', 100000, 1.45, 55e8, 1.57, undefined, 1, [], { workerIndex: 7, minLevel: 10 }),
+      createAutoWorker('Architecte', 100000, 1.45, 55e8, 1.57, undefined, 1, [primeUnlockDefinition], { workerIndex: 7, minLevel: 10 }),
       createAutoWorker('Explorateur', 40000000000000, 1.50, 1e15, 1.63, undefined, 1, [], { workerIndex: 8, minLevel: 10 }),
     ];
     attachDefaultWorkerUnlockMethods(this.workersAvailable);

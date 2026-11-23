@@ -8,6 +8,7 @@ export interface UnlockContext {
   getHouseLevel?: (houseId: string) => number;
   getPowerBought?: (powerId: string) => boolean;
   getPlannedCombatWins?: (combatId: string) => number;
+  getRespect?: () => number;
 }
 
 export type UnlockPredicate = (context: UnlockContext) => boolean;
@@ -104,6 +105,13 @@ export class UnlockMethod {
     return UnlockMethod.custom(
       (context) => context.getPowerBought ? context.getPowerBought(powerId) : false,
       `Pouvoir ${powerId}`
+    );
+  }
+
+  static minRespect(respect: number): UnlockMethod {
+    return UnlockMethod.custom(
+      (context) => (context.getRespect ? context.getRespect() : 0) >= respect,
+      `${respect} de respect`
     );
   }
 

@@ -13,6 +13,8 @@ import type { MissionSlotView } from "../missions/mission.model";
 import type { ResourceTradeView } from "../resource-trade";
 import type { LotteryView } from "../monsters/lottery.model";
 import type { KitchenView } from "../kitchen/dish.model";
+import type { PrimeBoardView } from "../primes/prime.model";
+import type { FeatureColorSettings } from "../feature-colors";
 
 /**
  * Vue agrégée du jeu pour l'UI. Les données réelles sont dans Resources, WorkerState, ShopState, PowerState.
@@ -81,6 +83,8 @@ export class Game {
     plannedCombats?: PlannedCombatView[];
     missionsUnlocked?: boolean;
     missionSlots?: MissionSlotView[];
+    /** Panneau des primes, débloqué par l'Architecte au niveau 125. */
+    primeBoard?: PrimeBoardView;
     missionSlotsUnlocked?: number;
     nextMissionSlotCost?: { essence?: number; tickets?: number } | null;
     resourceTrades?: ResourceTradeView[];
@@ -99,4 +103,6 @@ export class Game {
     showDamageNumbers?: boolean;
     /** Affiche les dégâts des coups critiques dans la zone de jeu. */
     showCriticalHitNumbers?: boolean;
+    /** Couleurs des fonctionnalités et des tags de maisons. */
+    featureColors?: FeatureColorSettings;
 }

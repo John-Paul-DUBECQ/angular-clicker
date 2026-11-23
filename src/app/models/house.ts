@@ -24,6 +24,8 @@ export interface House {
   vesselSpawnIntervalFactor?: number;
   /** Secondes ajoutées à tous les plats par la maison du délai de consommation. */
   delayKitchenDurationBonusSeconds?: number;
+  /** Respect minimum pour débloquer ou améliorer la maison. Non dépensé. */
+  respectRequired?: number;
   houseIndex?: number;
   /** Conditions cumulables nécessaires pour débloquer la maison. */
   unlockMethod?: UnlockMethod;

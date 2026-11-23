@@ -44,6 +44,10 @@ import { ResourceReward } from '../resource';
 import { MonsterRewardNotificationService } from './monster-reward-notification.service';
 import { KitchenSaveData, KitchenStateService } from '../kitchen/kitchen-state.service';
 import { KITCHEN_EXPLORER_INDEX } from '../kitchen/kitchen-unlock';
+import { PrimeStateService } from '../primes/prime-state.service';
+import { FeatureColorSettings, mergeFeatureColors } from '../feature-colors';
+import { PrimeSaveData } from '../primes/prime.model';
+import { ARCHITECT_WORKER_INDEX, PRIME_LEVEL_REQUIRED } from '../unlocks/prime-unlock';
 
 const TICKS_PER_SECOND = 10;
 const TICK_MS = 1000 / TICKS_PER_SECOND;
@@ -97,6 +101,8 @@ export interface SaveData {
   showCriticalHitNumbers?: boolean;
   kitchenStock?: Record<string, number>;
   kitchenBuffEndsAt?: Record<string, number>;
+  primes?: PrimeSaveData;
+  featureColors?: FeatureColorSettings;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -118,6 +124,7 @@ export class GameStateService {
   };
   private showDamageNumbers = false;
   private showCriticalHitNumbers = true;
+  private featureColors: FeatureColorSettings = mergeFeatureColors();
   private resourceTradeCounts: Record<string, number> = {};
   private lotteryUnlockNotified = false;
 
@@ -134,7 +141,8 @@ export class GameStateService {
     private vesselState: VesselService,
     private missionState: MissionStateService,
     private monsterRewardNotify: MonsterRewardNotificationService,
-    private kitchen: KitchenStateService
+    private kitchen: KitchenStateService,
+    private primeState: PrimeStateService
   ) {
     this.monsterState.setNowProvider(() => (this.catchingUp ? this.simulatedNow : Date.now()));
     this.startTickLoop();
@@ -159,7 +167,16 @@ export class GameStateService {
       totalManualClicks: this.resources.getTotalManualClicks(),
       getWorkerLevel: (workerIndex) => this.workerState.getWorkerLevel(workerIndex),
       getPlannedCombatWins: (combatId) => this.monsterState.getPlannedCombatWinCount(combatId),
+      getRespect: () => this.primeState.getRespect(),
     };
+  }
+
+  private isPrimeBoardUnlocked(): boolean {
+    return (this.workerState.getWorkerLevel(ARCHITECT_WORKER_INDEX) ?? 0) >= PRIME_LEVEL_REQUIRED;
+  }
+
+  private primeNow(): number {
+    return this.catchingUp ? this.simulatedNow : Date.now();
   }
 
   private startTickLoop(): void {
@@ -228,6 +245,13 @@ export class GameStateService {
     }
     this.resources.tickManaRegen();
     this.streakState.tick(TICKS_PER_SECOND, workers, workersAvailable);
+    this.primeState.tick(
+      this.primeNow(),
+      this.monsterState.getSelectedBiome(),
+      this.isPrimeBoardUnlocked(),
+      this.houseState.getPrimeHouseBonuses(),
+      this.workerState.getBaseProductionPerSecond()
+    );
     this.monsterState.tick(workers, workersAvailable, solarBonuses.monsterSpawnRateMultiplier);
     this.houseState.tick(1 / TICKS_PER_SECOND, () => {
       this.resources.addResource('bait', 1);
@@ -324,7 +348,8 @@ export class GameStateService {
       valueAutoPerSecond,
       shopItems: this.shopState.getShopItemsView(
         getWorkerLevel,
-        (combatId) => this.monsterState.getPlannedCombatWinCount(combatId)
+        (combatId) => this.monsterState.getPlannedCombatWinCount(combatId),
+        () => this.primeState.getRespect()
       ),
       powersAvailable: this.powerState.getPowersAvailableView(),
       sunUnlocked: isSunUnlocked(workers, workersAvailable),
@@ -375,7 +400,8 @@ export class GameStateService {
         ? this.houseState.getHousesView(
           workersAvailable[VESSEL_WORKER_INDEX]?.level ?? 0,
           astrologueLevel,
-          this.workerState.getWorkerLevel(KITCHEN_EXPLORER_INDEX) ?? 0
+          this.workerState.getWorkerLevel(KITCHEN_EXPLORER_INDEX) ?? 0,
+          this.workerState.getWorkerLevel(ARCHITECT_WORKER_INDEX) ?? 0
         )
         : undefined,
       resources: this.resources.getResourceStocks().filter((resource) =>
@@ -385,6 +411,14 @@ export class GameStateService {
       plannedCombats: this.monsterState.getPlannedCombats(workers, workersAvailable),
       missionsUnlocked,
       missionSlots,
+      primeBoard: this.primeState.getView(
+        this.primeNow(),
+        this.monsterState.getSelectedBiome(),
+        this.isPrimeBoardUnlocked(),
+        this.getUnlockContext(),
+        this.houseState.getPrimeHouseBonuses(),
+        this.workerState.getBaseProductionPerSecond()
+      ),
       resourceTrades: this.getResourceTradesView(),
       lottery: this.lotteryState.getView(this.getUnlockContext(), this.monsterState.getSelectedBiome()),
       kitchen: this.kitchen.getView(this.getUnlockContext()),
@@ -397,6 +431,7 @@ export class GameStateService {
       monsterKillCounts: this.monsterState.getKillCounts(),
       showDamageNumbers: this.showDamageNumbers,
       showCriticalHitNumbers: this.showCriticalHitNumbers,
+      featureColors: this.featureColors,
     };
   }
 
@@ -624,7 +659,96 @@ export class GameStateService {
     const geometerLevel = this.workerState.getWorkerLevel(VESSEL_WORKER_INDEX) ?? 0;
     const astrologueLevel = this.workerState.getWorkerLevel(SUN_WORKER_INDEX) ?? 0;
     const explorerLevel = this.workerState.getWorkerLevel(KITCHEN_EXPLORER_INDEX) ?? 0;
-    return this.houseState.buy(houseIndex, geometerLevel, astrologueLevel, explorerLevel);
+    const architectLevel = this.workerState.getWorkerLevel(ARCHITECT_WORKER_INDEX) ?? 0;
+    return this.houseState.buy(
+      houseIndex,
+      geometerLevel,
+      astrologueLevel,
+      explorerLevel,
+      architectLevel,
+      this.primeState.getRespect()
+    );
+  }
+
+  startPrime(offerId: string): boolean {
+    const offer = this.primeState.getOffer(offerId);
+    if (!offer || !this.isPrimeBoardUnlocked()) return false;
+    const monster = listMonster.find((entry) => entry.id === offer.monsterId);
+    if (!monster) return false;
+    const seconds = this.primeState.getFightDurationSeconds(offerId);
+    const hp = Math.max(1, Math.floor(
+      this.workerState.getBaseProductionPerSecond() * offer.hpPerSecond * seconds
+    ));
+    const started = this.monsterState.startPrime(monster, seconds, hp)
+      && this.primeState.beginFight(offerId);
+    if (started) this.saveToLocalStorage();
+    return started;
+  }
+
+  cancelPrime(): boolean {
+    const workers = this.workerState.getWorkers();
+    const workersAvailable = this.workerState.getWorkersAvailable();
+    const cancelled = this.monsterState.cancelPrime(workers, workersAvailable);
+    if (!cancelled) return false;
+    this.primeState.endFight();
+    this.saveToLocalStorage();
+    return true;
+  }
+
+  applyDevCommand(raw: string): string {
+    const text = raw.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const [kind, rawAmount] = text.split(/\s+/);
+    if (kind === 'vendeur' || kind === 'marchand') {
+      const spawned = this.primeState.forceSpawnTrader(
+        this.primeNow(),
+        this.houseState.getPrimeHouseBonuses()
+      );
+      if (spawned) this.saveToLocalStorage();
+      return spawned ? 'Un marchand itinérant est arrivé.' : 'Aucun marchand libre.';
+    }
+    const amount = Number(rawAmount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return 'Montant invalide. Exemples : or 1000000, essence 100, appat 10, vendeur.';
+    }
+    if (kind === 'or' || kind === 'thune' || kind === 'thunes') {
+      this.resources.addClicks(amount);
+    } else if (kind === 'essence') {
+      this.resources.addMonsterEssence(amount);
+    } else if (kind === 'appat' || kind === 'bait') {
+      this.resources.addResource('bait', amount);
+    } else {
+      return 'Commande inconnue. Utilise or, essence, appat ou vendeur.';
+    }
+    this.saveToLocalStorage();
+    return `Ajouté : ${amount} ${kind}.`;
+  }
+
+  buyPrimeTrade(tradeId: string, quantity = 1): boolean {
+    const bought = this.primeState.buyTrade(tradeId, this.getUnlockContext(), quantity);
+    if (bought) this.saveToLocalStorage();
+    return bought;
+  }
+
+  getFeatureColors(): FeatureColorSettings {
+    return this.featureColors;
+  }
+
+  setFeatureColor(id: string, color: string): void {
+    if (!/^#[0-9a-fA-F]{6}$/.test(color) || !(id in this.featureColors.features)) return;
+    this.featureColors = {
+      ...this.featureColors,
+      features: { ...this.featureColors.features, [id]: color },
+    };
+    this.saveToLocalStorage();
+  }
+
+  setHouseTagColor(tag: string, color: string): void {
+    if (!/^#[0-9a-fA-F]{6}$/.test(color) || !(tag in this.featureColors.houseTags)) return;
+    this.featureColors = {
+      ...this.featureColors,
+      houseTags: { ...this.featureColors.houseTags, [tag]: color },
+    };
+    this.saveToLocalStorage();
   }
 
   cookDish(dishId: string): boolean {
@@ -759,11 +883,16 @@ export class GameStateService {
 
   markMissionsSeen(): void {
     this.missionState.markSeen();
+    this.primeState.markSeen();
     this.saveToLocalStorage();
   }
 
   hasUnseenMissions(): boolean {
     return this.missionState.getUnseen();
+  }
+
+  hasUnseenPrimes(): boolean {
+    return this.primeState.getUnseen();
   }
 
   getResourceTradesView(): ResourceTradeView[] {
@@ -971,6 +1100,8 @@ export class GameStateService {
         showCriticalHitNumbers: this.showCriticalHitNumbers,
         kitchenStock: this.getKitchenSaveData().stock,
         kitchenBuffEndsAt: this.getKitchenSaveData().buffEndsAt,
+        primes: this.primeState.getSaveData(),
+        featureColors: this.featureColors,
       };
       const dataStr = JSON.stringify(saveData);
       localStorage.setItem('clickerGameSave', dataStr);
@@ -1024,6 +1155,8 @@ export class GameStateService {
         stock: saveData.kitchenStock,
         buffEndsAt: saveData.kitchenBuffEndsAt,
       });
+      this.primeState.setSaveData(saveData.primes);
+      this.featureColors = mergeFeatureColors(saveData.featureColors);
     } catch (e) {
       console.error('Failed to load from localStorage:', e);
     }
@@ -1060,6 +1193,8 @@ export class GameStateService {
       showCriticalHitNumbers: this.showCriticalHitNumbers,
       kitchenStock: this.getKitchenSaveData().stock,
       kitchenBuffEndsAt: this.getKitchenSaveData().buffEndsAt,
+      primes: this.primeState.getSaveData(),
+      featureColors: this.featureColors,
     };
 
     const dataStr = JSON.stringify(saveData, null, 2);
@@ -1126,6 +1261,8 @@ export class GameStateService {
         stock: saveData.kitchenStock,
         buffEndsAt: saveData.kitchenBuffEndsAt,
       });
+      this.primeState.setSaveData(saveData.primes);
+      this.featureColors = mergeFeatureColors(saveData.featureColors);
 
       return true;
     } catch (e) {

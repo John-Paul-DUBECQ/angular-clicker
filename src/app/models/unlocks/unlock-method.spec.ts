@@ -10,6 +10,7 @@ describe('UnlockMethod', () => {
     getHouseLevel: (houseId) => houseId === 'mine' ? 3 : 0,
     getPowerBought: (powerId) => powerId === 'fire',
     getPlannedCombatWins: (combatId) => combatId === 'first-combat' ? 1 : 0,
+    getRespect: () => 40,
   };
 
   it('évalue les moyens d’unlock principaux', () => {
@@ -35,6 +36,8 @@ describe('UnlockMethod', () => {
     expect(UnlockMethod.plannedCombatCompleted('first-combat').isUnlocked(context)).toBeTrue();
     expect(UnlockMethod.plannedCombatCompleted('first-combat', 2).isUnlocked(context)).toBeFalse();
     expect(UnlockMethod.plannedCombatCompleted('unknown-combat').isUnlocked(context)).toBeFalse();
+    expect(UnlockMethod.minRespect(40).isUnlocked(context)).toBeTrue();
+    expect(UnlockMethod.minRespect(41).isUnlocked(context)).toBeFalse();
   });
 
   it('conserve le niveau worker pour les paliers affiches', () => {

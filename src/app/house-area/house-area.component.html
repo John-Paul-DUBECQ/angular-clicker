@@ -25,6 +25,7 @@
       <p class="house-card__timer" *ngIf="house.unlocked && house.baitIntervalSeconds">
         Prochain appât dans {{ house.nextBaitInSeconds | number:'1.0-0' }} / {{ house.baitIntervalSeconds | number:'1.0-0' }} s
       </p>
+      <p *ngIf="house.respectRequired">Respect requis : {{ house.respectRequired }} (actuel {{ respect }})</p>
       <div class="house-card__costs">
         <span *ngFor="let cost of displayedCosts" [class.house-card__cost--missing]="getResourceAmount(cost.resourceId) < cost.amount">
           {{ getResourceName(cost.resourceId) }} {{ cost.amount }} ({{ getResourceAmount(cost.resourceId) }})

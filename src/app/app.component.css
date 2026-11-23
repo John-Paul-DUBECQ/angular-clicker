@@ -139,6 +139,19 @@
   border: 1px solid #444;
 }
 
+.desktop-section-rail button[data-feature="mobs"] { color: var(--feature-mobs, #c44536); }
+.desktop-section-rail button[data-feature="kitchen"] { color: var(--feature-kitchen, #8a5a2b); }
+.desktop-section-rail button[data-feature="garden"] { color: var(--feature-garden, #2f8f4e); }
+.desktop-section-rail button[data-feature="breeding"] { color: var(--feature-breeding, #8fd18a); }
+.desktop-section-rail button[data-feature="shop"] { color: var(--feature-shop, #3e6fb5); }
+.desktop-section-rail button[data-feature="lottery"] { color: var(--feature-lottery, #2ec4d6); }
+.desktop-section-rail button[data-feature="mobs"].desktop-section-rail__item--active { color: var(--feature-mobs, #c44536) !important; }
+.desktop-section-rail button[data-feature="kitchen"].desktop-section-rail__item--active { color: var(--feature-kitchen, #8a5a2b) !important; }
+.desktop-section-rail button[data-feature="garden"].desktop-section-rail__item--active { color: var(--feature-garden, #2f8f4e) !important; }
+.desktop-section-rail button[data-feature="breeding"].desktop-section-rail__item--active { color: var(--feature-breeding, #8fd18a) !important; }
+.desktop-section-rail button[data-feature="shop"].desktop-section-rail__item--active { color: var(--feature-shop, #3e6fb5) !important; }
+.desktop-section-rail button[data-feature="lottery"].desktop-section-rail__item--active { color: var(--feature-lottery, #2ec4d6) !important; }
+
 .streak-bar__fill {
   height: 100%;
   background: #4a7c59;
@@ -427,6 +440,14 @@
 .future-section-panel h2,
 .future-section-panel p {
   margin: 0;
+}
+
+.feature-garden {
+  border-color: var(--feature-garden, #2f8f4e);
+}
+
+.feature-garden h2 {
+  color: var(--feature-garden, #2f8f4e);
 }
 
 .missions-panel {
@@ -1074,7 +1095,7 @@
 .planned-combat-panel {
   padding: 12px;
   background: #211a1a;
-  border-bottom: 1px solid #784242;
+  border-bottom: 3px solid var(--feature-mobs, #c44536);
 }
 
 .planned-combat-panel__header h2,
@@ -1083,7 +1104,7 @@
 }
 
 .planned-combat-panel__header h2 {
-  color: #ef8f83;
+  color: var(--feature-mobs, #ef8f83);
   font-size: 1rem;
 }
 
@@ -1130,7 +1151,7 @@
 .lottery-panel {
   margin-top: 10px;
   padding: 10px;
-  border: 1px solid #513737;
+  border: 1px solid var(--feature-lottery, #2ec4d6);
   background: #2a2020;
   color: #e2c6c0;
   font-size: 0.72rem;
@@ -1138,7 +1159,7 @@
 
 .lottery-panel h2 {
   margin: 0 0 8px;
-  color: #fff1ee;
+  color: var(--feature-lottery, #2ec4d6);
   font-size: 0.85rem;
 }
 
@@ -1166,14 +1187,14 @@
 }
 
 .luck-bonus {
-  color: #6ec8ff;
+  color: var(--feature-luck, #6ec8ff);
   font-weight: 700;
 }
 
 .breeding-panel {
   margin: 12px;
   padding: 14px;
-  border: 1px solid #3d4d62;
+  border: 1px solid var(--feature-breeding, #8fd18a);
   border-radius: 8px;
   background: #1b222b;
   color: #d5dde6;
@@ -1181,7 +1202,7 @@
 
 .breeding-panel h2 {
   margin: 0 0 10px;
-  color: #f4f7fb;
+  color: var(--feature-breeding, #8fd18a);
   font-size: 0.85rem;
 }
 
@@ -1223,13 +1244,14 @@
 .kitchen-panel {
   margin-top: 10px;
   padding: 10px;
+  border-left: 3px solid var(--feature-kitchen, #8a5a2b);
   color: #dbdbdb;
   font-size: 0.72rem;
 }
 
 .kitchen-panel h2 {
   margin: 0 0 8px;
-  color: #fff1ee;
+  color: var(--feature-kitchen, #c4a484);
   font-size: 0.85rem;
 }
 
@@ -1540,7 +1562,7 @@
   min-height: 220px;
   background-color: #2a1a1a;
   border-radius: 10px;
-  border: 1px solid #8b4513;
+  border: 1px solid var(--feature-mobs, #c44536);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2797,4 +2819,160 @@
 
 .settings-option input {
   margin-right: 8px;
+}
+
+.settings-dev {
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.settings-dev h4,
+.settings-dev p {
+  margin: 0 0 8px;
+}
+
+.settings-dev input {
+  width: min(100%, 280px);
+  margin-right: 8px;
+}
+
+.prime-offer,
+.prime-trade {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #66542a;
+}
+
+.prime-offer img,
+.trader-portrait {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+}
+
+.prime-offer h3,
+.prime-trade h3,
+.trader-list {
+  margin: 0 0 6px;
+}
+
+.trader-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.trader-list__item--active {
+  outline: 1px solid #e8c547;
+}
+
+.prime-trade {
+  flex-direction: column;
+  gap: 4px;
+}
+
+.prime-trade p {
+  margin: 0;
+}
+
+.trader-shop {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.trader-shop__slot {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  margin: 0.25rem;
+  border: 3px solid var(--feature-shop, #3b3b3b);
+  border-radius: 8px;
+  background: #141414;
+  color: #fff;
+  cursor: pointer;
+  font-size: 1.75rem;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.trader-shop__slot--can-buy {
+  border-color: #fff;
+  box-shadow: 0 0 8px rgba(107, 142, 35, 0.5);
+}
+
+.trader-shop__slot--sold-out,
+.trader-shop__slot:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.trader-shop__slot em {
+  position: absolute;
+  right: 4px;
+  bottom: 2px;
+  color: #f0d56f;
+  font-size: 0.72rem;
+  font-style: normal;
+}
+
+.trader-popup {
+  position: fixed;
+  z-index: 9999;
+  min-width: 280px;
+  max-width: 320px;
+  padding: 12px 14px;
+  transform: translateY(-50%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  background: rgba(45, 42, 38, 0.98);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-size: 14px;
+  line-height: 1.4;
+  pointer-events: none;
+}
+
+.trader-popup__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.trader-popup p {
+  margin: 4px 0;
+}
+
+.settings-colors {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.settings-colors h4 {
+  margin: 0;
+}
+
+.settings-colors label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #e5e5e5;
+}
+
+.settings-colors input {
+  width: 42px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
 }

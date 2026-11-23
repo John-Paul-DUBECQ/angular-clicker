@@ -177,8 +177,129 @@
           (click)="unlockNextMissionSlot()">
           Débloquer
         </button>
-      </div>  
+      </div>
     </div>
+    <div class="missions-panel" *ngIf="game.primeBoard?.unlocked">
+      <div class="missions-panel__header">
+        <div>
+          <h2>Panneau des primes</h2>
+          <p>Jusqu'à trois cibles du biome restent affichées. Les réussir rapporte beaucoup plus de respect que leur fuite n'en retire. Un monstre raté dans la nature retire aussi un peu de respect.</p>
+        </div>
+      </div>
+      <article class="prime-offer" *ngFor="let offer of game.primeBoard?.offers; trackBy: trackByPrimeOffer">
+        <img *ngIf="offer.imageUrl" [src]="offer.imageUrl" [alt]="offer.monsterName" />
+        <div>
+          <h3>{{ offer.monsterName }}</h3>
+          <p>Affichée encore {{ formatCooldown(offer.remainingSeconds) }}. Temps pour la tuer : {{ offer.timeLimitSeconds }} s. PV : {{ offer.hpPerSecond }} fois le DPS AFK, par seconde.</p>
+          <p>Réussite : +{{ offer.gain }} respect ({{ offer.gainLabel }}). Fuite : -{{ offer.loss }}.</p>
+          <p>Récompense : {{ offer.rewardLabel }}</p>
+          <button type="button" [disabled]="!!game.currentMonster" (click)="startPrime(offer.id)">Accepter la prime</button>
+        </div>
+      </article>
+      <p class="mission-slot__cooldown" *ngIf="(game.primeBoard?.offers?.length || 0) < 3">
+        Prochaine prime dans {{ formatCooldown(game.primeBoard?.nextPrimeInSeconds || 0) }}
+      </p>
+    </div>
+  </ng-template>
+  <ng-template #featureColors>
+    <div class="settings-colors">
+      <h4>Couleurs</h4>
+      <label *ngFor="let option of featureColorOptions">
+        <span>{{ option.label }}</span>
+        <input type="color" [value]="featureColor(option.id)" (change)="setFeatureColor(option.id, $any($event.target).value)" />
+      </label>
+      <label *ngFor="let option of houseTagColorOptions">
+        <span>{{ option.label }}</span>
+        <input type="color" [value]="houseTagColor(option.id)" (change)="setHouseTagColor(option.id, $any($event.target).value)" />
+      </label>
+    </div>
+  </ng-template>
+  <ng-template #devTools>
+    <div class="settings-dev">
+      <h4>Développeur / testeur</h4>
+      <p>or 1000000 · essence 100 · appat 10 · vendeur</p>
+      <input
+        type="text"
+        [value]="devCommand"
+        (input)="devCommand = $any($event.target).value"
+        (keyup.enter)="applyDevCommand()"
+        aria-label="Commande de test" />
+      <button type="button" (click)="applyDevCommand()">Appliquer</button>
+      <p *ngIf="devCommandMessage">{{ devCommandMessage }}</p>
+    </div>
+  </ng-template>
+  <ng-template #tradersSection>
+    <section class="missions-panel" *ngIf="selectedTrader as trader; else noTrader">
+      <div class="missions-panel__header">
+        <div>
+          <h2>{{ trader.name }}</h2>
+          <p>{{ trader.dialogue }}</p>
+        </div>
+        <strong>{{ formatCooldown(trader.remainingSeconds) }}</strong>
+      </div>
+      <img *ngIf="trader.imageUrl" class="trader-portrait" [src]="trader.imageUrl" [alt]="trader.name" />
+      <div class="trader-list" *ngIf="(game.primeBoard?.traders?.length || 0) > 1">
+        <button
+          type="button"
+          *ngFor="let entry of game.primeBoard?.traders; trackBy: trackByPrimeTrader"
+          [class.trader-list__item--active]="entry.instanceId === trader.instanceId"
+          (click)="selectTrader(entry.instanceId)">
+          {{ entry.name }}
+        </button>
+      </div>
+      <div class="shop-trades__quantities" aria-label="Quantité à échanger">
+        <button
+          type="button"
+          *ngFor="let quantity of resourceTradeQuantities"
+          [attr.aria-pressed]="traderQuantity === quantity"
+          [class.shop-trades__quantity--active]="traderQuantity === quantity"
+          (click)="traderQuantity = quantity">
+          {{ quantity === 'max' ? 'Max' : '×' + quantity }}
+        </button>
+      </div>
+      <div class="trader-shop">
+        <div class="trader-shop__item" *ngFor="let trade of trader.trades; trackBy: trackByPrimeTrade">
+          <button
+            type="button"
+            class="trader-shop__slot"
+            [class.trader-shop__slot--can-buy]="trade.canBuy"
+            [class.trader-shop__slot--sold-out]="trade.remaining <= 0"
+            [disabled]="!trade.canBuy"
+            (click)="buyPrimeTrade(trade)"
+            (mouseenter)="showTraderPopup(trade, $event)"
+            (mouseleave)="hideTraderPopup()">
+            <span>{{ trade.name.charAt(0) }}</span>
+            <em>{{ trade.remaining }}</em>
+          </button>
+        </div>
+      </div>
+      <div
+        class="trader-popup"
+        *ngIf="traderPopup as popup"
+        [style.left]="popup.left"
+        [style.top]="popup.top">
+        <div class="trader-popup__header">
+          <strong>{{ popup.trade.name }}</strong>
+          <span *ngIf="popup.trade.discountedGoldCost != null">{{ formatResourceValue(popup.trade.discountedGoldCost) }} or</span>
+        </div>
+        <p>{{ popup.trade.description }}</p>
+        <p *ngIf="popup.trade.lockedReason">Verrouillé : {{ popup.trade.lockedReason }}</p>
+        <p *ngIf="popup.trade.costs.length">
+          <span *ngFor="let cost of popup.trade.costs" [class.kitchen-dish__cost--missing]="cost.owned < cost.amount">
+            {{ cost.name }} {{ formatResourceValue(cost.amount) }} ({{ formatResourceValue(cost.owned) }})
+          </span>
+        </p>
+        <p>Reçu : {{ popup.trade.rewardsLabel }}</p>
+        <p>Encore {{ popup.trade.remaining }} / {{ popup.trade.maxPerVisit }} ce passage.</p>
+        <p>Clique pour acheter.</p>
+      </div>
+    </section>
+    <ng-template #noTrader>
+      <section class="missions-panel">
+        <h2>Marchands</h2>
+        <p>Aucun marchand n'est là pour le moment.</p>
+      </section>
+    </ng-template>
   </ng-template>
   <ng-template #shopTrades>
     <section class="shop-trades" *ngIf="game.missionsUnlocked">
@@ -236,6 +357,7 @@
         *ngIf="sortedShopItemsWithIndex.length > 0 || game.missionsUnlocked"
         [class.desktop-section-rail__item--active]="desktopView === 'shop'"
         [attr.aria-pressed]="desktopView === 'shop'"
+        data-feature="shop"
         title="Shop"
         (click)="setDesktopView('shop')">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16l-1.5 11h-13L4 9Z"/><path d="M8 9V6.5a4 4 0 0 1 8 0V9"/></svg>
@@ -258,26 +380,30 @@
         *ngIf="game.explorerUnlocked"
         [class.desktop-section-rail__item--active]="desktopView === 'quests'"
         [attr.aria-pressed]="desktopView === 'quests'"
+        data-feature="mobs"
         title="Aventures"
         (click)="setDesktopView('quests')">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16v10H4z"/><path d="M7 8V6h10v2M8 12h8M8 15h5"/></svg>
         <span>Aventures</span>
       </button>
-      <button type="button" *ngIf="game.kitchen?.unlocked" [class.desktop-section-rail__item--active]="desktopView === 'kitchen'" title="Cuisine" (click)="setDesktopView('kitchen')">
+      <button type="button" *ngIf="game.kitchen?.unlocked" data-feature="kitchen" [class.desktop-section-rail__item--active]="desktopView === 'kitchen'" title="Cuisine" (click)="setDesktopView('kitchen')">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3v18M5 7h7v7H5M12 7h7v11h-7"/></svg><span>Cuisine</span>
         <i class="desktop-section-rail__notification" *ngIf="hasNewKitchenDishes" aria-hidden="true"></i>
       </button>
-      <button type="button" [class.desktop-section-rail__item--active]="desktopView === 'garden'" title="Jardin" (click)="setDesktopView('garden')">
+      <button type="button" data-feature="garden" [class.desktop-section-rail__item--active]="desktopView === 'garden'" title="Jardin" (click)="setDesktopView('garden')">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21V9M12 12c-4 0-7-2.5-7-6 4 0 7 2.5 7 6ZM12 15c4 0 7-2.5 7-6-4 0-7 2.5-7 6Z"/></svg><span>Jardin</span>
       </button>
-      <button type="button" [class.desktop-section-rail__item--active]="desktopView === 'breeding'" title="Élevage" (click)="setDesktopView('breeding')">
+      <button type="button" data-feature="breeding" [class.desktop-section-rail__item--active]="desktopView === 'breeding'" title="Élevage" (click)="setDesktopView('breeding')">
         <svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="13" rx="6" ry="7.5"/><path d="M12 5.5c.8-2 2.6-2.8 3.6-1.6 1 1.2-.2 2.6-1.6 3"/></svg><span>Élevage</span>
       </button>
       <button type="button" *ngIf="game.missionsUnlocked" [class.desktop-section-rail__item--active]="desktopView === 'missions'" title="Missions" (click)="setDesktopView('missions')">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="m14.2 9.8 5-5"/></svg><span>Missions</span>
         <i class="desktop-section-rail__notification" *ngIf="hasNewMissions" aria-hidden="true"></i>
       </button>
-      <button type="button" *ngIf="game.lottery?.unlocked" [class.desktop-section-rail__item--active]="desktopView === 'lottery'" title="Loterie" (click)="setDesktopView('lottery')">
+      <button type="button" *ngIf="game.primeBoard?.traders?.length" [class.desktop-section-rail__item--active]="desktopView === 'traders'" title="Marchands" (click)="setDesktopView('traders')">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16l-1.2 11H5.2z"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/></svg><span>Marchands</span>
+      </button>
+      <button type="button" *ngIf="game.lottery?.unlocked" data-feature="lottery" [class.desktop-section-rail__item--active]="desktopView === 'lottery'" title="Loterie" (click)="setDesktopView('lottery')">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v16H3z"/><circle cx="8" cy="9" r="1"/><circle cx="16" cy="9" r="1"/><circle cx="8" cy="15" r="1"/><circle cx="16" cy="15" r="1"/><circle cx="12" cy="12" r="1"/></svg><span>Loterie</span>
         <i class="desktop-section-rail__notification" *ngIf="hasNewLottery" aria-hidden="true"></i>
       </button>
@@ -287,6 +413,9 @@
       <div class="desktop-side-resources">
         <div><span>Essence</span><strong>{{ formatResourceValue(game.monsterEssence != null ? game.monsterEssence : 0) }}</strong></div>
         <div><span>Appât</span><strong>{{ formatResourceValue(getResourceAmount('bait')) }}</strong></div>
+        <div *ngIf="game.primeBoard?.unlocked" [matTooltip]="game.primeBoard?.gainLabel || ''" matTooltipPosition="right">
+          <span>Respect</span><strong>{{ formatResourceValue(game.primeBoard?.respect || 0) }}</strong>
+        </div>
         <div><span>Tickets</span><strong>{{ formatResourceValue(getResourceAmount('ticket')) }}</strong></div>
         <div><span>Pièges</span><strong>{{ formatResourceValue(getResourceAmount('trap')) }}</strong></div>
       </div>
@@ -343,14 +472,18 @@
             *ngFor="let tag of houseTags"
             [class.houses-area__filter--active]="selectedHouseTag === tag"
             [attr.aria-pressed]="selectedHouseTag === tag"
+            [style.color]="houseTagColor(tag)"
+            [style.border-color]="houseTagColor(tag)"
             (click)="selectedHouseTag = tag">
             {{ tag }}
           </button>
         </div>
         <ng-container *ngFor="let house of visibleHouses; let i = index; trackBy: trackByHouse">
           <app-house-area
+            [style.--house-accent]="houseAccent(house)"
             [house]="house"
             [essence]="game.monsterEssence || 0"
+            [respect]="game.primeBoard?.respect || 0"
             [resources]="resources"
             [collapsed]="!!collapsedHouseIds[house.id]"
             (collapsedChange)="toggleHouseCollapsed(house.id)"
@@ -362,7 +495,7 @@
         </button>
       </section>
       <ng-container *ngIf="desktopView === 'essenceShop' || desktopView === 'quests'">
-        <ng-container *ngTemplateOutlet="workerSectionMenu"></ng-container>
+      <ng-container *ngTemplateOutlet="workerSectionMenu"></ng-container>
       </ng-container>
       <section class="kitchen-panel" *ngIf="desktopView === 'kitchen' && game.kitchen as kitchen">
         <h2>Cuisine</h2>
@@ -397,7 +530,7 @@
           </div>
         </article>
       </section>
-      <section class="future-section-panel" *ngIf="desktopView === 'garden'">
+      <section class="future-section-panel feature-garden" *ngIf="desktopView === 'garden'">
         <h2>Jardin</h2>
         <p>Cette section sera ajoutée prochainement.</p>
       </section>
@@ -412,6 +545,9 @@
       </section>
       <ng-container *ngIf="desktopView === 'missions' && game.missionsUnlocked">
         <ng-container *ngTemplateOutlet="missionsSection"></ng-container>
+      </ng-container>
+      <ng-container *ngIf="desktopView === 'traders'">
+        <ng-container *ngTemplateOutlet="tradersSection"></ng-container>
       </ng-container>
       <ng-container *ngIf="desktopView === 'lottery' && game.lottery as lottery">
         <section class="lottery-panel" *ngIf="lottery.unlocked">
@@ -514,19 +650,20 @@
         <div class="column-center__hud">
         <div
           class="monster-title"
-          [class.monster-title--boss]="game.currentMonster && game.currentMonster.isBoss"
+          [class.monster-title--boss]="game.currentMonster && (game.currentMonster.isBoss || game.currentMonster.isPrime)"
           *ngIf="game.currentMonster">
           <div class="monster-title__heading">
-            <span class="monster-title__boss" *ngIf="game.currentMonster.isBoss">DANGER BOSS</span>
+            <span class="monster-title__boss" *ngIf="game.currentMonster.isPrime">PRIME</span>
+            <span class="monster-title__boss" *ngIf="game.currentMonster.isBoss && !game.currentMonster.isPrime">DANGER BOSS</span>
             <span class="monster-title__name">
               {{ game.currentMonster.name }}<span *ngIf="game.queuedMonsterCount && game.queuedMonsterCount > 0"> + {{ game.queuedMonsterCount }}</span>
             </span>
             <button
-              *ngIf="game.currentMonster.isPlannedCombat"
+              *ngIf="game.currentMonster.isPlannedCombat || game.currentMonster.isPrime"
               type="button"
               class="planned-combat-cancel"
-              aria-label="Annuler le combat scénarisé"
-              (click)="cancelPlannedCombat($event)">
+              [attr.aria-label]="game.currentMonster.isPrime ? 'Annuler la prime' : 'Annuler le combat scénarisé'"
+              (click)="game.currentMonster.isPrime ? cancelPrime($event) : cancelPlannedCombat($event)">
               Annuler
             </button>
           </div>
@@ -586,7 +723,7 @@
             *ngIf="game.monsterUnlocked && game.currentMonster"
             id="monster-area"
             class="monster-area"
-            [class.monster-area--boss]="game.currentMonster.isBoss"
+            [class.monster-area--boss]="game.currentMonster.isBoss || game.currentMonster.isPrime"
             (click)="!game.solarAreaExpanded && click($event)">
             <img
               *ngIf="game.currentMonster.imageUrl"
@@ -640,6 +777,7 @@
       <button type="button" [class.mobile-menu__item--active]="mobileScreen === 'shop'" (click)="setMobileScreen('shop')">Shop</button>
       <button type="button" [class.mobile-menu__item--active]="mobileScreen === 'workers'" (click)="setMobileScreen('workers')">Persos</button>
       <button *ngIf="game.missionsUnlocked" type="button" [class.mobile-menu__item--active]="mobileScreen === 'missions'" (click)="setMobileScreen('missions')">Missions</button>
+      <button *ngIf="game.primeBoard?.traders?.length" type="button" [class.mobile-menu__item--active]="mobileScreen === 'traders'" (click)="setMobileScreen('traders')">Marchands</button>
       <button type="button" [class.mobile-menu__item--active]="mobileScreen === 'settings'" (click)="setMobileScreen('settings')">Paramètres</button>
     </nav>
 
@@ -654,20 +792,22 @@
           <span>{{ game.valueAutoPerSecond | formatNumber }}/s</span>
           <span class="mobile-game-status__damage">{{ game.clickValue | formatNumber }} dégâts/clic</span>
           <span class="mobile-game-status__essence">{{ formatResourceValue(game.monsterEssence != null ? game.monsterEssence : 0) }} essence</span>
+          <span *ngIf="game.primeBoard?.unlocked" [matTooltip]="game.primeBoard?.gainLabel || ''">{{ formatResourceValue(game.primeBoard?.respect || 0) }} respect</span>
         </div>
         <div
           class="mobile-monster-title"
-          [class.mobile-monster-title--boss]="game.currentMonster && game.currentMonster.isBoss"
+          [class.mobile-monster-title--boss]="game.currentMonster && (game.currentMonster.isBoss || game.currentMonster.isPrime)"
           *ngIf="game.currentMonster">
           <div class="mobile-monster-title__heading">
-            <span class="monster-title__boss" *ngIf="game.currentMonster.isBoss">DANGER BOSS</span>
+            <span class="monster-title__boss" *ngIf="game.currentMonster.isPrime">PRIME</span>
+            <span class="monster-title__boss" *ngIf="game.currentMonster.isBoss && !game.currentMonster.isPrime">DANGER BOSS</span>
             <span class="mobile-monster-title__name">{{ game.currentMonster.name }}</span>
             <button
-              *ngIf="game.currentMonster.isPlannedCombat"
+              *ngIf="game.currentMonster.isPlannedCombat || game.currentMonster.isPrime"
               type="button"
               class="planned-combat-cancel"
-              aria-label="Annuler le combat scénarisé"
-              (click)="cancelPlannedCombat($event)">
+              [attr.aria-label]="game.currentMonster.isPrime ? 'Annuler la prime' : 'Annuler le combat scénarisé'"
+              (click)="game.currentMonster.isPrime ? cancelPrime($event) : cancelPlannedCombat($event)">
               Annuler
             </button>
           </div>
@@ -708,7 +848,7 @@
         </div>
         <div class="mobile-center-zone center-zone-wrapper">
           <div *ngIf="!game.monsterUnlocked || !game.currentMonster" id="click-area" (click)="!game.solarAreaExpanded && click($event)"></div>
-          <div *ngIf="game.monsterUnlocked && game.currentMonster" id="monster-area" class="monster-area" [class.monster-area--boss]="game.currentMonster.isBoss" (click)="!game.solarAreaExpanded && click($event)">
+          <div *ngIf="game.monsterUnlocked && game.currentMonster" id="monster-area" class="monster-area" [class.monster-area--boss]="game.currentMonster.isBoss || game.currentMonster.isPrime" (click)="!game.solarAreaExpanded && click($event)">
             <img *ngIf="game.currentMonster.imageUrl" [src]="game.currentMonster.imageUrl" [alt]="game.currentMonster.name" class="monster-area__img" />
             <span *ngIf="!game.currentMonster.imageUrl" class="monster-area__placeholder">{{ game.currentMonster.name.charAt(0) }}</span>
             <div class="monster-area__hp-track" *ngIf="!game.currentMonster.healthBars"><div class="monster-area__hp-fill" [style.width.%]="getMonsterHpPercent()"></div></div>
@@ -777,6 +917,9 @@
       <section class="mobile-screen" *ngIf="mobileScreen === 'missions' && game.missionsUnlocked">
         <ng-container *ngTemplateOutlet="missionsSection"></ng-container>
       </section>
+      <section class="mobile-screen" *ngIf="mobileScreen === 'traders'">
+        <ng-container *ngTemplateOutlet="tradersSection"></ng-container>
+      </section>
 
       <section class="mobile-screen mobile-screen--settings" *ngIf="mobileScreen === 'settings'">
         <h1 class="mobile-screen__title">Paramètres</h1>
@@ -790,6 +933,8 @@
           <label>Importer la sauvegarde<input type="file" (change)="importSave($event)" accept=".json" /></label>
         </div>
         <p *ngIf="importError" class="settings-import-error">Erreur lors de l'importation : fichier invalide.</p>
+        <ng-container *ngTemplateOutlet="featureColors"></ng-container>
+        <ng-container *ngTemplateOutlet="devTools"></ng-container>
         <h2 class="mobile-section-title">Lore déjà vu</h2>
         <div class="mobile-lore-list" *ngIf="loreHistory.length > 0; else mobileNoLore">
           <button type="button" *ngFor="let lore of loreHistory; let i = index" [class.mobile-lore-list__item--active]="i === selectedLoreIndex" (click)="selectLore(i)">{{ lore.title }}</button>
@@ -960,6 +1105,8 @@
         <div *ngIf="importError" class="settings-import-error">Erreur lors de l'importation : fichier invalide.</div>
         <label class="settings-option"><input type="checkbox" [checked]="game.showDamageNumbers" (change)="setShowDamageNumbers($any($event.target).checked)" /> Afficher les dégâts à chaque clic</label>
         <label class="settings-option"><input type="checkbox" [checked]="game.showCriticalHitNumbers" (change)="setShowCriticalHitNumbers($any($event.target).checked)" /> Afficher les coups critiques</label>
+        <ng-container *ngTemplateOutlet="featureColors"></ng-container>
+        <ng-container *ngTemplateOutlet="devTools"></ng-container>
       </section>
     </div>
   </div>

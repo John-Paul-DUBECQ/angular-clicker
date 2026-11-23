@@ -1,4 +1,5 @@
 import { requirePlannedCombatWins, requireAll, requireBought, requirePower, requireWorkerLevel, ShopItem } from "./shop-item";
+import { ARCHITECT_WORKER_INDEX, PRIME_LEVEL_REQUIRED } from "./unlocks/prime-unlock";
 import { dishUpgradeId } from "./kitchen/dish.model";
 import { LIST_DISH } from "./kitchen/list-dish";
 /*
@@ -450,6 +451,46 @@ export const listShopItem: Array<ShopItem> = [
     unlockMethod: requireAll(requireBought('hunter-beacon-upgrade2'), requireWorkerLevel(8,65)),
     unlockUpgrade: { unlockId: dishUpgradeId('ration-de-chasseur'), type: 'vesselSpawnRateMultiplier', value: 0.3 },
   },
+  {
+    id: 'prime-respect-flat',
+    name: 'Sceau de réputation',
+    description: 'Chaque prime rapporte 4 de respect en plus.',
+    imageUrl: 'assets/img/House/House1.png',
+    price: 1e12,
+    appearImmediatelyOnUnlock: true,
+    unlockMethod: requireWorkerLevel(ARCHITECT_WORKER_INDEX, PRIME_LEVEL_REQUIRED),
+    unlockUpgrade: { unlockId: 'prime', type: 'respect-flat', value: 4 },
+  },
+  {
+    id: 'prime-respect-percent',
+    name: 'Bannière des primes',
+    description: 'Le respect gagné sur une prime augmente de 25 %.',
+    imageUrl: 'assets/img/House/House1.png',
+    price: 5e12,
+    appearImmediatelyOnUnlock: true,
+    unlockMethod: requireWorkerLevel(ARCHITECT_WORKER_INDEX, PRIME_LEVEL_REQUIRED),
+    unlockUpgrade: { unlockId: 'prime', type: 'respect-percent', value: 0.25 },
+  },
+  {
+    id: 'prime-time',
+    name: 'Sablier du contrat',
+    description: 'Ajoute 10 secondes au temps pour tuer la cible d\'une prime.',
+    imageUrl: 'assets/img/House/House1.png',
+    price: 2e12,
+    appearImmediatelyOnUnlock: true,
+    unlockMethod: requireWorkerLevel(ARCHITECT_WORKER_INDEX, PRIME_LEVEL_REQUIRED),
+    unlockUpgrade: { unlockId: 'prime', type: 'time', value: 10 },
+  },
+  {
+    id: 'prime-discount',
+    name: 'Poignée de main',
+    description: 'Le respect réduit de 10 % le prix en or des marchands itinérants.',
+    imageUrl: 'assets/img/House/House1.png',
+    price: 3e12,
+    appearImmediatelyOnUnlock: true,
+    unlockMethod: requireWorkerLevel(ARCHITECT_WORKER_INDEX, PRIME_LEVEL_REQUIRED),
+    unlockUpgrade: { unlockId: 'prime', type: 'discount', value: 0.1 },
+  },
 ];
 
 
@@ -477,6 +518,10 @@ UnlockUpgrade disponibles (appliques quand l'item est achete) :
 - monster / time : multiplicateur du temps disponible contre les monstres.
 - monster / drops : bonus multiplicatif des drops de monstres.
 - monster / gold : bonus multiplicatif des récompenses en clics des monstres.
+- prime / respect-flat : respect entier ajouté au gain d'une prime (4 avec 4).
+- prime / respect-percent : pourcentage ajouté au gain d'une prime (0.25 = +25 %).
+- prime / time : secondes ajoutées au temps pour tuer la cible d'une prime (10 avec 10).
+- prime / discount : réduction du prix en or des marchands itinérants (0.1 = -10 %).
 - sun / chance : chance critique ajoutee (0.01 = +1 point de pourcentage).
 - sun / damage : multiplicateur de degats du clic Soleil (+10 % avec 0.1).
 - sun / size : taille du Soleil (+10 % avec 0.1).

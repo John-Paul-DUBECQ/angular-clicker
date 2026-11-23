@@ -146,7 +146,7 @@ export const listPlannedCombat: PlannedCombat[] = [
       previousCombatId: 'planned-forest-04',
       trapEncounter: {
         unlockWins: 10,
-        trapCost: 5,
+        trapCost: 1,
         rewards: [{ resourceId: 'mosh-paw', amount: 1 }],
       },
     }
@@ -208,7 +208,7 @@ export const listPlannedCombat: PlannedCombat[] = [
       previousCombatId: 'planned-forest-09',
       trapEncounter: {
         unlockWins: 3,
-        trapCost: 10,
+        trapCost: 2,
         rewards: [{ resourceId: 'mosh-paw', amount: 1 }],
       },
     }
@@ -271,7 +271,7 @@ export const listPlannedCombat: PlannedCombat[] = [
       previousCombatId: 'planned-beach-04',
       trapEncounter: {
         unlockWins: 10,
-        trapCost: 5,
+        trapCost: 3,
         rewards: [{ resourceId: 'peji-tongue', amount: 1 }],
       },
     }
@@ -335,7 +335,7 @@ export const listPlannedCombat: PlannedCombat[] = [
       previousCombatId: 'planned-beach-09',
       trapEncounter: {
         unlockWins: 10,
-        trapCost: 10,
+        trapCost: 4,
         rewards: [{ resourceId: 'peji-tongue', amount: 1 }],
       },
     }

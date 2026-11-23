@@ -38,7 +38,8 @@ export class ShopStateService {
 
   getShopContext(
     getWorkerLevel: (index: number) => number | null,
-    getPlannedCombatWins: (combatId: string) => number = () => 0
+    getPlannedCombatWins: (combatId: string) => number = () => 0,
+    getRespect: () => number = () => 0
   ): ShopUnlockContext {
     return {
       clicks: this.resources.getClicks(),
@@ -50,6 +51,7 @@ export class ShopStateService {
       getPowerBought: (powerId: string) =>
         this.powerState.getPowers().some((p) => p.id === powerId),
       getPlannedCombatWins,
+      getRespect,
     };
   }
 
@@ -94,9 +96,10 @@ export class ShopStateService {
 
   getShopItemsView(
     getWorkerLevel: (index: number) => number | null,
-    getPlannedCombatWins?: (combatId: string) => number
+    getPlannedCombatWins?: (combatId: string) => number,
+    getRespect?: () => number
   ): ShopItem[] {
-    const ctx = this.getShopContext(getWorkerLevel, getPlannedCombatWins);
+    const ctx = this.getShopContext(getWorkerLevel, getPlannedCombatWins, getRespect);
     return this.shopItems.map((item) => ({
       ...item,
       doesAppearInGame: getDoesAppearInShop(item, ctx),

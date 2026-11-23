@@ -21,6 +21,11 @@ export interface Monster {
   lootMultiplier?: number;
 
   probabilityToSpawn?: number;
+  /**
+   * Présence dans les primes du biome.
+   * Absent ou true : le monstre peut être visé, même s'il n'est pas encore débloqué.
+   */
+  canAppearInPrime?: boolean;
 
   drops?: MonsterDrop[];
 }

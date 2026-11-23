@@ -13,6 +13,14 @@ import { UnlockUpgradeService } from './unlock-upgrade.service';
 import { LIST_DISH } from '../kitchen/list-dish';
 import { KITCHEN_EXPLORER_INDEX } from '../kitchen/kitchen-unlock';
 import { DISH_EFFECT_MODIFIER, DishEffectKind, KitchenModifiers, describeDishEffect } from '../kitchen/dish.model';
+import { ARCHITECT_WORKER_INDEX } from '../unlocks/prime-unlock';
+import {
+  PRIME_HOUSE_CHANCE_PER_LEVEL,
+  PRIME_HOUSE_DURATION_PER_LEVEL_SECONDS,
+  PRIME_HOUSE_ID,
+  PRIME_HOUSE_RESPECT_PER_LEVEL,
+  PrimeHouseBonuses,
+} from '../primes/prime.model';
 
 const CRITICAL_HOUSE_ID = 'critical-house';
 const CRITICAL_HOUSE_BASE_PRICE = 10;
@@ -249,6 +257,22 @@ export class HouseStateService {
       maxLevel: DELAY_KITCHEN_HOUSE_MAX_LEVEL,
       unlockMethod: UnlockMethod.workerLevel(9, 60),
     },
+    {
+      id: PRIME_HOUSE_ID,
+      name: 'Relais des primes',
+      description: 'Augmente la chance qu\'un marchand itinérant s\'installe et la durée de son passage. Plusieurs marchands peuvent être présents, avec au moins 5 minutes entre deux arrivées.',
+      imageUrl: 'assets/img/House/House1.png',
+      tags: ['Primes'],
+      level: 0,
+      bonusPerLevel: PRIME_HOUSE_CHANCE_PER_LEVEL,
+      price: 15,
+      costs: [{ resourceId: 'food', amount: 3 }],
+      unlockPrice: 40,
+      unlockCosts: [{ resourceId: 'food', amount: 6 }],
+      unlocked: false,
+      maxLevel: 10,
+      unlockMethod: UnlockMethod.workerLevel(ARCHITECT_WORKER_INDEX, 125),
+    },
   ];
 
   constructor(
@@ -256,10 +280,15 @@ export class HouseStateService {
     @Optional() private unlockUpgrades?: UnlockUpgradeService
   ) {}
 
-  getHousesView(geometerLevel = 0, astrologueLevel = 0, explorerLevel = 0): House[] {
+  getHousesView(
+    geometerLevel = 0,
+    astrologueLevel = 0,
+    explorerLevel = 0,
+    architectLevel = 0
+  ): House[] {
     return this.houses
       .map((house, houseIndex) => ({ house, houseIndex }))
-      .filter(({ house }) => this.isHouseAvailable(house, geometerLevel, astrologueLevel, explorerLevel))
+      .filter(({ house }) => this.isHouseAvailable(house, geometerLevel, astrologueLevel, explorerLevel, architectLevel))
       .map(({ house, houseIndex }) => ({
       ...house,
       houseIndex,
@@ -294,7 +323,16 @@ export class HouseStateService {
       delayKitchenDurationBonusSeconds: house.id === DELAY_KITCHEN_HOUSE_ID
         ? this.getConsumptionDurationBonusSeconds()
         : undefined,
+      respectRequired: house.id === PRIME_HOUSE_ID ? this.respectRequiredFor(house) : undefined,
     }));
+  }
+
+  getPrimeHouseBonuses(): PrimeHouseBonuses {
+    const level = this.getUnlockedHouseLevel(PRIME_HOUSE_ID);
+    return {
+      chanceBonus: level * PRIME_HOUSE_CHANCE_PER_LEVEL,
+      extraDurationSeconds: level * PRIME_HOUSE_DURATION_PER_LEVEL_SECONDS,
+    };
   }
 
   isSolarHubUnlocked(): boolean {
@@ -410,9 +448,17 @@ export class HouseStateService {
     return this.houses.find((house) => house.id === BAIT_HOUSE_ID)?.nextBaitInSeconds;
   }
 
-  canBuy(index: number, geometerLevel = 0, astrologueLevel = 0, explorerLevel = 0): boolean {
+  canBuy(
+    index: number,
+    geometerLevel = 0,
+    astrologueLevel = 0,
+    explorerLevel = 0,
+    architectLevel = 0,
+    respect = 0
+  ): boolean {
     const house = this.houses[index];
-    if (!house || !this.isHouseAvailable(house, geometerLevel, astrologueLevel, explorerLevel)) return false;
+    if (!house || !this.isHouseAvailable(house, geometerLevel, astrologueLevel, explorerLevel, architectLevel)) return false;
+    if (respect < this.respectRequiredFor(house)) return false;
     if (!house.unlocked) {
       return this.resources.getMonsterEssence() >= (house.unlockPrice ?? 0)
         && this.resources.canSpendResources(house.unlockCosts ?? []);
@@ -422,9 +468,17 @@ export class HouseStateService {
       && this.resources.canSpendResources(this.getCostsForNextLevel(house));
   }
 
-  buy(index: number, geometerLevel = 0, astrologueLevel = 0, explorerLevel = 0): boolean {
+  buy(
+    index: number,
+    geometerLevel = 0,
+    astrologueLevel = 0,
+    explorerLevel = 0,
+    architectLevel = 0,
+    respect = 0
+  ): boolean {
     const house = this.houses[index];
-    if (!house || !this.isHouseAvailable(house, geometerLevel, astrologueLevel, explorerLevel)) return false;
+    if (!house || !this.isHouseAvailable(house, geometerLevel, astrologueLevel, explorerLevel, architectLevel)) return false;
+    if (respect < this.respectRequiredFor(house)) return false;
     if (!house.unlocked) {
       const unlockPrice = house.unlockPrice ?? 0;
       const unlockCosts = house.unlockCosts ?? [];
@@ -531,6 +585,10 @@ export class HouseStateService {
       const bonus = this.getConsumptionDurationBonusSeconds();
       return `${house.description} Actuel : +${Math.round(bonus)} s.`;
     }
+    if (house.id === PRIME_HOUSE_ID) {
+      const bonuses = this.getPrimeHouseBonuses();
+      return `${house.description} Actuel : +${Math.round(bonuses.chanceBonus * 100)} % de chance, +${Math.round(bonuses.extraDurationSeconds / 60)} min. Prochain niveau : ${this.respectRequiredFor(house)} de respect.`;
+    }
     const upgrade = house.dishUpgrade;
     if (!upgrade) return house.description;
     const level = house.unlocked ? house.level : 0;
@@ -544,11 +602,19 @@ export class HouseStateService {
     return parts.length > 0 ? `${house.description} Actuel : ${parts.join(', ')}.` : house.description;
   }
 
+  private respectRequiredFor(house: House): number {
+    if (house.id !== PRIME_HOUSE_ID) return 0;
+    if (house.maxLevel != null && house.unlocked && house.level >= house.maxLevel) return 0;
+    const nextLevel = house.unlocked ? house.level + 1 : 1;
+    return PRIME_HOUSE_RESPECT_PER_LEVEL * nextLevel;
+  }
+
   private isHouseAvailable(
     house: House,
     geometerLevel: number,
     astrologueLevel: number,
-    explorerLevel: number
+    explorerLevel: number,
+    architectLevel = 0
   ): boolean {
     if (house.id === SOLAR_BALANCE_HOUSE_ID) return astrologueLevel >= 75;
     if (house.id === SOLAR_BLUE_HOUSE_ID || house.id === SOLAR_YELLOW_HOUSE_ID) {
@@ -561,6 +627,7 @@ export class HouseStateService {
         if (workerIndex === VESSEL_WORKER_INDEX) return geometerLevel;
         if (workerIndex === SUN_WORKER_INDEX) return astrologueLevel;
         if (workerIndex === KITCHEN_EXPLORER_INDEX) return explorerLevel;
+        if (workerIndex === ARCHITECT_WORKER_INDEX) return architectLevel;
         return null;
       },
     });

@@ -23,6 +23,7 @@ import { MissionStateService } from './mission-state.service';
 import { LotteryStateService } from './lottery-state.service';
 import { KitchenStateService } from '../kitchen/kitchen-state.service';
 import { emptyKitchenModifiers, scaleResourceAmount } from '../kitchen/dish.model';
+import { PrimeStateService } from '../primes/prime-state.service';
 
 /** Référence de difficulté pour calculer les récompenses selon les PV vaincus. */
 const MONSTER_HP_BASE_SECONDS = 12;
@@ -68,6 +69,8 @@ export interface CurrentMonsterView {
   /** True si spawn "DANGER BOSS" (1/10, combat plus dur). */
   isBoss?: boolean;
   isPlannedCombat?: boolean;
+  /** Combat lancé depuis le panneau des primes. */
+  isPrime?: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -93,6 +96,7 @@ export class MonsterStateService {
   private plannedCombatCooldownEnds: Record<string, number> = {};
   private currentPlannedCombatId: string | null = null;
   private currentPlannedCombatEnemyIndex = 0;
+  private currentPrimeActive = false;
   private selectedBiome: MonsterBiomeId = 'forest';
   /** Horloge injectable pour simuler le temps réel quand l’onglet est inactif. */
   private nowProvider: (() => number) | null = null;
@@ -113,7 +117,8 @@ export class MonsterStateService {
     private missionState: MissionStateService,
     private lotteryState: LotteryStateService,
     @Optional() private unlockUpgrades?: UnlockUpgradeService,
-    @Optional() private kitchen?: KitchenStateService
+    @Optional() private kitchen?: KitchenStateService,
+    @Optional() private primeState?: PrimeStateService
   ) {}
 
   /** True si la zone monstre est débloquée (Alchimiste niveau requis). */
@@ -129,6 +134,7 @@ export class MonsterStateService {
     const monster = this.pickMonsterForLevel(monsterLevel, this.selectedBiome, workers, workersAvailable);
     if (!monster) return;
 
+    this.currentPrimeActive = false;
     const lootMult = Math.max(0.1, monster.lootMultiplier ?? 1);
     this.clearHealthBars();
     this.isBoss = Math.random() < 1 / BOSS_CHANCE;
@@ -189,6 +195,23 @@ export class MonsterStateService {
     return true;
   }
 
+  /** Lance la cible d'une prime. Les PV sont déjà calculés (très au-dessus du DPS AFK). */
+  startPrime(monster: Monster, timeLimitSeconds: number, hp: number): boolean {
+    if (this.currentMonsterId != null || timeLimitSeconds <= 0 || hp <= 0) return false;
+    this.currentPrimeActive = true;
+    this.currentPlannedCombatId = null;
+    this.currentPlannedCombatEnemyIndex = 0;
+    this.clearHealthBars();
+    this.currentMonsterId = monster.id;
+    this.maxHp = Math.max(1, Math.floor(hp));
+    this.currentHp = this.maxHp;
+    this.timeLimitSeconds = Math.max(1, Math.floor(timeLimitSeconds));
+    this.timeLimitMs = this.timeLimitSeconds * 1000;
+    this.isBoss = false;
+    this.spawnTime = this.now();
+    return true;
+  }
+
   usePlannedCombatBait(
     id: string,
     workers: WorkerAutoData[],
@@ -229,6 +252,21 @@ export class MonsterStateService {
     this.maxHp = 0;
     this.clearHealthBars();
     this.isBoss = false;
+
+    if (!this.spawnQueuedMonster(workers, workersAvailable)) this.encounterMeter = 0;
+    return true;
+  }
+
+  /** Abandonne une prime en cours sans retirer de respect. Le contrat reste au panneau. */
+  cancelPrime(workers: WorkerAutoData[], workersAvailable: WorkerAutoData[]): boolean {
+    if (!this.currentPrimeActive) return false;
+
+    this.currentPrimeActive = false;
+    this.currentMonsterId = null;
+    this.currentHp = 0;
+    this.maxHp = 0;
+    this.isBoss = false;
+    this.clearHealthBars();
 
     if (!this.spawnQueuedMonster(workers, workersAvailable)) this.encounterMeter = 0;
     return true;
@@ -324,6 +362,10 @@ export class MonsterStateService {
       this.currentHp = Math.max(0, this.currentHp - amount);
     }
     if (this.currentHp <= 0) {
+      if (this.currentPrimeActive) {
+        this.finishPrime(true, workers, workersAvailable);
+        return true;
+      }
       this.missionState.recordMonsterKill();
       if (this.advanceToNextPlannedCombatEnemy()) return true;
 
@@ -534,10 +576,17 @@ export class MonsterStateService {
     if (this.currentMonsterId != null) {
       const remaining = this.spawnTime + this.timeLimitMs - this.now();
       if (remaining <= 0) {
+        const prime = this.currentPrimeActive;
+        const wild = !prime && this.currentPlannedCombatId == null;
+        const monsterId = this.currentMonsterId;
+        this.currentPrimeActive = false;
         this.currentMonsterId = null;
         this.currentPlannedCombatId = null;
         this.currentPlannedCombatEnemyIndex = 0;
+        this.isBoss = false;
         this.clearHealthBars();
+        if (prime) this.primeState?.onPrimeResolved(false);
+        else if (wild) this.primeState?.onWildDefeat(monsterId);
         if (!this.spawnQueuedMonster(workers, workersAvailable)) this.encounterMeter = 0;
       }
       return;
@@ -604,6 +653,7 @@ export class MonsterStateService {
         : listMonster.find((entry) => entry.id === monster.id)?.damageMode ?? 'any',
       isBoss: plannedCombat != null || this.isBoss,
       isPlannedCombat: plannedCombat != null,
+      isPrime: this.currentPrimeActive,
       plannedCombatEnemyNumber: plannedCombat == null ? undefined : this.currentPlannedCombatEnemyIndex + 1,
       plannedCombatEnemyCount: plannedCombat?.enemies.length,
     };
@@ -623,6 +673,22 @@ export class MonsterStateService {
 
   setSelectedBiome(biome: MonsterBiomeId): void {
     if (isMonsterBiomeId(biome) && this.isBiomeUnlocked(biome)) this.selectedBiome = biome;
+  }
+
+  private finishPrime(
+    success: boolean,
+    workers: WorkerAutoData[],
+    workersAvailable: WorkerAutoData[]
+  ): void {
+    this.currentPrimeActive = false;
+    this.currentMonsterId = null;
+    this.currentHp = 0;
+    this.maxHp = 0;
+    this.isBoss = false;
+    this.clearHealthBars();
+    if (success) this.missionState.recordMonsterKill();
+    this.primeState?.onPrimeResolved(success);
+    if (!this.spawnQueuedMonster(workers, workersAvailable)) this.encounterMeter = 0;
   }
 
   private spawnQueuedMonster(

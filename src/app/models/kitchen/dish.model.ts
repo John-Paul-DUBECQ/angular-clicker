@@ -36,6 +36,7 @@ export interface DishDefinition {
   baseDurationSeconds: number;
   tags?: string[];
   unlockMethod?: UnlockMethod;
+  imageUrl?: string;
 }
 
 /** Bonus de shop lié à un plat : `unlockUpgrade.unlockId = dishUpgradeId(dishId)`. */
@@ -203,6 +204,7 @@ export interface DishView {
   active: boolean;
   baseDurationSeconds: number;
   durationBonusSeconds: number;
+  imageUrl?: string;
 }
 
 export interface KitchenView {

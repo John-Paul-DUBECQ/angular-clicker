@@ -191,9 +191,9 @@
             <h3>{{ offer.monsterName }}</h3>
             <span>{{ formatCooldown(offer.remainingSeconds) }}</span>
           </div>
-          <p> Temps pour la tuer : {{ offer.timeLimitSeconds }} s.</p>
-          <p>Réussite : +{{ offer.gain }} respect ({{ offer.gainLabel }}).
-             Fuite : -{{ offer.loss }}.</p>
+          <p> Temps : {{ offer.timeLimitSeconds }} s.</p>
+          <p>Gain : +{{ offer.gain }} respect ({{ offer.gainLabel }}).
+            <br> Fuite : -{{ offer.loss }}.</p>
           <p>Récompense : {{ offer.rewardLabel }}</p>
           <button type="button" [disabled]="!!game.currentMonster" (click)="startPrime(offer.id)">Accepter la prime</button>
         </div>
@@ -503,31 +503,32 @@
       <ng-container *ngIf="desktopView === 'essenceShop' || desktopView === 'quests'">
       <ng-container *ngTemplateOutlet="workerSectionMenu"></ng-container>
       </ng-container>
+
       <section class="kitchen-panel" *ngIf="desktopView === 'kitchen' && game.kitchen as kitchen">
-        <h2>Cuisine</h2>
-        <p *ngIf="kitchen.luck > 0">Chance des plats actifs : <span class="luck-bonus">{{ kitchen.luck }}</span>. Elle s'ajoute à la chance de la loterie.</p>
         <div class="kitchen-panel__filters" aria-label="Filtrer les plats">
           <button type="button" [class.kitchen-panel__filter--active]="selectedKitchenTag === null" (click)="selectedKitchenTag = null">Tous</button>
           <button type="button" *ngFor="let tag of kitchenTags" [class.kitchen-panel__filter--active]="selectedKitchenTag === tag" (click)="selectedKitchenTag = tag">{{ tag }}</button>
         </div>
         <article class="kitchen-dish" *ngFor="let dish of visibleKitchenDishes; trackBy: trackByDish">
           <header>
-            <h3>{{ dish.name }}</h3>
-            <span *ngIf="dish.active">{{ formatCooldown(dish.remainingSeconds) }}</span>
+            <div class="kitchen-dish__header">
+              <img *ngIf="dish.imageUrl" [src]="dish.imageUrl" [alt]="dish.name" class="kitchen-dish__image" />
+              <h5>{{ dish.name + " (" + dish.stock + ")"}}</h5>
+            </div>
+            <span *ngIf="dish.active">{{ formatCooldown(dish.remainingSeconds)}}  </span> 
           </header>
-          <p>{{ dish.description }} - Durée : {{ dish.baseDurationSeconds }} s<span *ngIf="dish.durationBonusSeconds"> + {{ dish.durationBonusSeconds }} s</span></p>
+          <p>{{ dish.description }} <br> Durée : {{ dish.baseDurationSeconds }} s<span *ngIf="dish.durationBonusSeconds"> + {{ dish.durationBonusSeconds }} s</span></p>
           <ul>
-            <li *ngFor="let effect of dish.effectLabels; trackBy: trackByPosition">{{ effect }}</li>
+            <li *ngFor="let effect of dish.effectLabels; trackBy: trackByPosition"><b>{{ effect }}</b></li>
           </ul>
-          
           <div class="dishBottomInfo">
             <div class="leftInfodish">
               <p class="kitchen-dish__costs">
+                Coût :
                 <span *ngFor="let ingredient of dish.ingredients; trackBy: trackByIngredient" [class.kitchen-dish__cost--missing]="ingredient.owned < ingredient.amount">
                   {{ ingredient.name }} {{ ingredient.amount }} ({{ formatResourceValue(ingredient.owned) }})
                 </span>
               </p>
-              <p>En réserve : {{ dish.stock }}</p>
             </div>
             <div class="kitchen-dish__actions">
               <button type="button" [disabled]="!dish.canCook" (click)="cookDish(dish.id)">Préparer</button>
@@ -536,6 +537,7 @@
           </div>
         </article>
       </section>
+
       <section class="future-section-panel feature-garden" *ngIf="desktopView === 'garden'">
         <h2>Jardin</h2>
         <p>Cette section sera ajoutée prochainement.</p>

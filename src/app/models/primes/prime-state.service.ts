@@ -459,7 +459,7 @@ export class PrimeStateService {
     resources?: { resourceId: string; amount: number }[]
   ): string {
     const parts: string[] = [];
-    if (goldReward) parts.push(`${formatNumberValue(goldReward, 0)} or`);
+    if (goldReward) parts.push(`${formatNumberValue(goldReward, 0)} clics`);
     if (essenceReward) parts.push(`${formatNumberValue(essenceReward, 0)} essence`);
     (resources ?? []).forEach((reward) => {
       parts.push(`${formatNumberValue(reward.amount, 0)} ${this.resourceName(reward.resourceId)}`);

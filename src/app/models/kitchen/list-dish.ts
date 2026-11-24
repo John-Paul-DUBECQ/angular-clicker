@@ -28,6 +28,7 @@ export const LIST_DISH: DishDefinition[] = [
     tags: ['Monstres'],
     baseDurationSeconds: 60,
     unlockMethod: explorerLevelUnlock(60),
+    imageUrl: 'assets/img/shadocks/mosh.png',
   },
   {
     id: 'queue-grillee',
@@ -41,6 +42,7 @@ export const LIST_DISH: DishDefinition[] = [
     tags: ['Ressources'],
     baseDurationSeconds: 45,
     unlockMethod: explorerLevelUnlock(65),
+    imageUrl: 'assets/img/shadocks/mosh.png',
   },
   {
     id: 'noyau-saute',

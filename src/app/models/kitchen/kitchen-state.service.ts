@@ -144,6 +144,7 @@ export class KitchenStateService {
       active: remainingMs > 0,
       baseDurationSeconds: dish.baseDurationSeconds,
       durationBonusSeconds,
+      imageUrl: dish.imageUrl,
     };
   }
 

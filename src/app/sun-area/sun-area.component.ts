@@ -3,9 +3,10 @@ import { GameStateService } from '../models/game/game-state.service';
 
 
 @Component({
-  selector: 'app-sun-area',
-  templateUrl: './sun-area.component.html',
-  styleUrls: ['./sun-area.component.css']
+    selector: 'app-sun-area',
+    templateUrl: './sun-area.component.html',
+    styleUrls: ['./sun-area.component.css'],
+    standalone: false
 })
 export class SunAreaComponent {
 

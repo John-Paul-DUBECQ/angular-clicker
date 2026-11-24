@@ -3,9 +3,10 @@ import { House } from '../models/house';
 import { ResourceStock } from '../models/resource';
 
 @Component({
-  selector: 'app-house-area',
-  templateUrl: './house-area.component.html',
-  styleUrls: ['./house-area.component.css'],
+    selector: 'app-house-area',
+    templateUrl: './house-area.component.html',
+    styleUrls: ['./house-area.component.css'],
+    standalone: false
 })
 export class HouseAreaComponent {
   @Input() house!: House;

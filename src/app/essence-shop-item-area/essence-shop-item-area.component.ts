@@ -7,9 +7,10 @@ const POPUP_VIEWPORT_MARGIN = 12;
 const POPUP_SELECTOR = '.essence-shop-item-popup--fixed';
 
 @Component({
-	selector: 'app-essence-shop-item-area',
-	templateUrl: './essence-shop-item-area.component.html',
-	styleUrls: ['./essence-shop-item-area.component.css']
+    selector: 'app-essence-shop-item-area',
+    templateUrl: './essence-shop-item-area.component.html',
+    styleUrls: ['./essence-shop-item-area.component.css'],
+    standalone: false
 })
 export class EssenceShopItemAreaComponent {
 	@Input() item!: EssenceShopItem;

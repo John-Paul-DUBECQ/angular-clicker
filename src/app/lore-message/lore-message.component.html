@@ -13,9 +13,11 @@
       <div class="lore-text">
         {{ text }}
       </div>
-      <div *ngIf="imageUrl" class="lore-image-wrapper">
-        <img [src]="imageUrl" alt="Illustration" class="lore-image">
-      </div>
+      @if (imageUrl) {
+        <div class="lore-image-wrapper">
+          <img [src]="imageUrl" alt="Illustration" class="lore-image">
+        </div>
+      }
     </div>
   </div>
 </div>

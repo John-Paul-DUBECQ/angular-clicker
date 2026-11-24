@@ -1,9 +1,10 @@
 import { Component, EventEmitter, HostListener, Input, Output } from '@angular/core';
 
 @Component({
-  selector: 'app-lore-message',
-  templateUrl: './lore-message.component.html',
-  styleUrls: ['./lore-message.component.css'],
+    selector: 'app-lore-message',
+    templateUrl: './lore-message.component.html',
+    styleUrls: ['./lore-message.component.css'],
+    standalone: false
 })
 export class LoreMessageComponent {
   /** Titre du popup (ex. nom d'acte). */

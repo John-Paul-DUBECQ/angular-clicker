@@ -10,9 +10,10 @@ import { listShopItem } from '../models/list-shop-item';
 const POPUP_OFFSET = 12;
 
 @Component({
-  selector: 'app-worker-area',
-  templateUrl: './worker-area.component.html',
-  styleUrls: ['./worker-area.component.css']
+    selector: 'app-worker-area',
+    templateUrl: './worker-area.component.html',
+    styleUrls: ['./worker-area.component.css'],
+    standalone: false
 })
 export class WorkerAreaComponent {
 

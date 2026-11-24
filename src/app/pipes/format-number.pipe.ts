@@ -35,7 +35,10 @@ function getLetterSuffix(letterIndex: number): string {
   return s;
 }
 
-@Pipe({ name: 'formatNumber' })
+@Pipe({
+    name: 'formatNumber',
+    standalone: false
+})
 export class FormatNumberPipe implements PipeTransform {
   transform(value: number | null | undefined, decimals?: number): string {
     if (value == null || !Number.isFinite(value)) return '0';

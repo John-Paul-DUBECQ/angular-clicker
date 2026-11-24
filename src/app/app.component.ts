@@ -10,7 +10,7 @@ import { EssenceShopItem } from './models/essence-shop-item';
 import { House } from './models/house';
 import { ResourceReward, ResourceStock } from './models/resource';
 import { DishIngredientView, DishView } from './models/kitchen/dish.model';
-import { formatNumberValue } from './pipes/format-number.pipe';
+import { FormatNumberPipe, formatNumberValue } from './pipes/format-number.pipe';
 import { MonsterRewardNotificationService } from './models/game/monster-reward-notification.service';
 import { VesselRewardNotificationService } from './models/game/vessel-reward-notification.service';
 import type { VesselReward } from './models/game/vessel-reward-notification.service';
@@ -27,14 +27,16 @@ import {
 } from './models/resource-trade';
 import { PrimeOfferView, PrimeTradeView, PrimeTraderView } from './models/primes/prime.model';
 import { FEATURE_COLOR_OPTIONS, HOUSE_TAG_COLOR_OPTIONS } from './models/feature-colors';
-import {MatTooltipModule} from '@angular/material/tooltip';
 import Swal from 'sweetalert2';
+// Source - https://stackoverflow.com/a/40576301
+// Posted by codef0rmer, modified by community. See post 'Timeline' for change history
+// Retrieved 2026-11-24, License - CC BY-SA 4.0
 
 @Component({
     selector: 'app-root',
     templateUrl: './app.component.html',
     styleUrls: ['./app.component.css'],
-    standalone: false
+    standalone: false,
 })
 export class AppComponent implements OnInit, OnDestroy {
   title = 'Clicker Game';

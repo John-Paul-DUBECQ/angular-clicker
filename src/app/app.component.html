@@ -528,7 +528,7 @@
           }
           <button type="button" class="desktop-section-rail__settings" title="Paramètres" aria-label="Paramètres" (click)="openSettings($event)">⚙</button>
         </nav>
-        <div class="column column-left">
+        <ng-scrollbar class="column column-left">
           <div class="desktop-side-resources">
             <div><span>Essence</span><strong>{{ formatResourceValue(game.monsterEssence != null ? game.monsterEssence : 0) }}</strong></div>
             <div><span>Appât</span><strong>{{ formatResourceValue(getResourceAmount('bait')) }}</strong></div>
@@ -540,13 +540,6 @@
             <div><span>Tickets</span><strong>{{ formatResourceValue(getResourceAmount('ticket')) }}</strong></div>
             <div><span>Pièges</span><strong>{{ formatResourceValue(getResourceAmount('trap')) }}</strong></div>
           </div>
-          @if (game.kitchen?.activeDishes?.length) {
-            <div class="kitchen-buff-bar">
-              @for (dish of game.kitchen?.activeDishes || []; track trackByDish($index, dish)) {
-                <span>{{ dish.name }} {{ formatCooldown(dish.remainingSeconds) }}</span>
-              }
-            </div>
-          }
           @if (desktopView === 'shop') {
             @if (sortedShopItemsWithIndex.length > 0) {
               <div class="shop-items-list">
@@ -634,6 +627,23 @@
           }
 
           @if (desktopView === 'kitchen' && game.kitchen; as kitchen) {
+            @if (game.kitchen.activeDishes.length) {
+              <div class="kitchen-buff-bar">
+                @for (dish of game.kitchen.activeDishes || []; track trackByDish($index, dish)) {
+                  <span class="dish-tooltip">
+                    {{ dish.name }} {{ formatCooldown(dish.remainingSeconds) }}
+                
+                    <span class="dish-tooltip__content">
+                      <ul>
+                        @for (effect of dish.effectLabels; track trackByPosition($index)) {
+                          <li><b>{{ effect }}</b></li>
+                        }
+                      </ul>
+                    </span>
+                  </span>
+                }
+              </div>
+            }
             <section class="kitchen-panel">
               <div class="kitchen-panel__filters" aria-label="Filtrer les plats">
                 <button type="button" [class.kitchen-panel__filter--active]="selectedKitchenTag === null" (click)="selectedKitchenTag = null">Tous</button>
@@ -768,7 +778,7 @@
               </section>
             }
           }
-        </div>
+        </ng-scrollbar>
 
         <div
           class="column column-center"

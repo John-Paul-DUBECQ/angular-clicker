@@ -22,7 +22,8 @@
     "@angular/platform-browser-dynamic": "^21.2.26",
     "@angular/router": "^21.2.26",
     "bootstrap": "^5.3.8",
-    "rxjs": "~6.6.0",
+    "ngx-scrollbar": "^19.1.5",
+    "rxjs": "^7.8.2",
     "sweetalert2": "^11.10.0",
     "tslib": "^2.0.0",
     "zone.js": "~0.15.1"

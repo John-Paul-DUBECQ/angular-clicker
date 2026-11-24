@@ -315,6 +315,13 @@
   overflow-y: auto;
   border-right: 1px solid #343434;
   background: #171717;
+  --scollbar-track-color: rgb(0 0 0 / 30%);
+  --scrollbar-track-thickness: 18px;
+  --scrollbar-track-hover-thickness: 24px;
+  --scrollbar-track-offset: 5px;
+  
+  --scrollbar-thumb-color: rgba(0, 0, 0, 0.781);
+  --scrollbar-thumb-hover-color: rgba(0, 0, 0, 0.575);
 }
 
 .desktop-side-resources {
@@ -1120,8 +1127,7 @@
 
 .planned-combat-panel {
   padding: 12px;
-  background: #211a1a;
-  border-bottom: 3px solid var(--feature-mobs, #c44536);
+  background: #1b1b1b;
 }
 
 .planned-combat-panel__header h2,
@@ -1136,24 +1142,24 @@
 
 .planned-combat-panel__header p {
   margin-top: 3px;
-  color: #c6aaa5;
+  color: #d1d1d1;
   font-size: 0.72rem;
 }
 
 .quest-biomes {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
   gap: 6px;
   margin-top: 10px;
 }
 
 .quest-biomes button {
   padding: 6px 10px;
-  border: 1px solid #513737;
-  background: #2a2020;
-  color: #c6aaa5;
+  border: 1px solid var(--feature-mobs, #c44536);
+  background: color-mix(in srgb, var(--feature-mobs, #c44536) 20%, transparent);
+  color: #e6e6e6;
   cursor: pointer;
-  font-size: 0.75rem;
+  font-size: 0.88rem;
 }
 
 .quest-biomes button:disabled {
@@ -1162,15 +1168,16 @@
 }
 
 .quest-biomes__item--active {
-  border-color: #ef8f83 !important;
-  background: #513737 !important;
-  color: #fff1ee !important;
+  border-color: color-mix(in srgb, var(--feature-mobs, #c44536) 50%, #fff) !important;
+  background: color-mix(in srgb, var(--feature-mobs, #c44536) 50%, transparent) !important;
+  color: #ffffff !important;
+  font-weight: 500;
 }
 
 .quest-biome-description,
 .planned-combat-empty {
   margin: 8px 0 0;
-  color: #c6aaa5;
+  color: #ffffff;
   font-size: 0.72rem;
 }
 
@@ -1321,9 +1328,8 @@
   gap: 6px 10px;
   padding: 6px 10px;
   border-bottom: 1px solid #444;
-  background: #b96626;
+  background: color-mix(in srgb, var(--feature-kitchen, #8a5a2b) 10%, #292929);
   color: #ffffff;
-  font-size: 0.68rem;
 }
 
 .kitchen-panel {
@@ -1346,23 +1352,24 @@
 
 .kitchen-panel__filters {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
   gap: 0.35rem;
   margin-bottom: 10px;
 }
 
 .kitchen-panel__filters button {
-  border: 1px solid #513737;
+  border: 1px solid var(--feature-kitchen, #8a5a2b);
   padding: 0.3rem 0.5rem;
-  background: #241c1c;
-  color: #c6aaa5;
+  background: color-mix(in srgb, var(--feature-kitchen, #8a5a2b) 50%, transparent);
+  color: #ffffff;
   cursor: pointer;
-  font-size: 0.68rem;
 }
 
 .kitchen-panel__filters .kitchen-panel__filter--active {
-  border-color: #e2a090;
-  color: #fff1ee;
+  border-color: #ffffff;
+  color: #ffffff;
+  background: color-mix(in srgb, var(--feature-kitchen, #8a5a2b) 50%, #000);
+  font-weight: 500;
 }
 
 .kitchen-dish {
@@ -1465,8 +1472,9 @@
 
 .planned-combat {
   padding: 9px;
-  background: #2a2020;
-  border: 1px solid #513737;
+  background: #272727;
+  border: 1px solid var(--feature-mobs, #c44536);
+  border-radius: 8px;
 }
 
 .planned-combat__heading,
@@ -1485,16 +1493,7 @@
 
 .planned-combat__heading span,
 .planned-combat__meta {
-  color: #c89a94;
-  font-size: 0.68rem;
-}
-
-.planned-combat__enemies {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px 10px;
-  margin: 5px 0;
-  color: #e2c6c0;
+  color: color-mix(in srgb, var(--feature-mobs, #c44536) 50%, #fff);
   font-size: 0.68rem;
 }
 
@@ -1508,7 +1507,7 @@
 .planned-combat__reward {
   flex-wrap: wrap;
   margin: 7px 0;
-  color: #e8c547;
+  color: color-mix(in srgb, var(--feature-mobs, #c44536) 50%, #e8c547);
   font-size: 0.68rem;
 }
 
@@ -1524,24 +1523,24 @@
 
 .planned-combat__reward strong {
   min-width: 118px;
-  color: #fff1ee;
+  color: #ffffff;
   font-size: 0.68rem;
 }
 
 .planned-combat button {
   width: 100%;
   padding: 7px;
-  border: 1px solid #9a5148;
-  background: #65342f;
-  color: #fff1ee;
+  border: 1px solid var(--feature-mobs, #c44536);
+  background: color-mix(in srgb, var(--feature-mobs, #c44536) 50%, transparent);
+  color: #ffffff;
   cursor: pointer;
   font-size: 0.72rem;
 }
 
 .planned-combat button:disabled {
-  border-color: #4a3b3a;
-  background: #302929;
-  color: #817875;
+  border-color: var(--feature-mobs, #c44536);
+  background: color-mix(in srgb, var(--feature-mobs, #c44536) 20%, transparent);
+  color: #f0f0f0;
   cursor: not-allowed;
 }
 

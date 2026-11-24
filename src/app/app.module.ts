@@ -17,10 +17,12 @@ import { FormatNumberPipe } from './pipes/format-number.pipe';
 import { LoreMessageComponent } from './lore-message/lore-message.component';
 import { EssenceShopItemAreaComponent } from './essence-shop-item-area/essence-shop-item-area.component';
 import { HouseAreaComponent } from './house-area/house-area.component';
+import { NgScrollbarModule } from 'ngx-scrollbar';
 
-@NgModule({ declarations: [
+
+@NgModule({
+    declarations: [
         AppComponent,
-        FormatNumberPipe,
         WorkerAreaComponent,
         ShopItemAreaComponent,
         SunAreaComponent,
@@ -28,11 +30,22 @@ import { HouseAreaComponent } from './house-area/house-area.component';
         LoreMessageComponent,
         EssenceShopItemAreaComponent,
         HouseAreaComponent,
+        FormatNumberPipe,
     ],
-    bootstrap: [AppComponent], imports: [BrowserModule,
+    imports: [
+        BrowserModule,
         CommonModule,
         AppRoutingModule,
         BrowserAnimationsModule,
         MatIconModule,
-        MatTooltipModule], providers: [GameService, provideHttpClient(withInterceptorsFromDi())] })
+        MatTooltipModule,
+        NgScrollbarModule,
+    ],
+    providers: [
+        GameService,
+        provideHttpClient(withInterceptorsFromDi()),
+    ],
+    bootstrap: [AppComponent],
+})
 export class AppModule { }
+

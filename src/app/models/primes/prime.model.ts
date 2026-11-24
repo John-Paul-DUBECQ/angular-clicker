@@ -117,6 +117,9 @@ export interface PrimeTradeView {
   goldCost?: number;
   discountedGoldCost?: number;
   costs: PrimeTradeCostView[];
+  resourceRewards: { resourceId: string; name: string; amount: number; owned: number }[];
+  goldReward: number;
+  essenceReward: number;
   rewardsLabel: string;
   canBuy: boolean;
   lockedReason?: string;
@@ -146,8 +149,8 @@ export interface PrimeBoardView {
 
 export const PRIME_MERCHANTS: PrimeMerchantDefinition[] = [
   {
-    id: 'bram',
-    name: 'Bram Cendre',
+    id: 'terry',
+    name: 'Terry',
     imageUrl: 'assets/img/shadocks/mosh.png',
     dialogues: [
       'Le panneau paie mieux que la forêt, si tu survis assez longtemps pour encaisser.',
@@ -185,8 +188,8 @@ export const PRIME_MERCHANTS: PrimeMerchantDefinition[] = [
 
 export const PRIME_TRADES: PrimeTradeDefinition[] = [
   {
-    id: 'bram-baits',
-    merchantId: 'bram',
+    id: 'terry-baits',
+    merchantId: 'terry',
     name: 'Paquet d\'appâts',
     description: 'Cinq appâts, payés en or.',
     goldCost: 50000,
@@ -194,10 +197,10 @@ export const PRIME_TRADES: PrimeTradeDefinition[] = [
     maxPerVisit: 4,
   },
   {
-    id: 'bram-tickets',
-    merchantId: 'bram',
+    id: 'terry-tickets',
+    merchantId: 'terry',
     name: 'Liasse de tickets',
-    description: 'Dix tickets. Bram ne les sort que pour une réputation déjà solide.',
+    description: 'Dix tickets. terry ne les sort que pour une réputation déjà solide.',
     goldCost: 200000,
     resourceRewards: [{ resourceId: 'ticket', amount: 10 }],
     unlockMethod: UnlockMethod.minRespect(40),

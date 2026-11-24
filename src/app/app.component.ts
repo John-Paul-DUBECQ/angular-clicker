@@ -19,7 +19,7 @@ import { listMonster } from './models/monsters/list-monster';
 import { Monster } from './models/monsters/monster.model';
 import { MONSTER_BIOMES, MonsterBiomeId } from './models/monsters/monster-biome.model';
 import { MissionSlotView } from './models/missions/mission.model';
-import { LIST_CHEST, LOTTERY_LOOT, getLotteryLuckBonus } from './models/monsters/lottery.model';
+import { ChestDefinition, LIST_CHEST, LOTTERY_LOOT, LotteryLootDrop, getLotteryLuckBonus } from './models/monsters/lottery.model';
 import {
   getResourceTradeCost,
   ResourceTradeQuantity,
@@ -27,6 +27,7 @@ import {
 } from './models/resource-trade';
 import { PrimeOfferView, PrimeTradeView, PrimeTraderView } from './models/primes/prime.model';
 import { FEATURE_COLOR_OPTIONS, HOUSE_TAG_COLOR_OPTIONS } from './models/feature-colors';
+import {MatTooltipModule} from '@angular/material/tooltip';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -116,6 +117,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private vesselRewardSub: Subscription | null = null;
   private loreSub: Subscription | null = null;
   private loreQueue: LorePayload[] = [];
+  lottery: any;
   /** Historique complet des messages de lore vus. */
   get loreHistory(): LorePayload[] {
     return this.game.loreHistory || [];
@@ -522,6 +524,25 @@ export class AppComponent implements OnInit, OnDestroy {
 
   getResourceAmount(resourceId: string): number {
     return this.resources.find((resource) => resource.id === resourceId)?.amount ?? 0;
+  }
+
+  getLoterieDropsTooltip(): string {
+    const drops = this.lotteryLoot.map(
+      drop =>
+        `${this.getResourceName(drop.resourceId)} ×${drop.amount} — ${this.formatLuckPercent(drop.chance)} +${this.formatLuckPercent(this.lotteryLuckBonus(drop.chance))} (luck)`
+    );
+  
+    if (this.lottery?.biomeEggAvailable) {
+      drops.push(
+        `Œuf aléatoire (${this.lottery.biomeName}) ×1 — ${this.formatLuckPercent(this.lottery.biomeEggChance)} +${this.formatLuckPercent(this.lotteryLuckBonus(this.lottery.biomeEggChance))} (luck)`
+      );
+    }
+  
+    return drops.join('\n');
+  }
+
+  getChestDropsTooltip(chest: ChestDefinition): string {
+    return chest.drops.map(drop => this.getResourceName(drop.resourceId) + ' x' + drop.amount + ' (' + drop.probability + '%)').join('\n');
   }
 
   get houseTags(): string[] {

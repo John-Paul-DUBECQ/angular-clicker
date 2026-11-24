@@ -421,6 +421,14 @@ export class PrimeStateService {
             amount: cost.amount,
             owned: this.resources.getResourceAmount(cost.resourceId),
           }));
+          const resourceRewards = (trade.resourceRewards ?? []).map((reward) => ({
+            resourceId: reward.resourceId,
+            name: this.resourceName(reward.resourceId),
+            amount: reward.amount,
+            owned: this.resources.getResourceAmount(reward.resourceId),
+          }));
+          const goldReward = trade.goldReward ?? 0;
+          const essenceReward = trade.essenceReward ?? 0;
           const bought = trader.bought?.[trade.id] ?? 0;
           const remaining = Math.max(0, trade.maxPerVisit - bought);
           const goldOk = discounted == null || this.resources.getClicks() >= discounted;
@@ -432,6 +440,9 @@ export class PrimeStateService {
             goldCost: trade.goldCost,
             discountedGoldCost: discounted,
             costs,
+            resourceRewards,
+            goldReward,
+            essenceReward,
             rewardsLabel: this.rewardsLabel(trade.goldReward, trade.essenceReward, trade.resourceRewards),
             canBuy: !locked && remaining > 0 && goldOk && resourcesOk,
             lockedReason: locked ? trade.unlockMethod?.description : undefined,

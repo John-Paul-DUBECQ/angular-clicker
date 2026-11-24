@@ -145,6 +145,8 @@
 .desktop-section-rail button[data-feature="breeding"] { color: var(--feature-breeding, #8fd18a); }
 .desktop-section-rail button[data-feature="shop"] { color: var(--feature-shop, #3e6fb5); }
 .desktop-section-rail button[data-feature="lottery"] { color: var(--feature-lottery, #2ec4d6); }
+.desktop-section-rail button[data-feature="missions"] { color: var(--feature-missions, #0081cf); }
+.desktop-section-rail button[data-feature="traders"] { color: var(--feature-traders, #008f7a); }
 .desktop-section-rail button[data-feature="mobs"].desktop-section-rail__item--active { color: var(--feature-mobs, #c44536) !important; }
 .desktop-section-rail button[data-feature="kitchen"].desktop-section-rail__item--active { color: var(--feature-kitchen, #8a5a2b) !important; }
 .desktop-section-rail button[data-feature="garden"].desktop-section-rail__item--active { color: var(--feature-garden, #2f8f4e) !important; }
@@ -450,13 +452,40 @@
   color: var(--feature-garden, #2f8f4e);
 }
 
+.traders-panel {
+  margin: 12px;
+  padding: 14px;
+  border: 1px solid var(--feature-traders, #008f7a);
+  border-radius: 8px;
+  background: #202020;
+  color: #ffffff;
+}
+
+.traders-panel__header {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  justify-content: space-between;
+  padding-bottom: 8px;
+}
+
+.traders-panel__info-container {flex-grow: 1;}
+
+.traders-panel__content {
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+  justify-content: space-between;
+  align-items: center;	
+}
+
 .missions-panel {
   margin: 12px;
   padding: 14px;
-  border: 1px solid #66542a;
+  border: 1px solid var(--feature-missions, #2ec4d6);
   border-radius: 8px;
-  background: #211d16;
-  color: #eee8d8;
+  background: #202020;
+  color: #ffffff;
 }
 
 .missions-panel__header,
@@ -1148,13 +1177,72 @@
   font-size: 0.72rem;
 }
 
+.lottery-chest {
+  border: 1px solid var(--feature-lottery, #0d3438);
+  padding: 10px;
+  background: #202020;
+  color: #ffffff;
+  font-size: 0.72rem;
+  margin: 12px 16px;
+  border-radius: 8px;
+}
+
+.chest-tooltip, .lottery-tooltip {
+  white-space: pre-wrap !important;
+}
+
+.chest-header {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  white-space: pre-line
+}
+
+.lottery-chest__list {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  margin-top: 10px;
+  background: #202020;
+  color: #ffffff;
+  font-size: 0.72rem;
+}
+
+.lottery-chest__item {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  gap: 8px;
+  padding: 8px;
+  background-color: #11151a65;
+}
+
+.loterieHeader {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  white-space: pre-line;
+  justify-content: space-between;
+  padding-bottom: 8px;
+}
+
 .lottery-panel {
   margin-top: 10px;
   padding: 10px;
   border: 1px solid var(--feature-lottery, #2ec4d6);
-  background: #2a2020;
-  color: #e2c6c0;
+  background: #202020;
+  color: #ffffff;
   font-size: 0.72rem;
+  margin: 12px 16px;
+  border-radius: 8px;
+}
+
+.lottery-chest__button {
+  padding: 8px 12px;
+  border: 1px solid  var(--feature-lottery, #2ec4d6);
+  background: color-mix(in srgb, var(--feature-lottery, #2ec4d6) 50%, transparent);
+  color: #ffffff;
+  cursor: pointer;
 }
 
 .lottery-panel h2 {
@@ -1165,7 +1253,7 @@
 
 .lottery-panel p {
   margin: 4px 0;
-  color: #c6aaa5;
+  color: #ffffff;
 }
 
 .lottery-panel ul {
@@ -1175,9 +1263,9 @@
 
 .lottery-panel button {
   padding: 8px 12px;
-  border: 1px solid #a87d2f;
-  background: #45351b;
-  color: #ffe4a0;
+  border: 1px solid var(--feature-lottery, #2ec4d6);
+  background: color-mix(in srgb, var(--feature-lottery, #2ec4d6) 50%, transparent);
+  color: #ffffff;
   cursor: pointer;
 }
 
@@ -2882,6 +2970,40 @@
   display: flex;
   flex-wrap: wrap;
   margin-top: 12px;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.trader-shop__button {
+  padding: 8px 12px;
+  border: 1px solid var(--feature-traders, #2ec4d6);
+  background: color-mix(in srgb, var(--feature-traders, #2ec4d6) 50%, transparent);
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.trader-shop__item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  background-color: #47474783;
+  padding: 8px;
+  border-radius: 8px;
+}
+
+.trader-shop__item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.trader-shop__button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .trader-shop__slot {

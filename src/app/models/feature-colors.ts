@@ -12,11 +12,13 @@ export interface FeatureColorOption {
 export const FEATURE_COLOR_OPTIONS: FeatureColorOption[] = [
   { id: 'mobs', label: 'Mobs / aventure', color: '#c44536' },
   { id: 'luck', label: 'Chance', color: '#3d7eff' },
-  { id: 'kitchen', label: 'Cuisine', color: '#8a5a2b' },
+  { id: 'kitchen', label: 'Cuisine', color: '#ff8066' },
   { id: 'garden', label: 'Jardin', color: '#2f8f4e' },
   { id: 'breeding', label: 'Œufs / élevage', color: '#8fd18a' },
   { id: 'shop', label: 'Shop', color: '#3e6fb5' },
   { id: 'lottery', label: 'Loterie', color: '#2ec4d6' },
+  { id: 'missions', label: 'Missions', color: '#0081cf' },
+  { id: 'traders', label: 'Marchands', color: '#008f7a' },
 ];
 
 export const HOUSE_TAG_COLOR_OPTIONS: FeatureColorOption[] = [

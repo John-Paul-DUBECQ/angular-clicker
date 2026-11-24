@@ -228,49 +228,52 @@
       <p *ngIf="devCommandMessage">{{ devCommandMessage }}</p>
     </div>
   </ng-template>
+
+
   <ng-template #tradersSection>
-    <section class="missions-panel" *ngIf="selectedTrader as trader; else noTrader">
-      <div class="missions-panel__header">
-        <div>
-          <h2>{{ trader.name }}</h2>
+    <section class="traders-panel" *ngFor="let trader of game.primeBoard?.traders; trackBy: trackByPrimeTrader">
+      <div class="traders-panel__header">
+        <img *ngIf="trader.imageUrl" class="trader-portrait" [src]="trader.imageUrl" [alt]="trader.name" />
+        <div class="traders-panel__info-container">
+          <div class="traders-panel__content">
+            <h2>{{ trader.name }}</h2>
+            <strong>{{ formatCooldown(trader.remainingSeconds) }}</strong>
+          </div>
           <p>{{ trader.dialogue }}</p>
         </div>
-        <strong>{{ formatCooldown(trader.remainingSeconds) }}</strong>
-      </div>
-      <img *ngIf="trader.imageUrl" class="trader-portrait" [src]="trader.imageUrl" [alt]="trader.name" />
-      <div class="trader-list" *ngIf="(game.primeBoard?.traders?.length || 0) > 1">
-        <button
-          type="button"
-          *ngFor="let entry of game.primeBoard?.traders; trackBy: trackByPrimeTrader"
-          [class.trader-list__item--active]="entry.instanceId === trader.instanceId"
-          (click)="selectTrader(entry.instanceId)">
-          {{ entry.name }}
-        </button>
-      </div>
-      <div class="shop-trades__quantities" aria-label="Quantité à échanger">
-        <button
-          type="button"
-          *ngFor="let quantity of resourceTradeQuantities"
-          [attr.aria-pressed]="traderQuantity === quantity"
-          [class.shop-trades__quantity--active]="traderQuantity === quantity"
-          (click)="traderQuantity = quantity">
-          {{ quantity === 'max' ? 'Max' : '×' + quantity }}
-        </button>
       </div>
       <div class="trader-shop">
-        <div class="trader-shop__item" *ngFor="let trade of trader.trades; trackBy: trackByPrimeTrade">
-          <button
-            type="button"
-            class="trader-shop__slot"
-            [class.trader-shop__slot--can-buy]="trade.canBuy"
-            [class.trader-shop__slot--sold-out]="trade.remaining <= 0"
-            [disabled]="!trade.canBuy"
-            (click)="buyPrimeTrade(trade)"
-            (mouseenter)="showTraderPopup(trade, $event)"
-            (mouseleave)="hideTraderPopup()">
-            <span>{{ trade.name.charAt(0) }}</span>
-            <em>{{ trade.remaining }}</em>
-          </button>
+        <div *ngFor="let trade of trader.trades; trackBy: trackByPrimeTrade">
+          <div class="trader-shop__item" >
+            <div class="trader-shop__item-header">
+              {{ trade.name }}
+              <mat-icon
+              [matTooltip]="trade.description"
+              matTooltipClass="trade-tooltip"
+              aria-label="Informations"
+              class="trade-tooltip"
+            >
+              info
+            </mat-icon>
+            </div>
+            <span>
+              {{ trade.costs?.length
+                ? 'Coût : ' + formatResourceValue(trade.costs[0].amount) + ' ' + getResourceName(trade.costs[0].resourceId) + ' (' + formatResourceValue(getResourceAmount(trade.costs[0].resourceId)) + ')'
+                : trade.goldCost != null ? 'Coût : ' + formatResourceValue(trade.goldCost) + ' or' : 'Aucun coût' }}
+            </span>
+            
+            <button
+              type="button"
+              class="trader-shop__button"
+              [disabled]="!trade.canBuy || (trade.costs?.length && getResourceAmount(trade.costs[0].resourceId) < trade.costs[0].amount)"
+              (click)="buyPrimeTrade(trade)">
+              Acheter <br> {{ trade.remaining + ' / ' + trade.maxPerVisit }}
+            </button>
+            
+            <strong>{{ trade.resourceRewards?.length && trade.resourceRewards[0].owned != null
+              ? 'Reçu : ' + formatResourceValue(trade.resourceRewards[0].amount) + ' ' + trade.resourceRewards[0].name + ' (' + formatResourceValue(trade.resourceRewards[0].owned) + ')'
+              : trade.goldReward != 0 ? 'Reçu : ' + formatResourceValue(trade.goldReward) + ' or' : trade.essenceReward != 0 ? 'Reçu : ' + formatResourceValue(trade.essenceReward) + ' essence' : 'Aucun reçu' }}</strong>
+          </div>
         </div>
       </div>
       <div
@@ -295,12 +298,14 @@
       </div>
     </section>
     <ng-template #noTrader>
-      <section class="missions-panel">
+      <section class="traders-panel">
         <h2>Marchands</h2>
         <p>Aucun marchand n'est là pour le moment.</p>
       </section>
     </ng-template>
   </ng-template>
+
+
   <ng-template #shopTrades>
     <section class="shop-trades" *ngIf="game.missionsUnlocked">
       <div class="shop-trades__quantities" aria-label="Quantité à échanger">
@@ -396,13 +401,15 @@
       <button type="button" data-feature="breeding" [class.desktop-section-rail__item--active]="desktopView === 'breeding'" title="Élevage" (click)="setDesktopView('breeding')">
         <svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="13" rx="6" ry="7.5"/><path d="M12 5.5c.8-2 2.6-2.8 3.6-1.6 1 1.2-.2 2.6-1.6 3"/></svg><span>Élevage</span>
       </button>
-      <button type="button" *ngIf="game.missionsUnlocked" [class.desktop-section-rail__item--active]="desktopView === 'missions'" title="Missions" (click)="setDesktopView('missions')">
+
+      <button type="button" data-feature="missions" *ngIf="game.missionsUnlocked" [class.desktop-section-rail__item--active]="desktopView === 'missions'" title="Missions" (click)="setDesktopView('missions')">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="m14.2 9.8 5-5"/></svg><span>Missions</span>
         <i class="desktop-section-rail__notification" *ngIf="hasNewMissions" aria-hidden="true"></i>
       </button>
-      <button type="button" *ngIf="game.primeBoard?.traders?.length" [class.desktop-section-rail__item--active]="desktopView === 'traders'" title="Marchands" (click)="setDesktopView('traders')">
+      <button type="button" data-feature="traders" *ngIf="game.primeBoard?.traders?.length" [class.desktop-section-rail__item--active]="desktopView === 'traders'" title="Marchands" (click)="setDesktopView('traders')">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16l-1.2 11H5.2z"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/></svg><span>Marchands</span>
       </button>
+
       <button type="button" *ngIf="game.lottery?.unlocked" data-feature="lottery" [class.desktop-section-rail__item--active]="desktopView === 'lottery'" title="Loterie" (click)="setDesktopView('lottery')">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v16H3z"/><circle cx="8" cy="9" r="1"/><circle cx="16" cy="9" r="1"/><circle cx="8" cy="15" r="1"/><circle cx="16" cy="15" r="1"/><circle cx="12" cy="12" r="1"/></svg><span>Loterie</span>
         <i class="desktop-section-rail__notification" *ngIf="hasNewLottery" aria-hidden="true"></i>
@@ -549,35 +556,53 @@
       <ng-container *ngIf="desktopView === 'traders'">
         <ng-container *ngTemplateOutlet="tradersSection"></ng-container>
       </ng-container>
+
       <ng-container *ngIf="desktopView === 'lottery' && game.lottery as lottery">
-        <section class="lottery-panel" *ngIf="lottery.unlocked">
-          <h2>Loterie</h2>
-          <p>Chaque monstre vaincu peut laisser apparaître un coffre. La chance ajoute 0,01 % par point et multiplie les gains.</p>
-          <p>Chance : <span class="luck-bonus">{{ lottery.luck }}</span></p>
-          <p>Chance de coffre par monstre : <strong>{{ formatLuckPercent(lottery.monsterChestChance) }}</strong><span class="luck-bonus">+{{ formatLuckPercent(lottery.chestLuckBonus) }} (luck)</span></p>
-          <ul>
-            <li *ngFor="let chest of lotteryChests">
-              {{ chest.name }} — poids {{ chest.weight }} · {{ formatResourceValue(getResourceAmount(chest.resourceId)) }} disponible(s)
+        <section class="lottery-chest">
+          <div class="infoChest">
+            <h5>Chance : <span class="luck-bonus">{{ lottery.luck }}</span> <p>Chance de coffre par monstre : <strong>{{ formatLuckPercent(lottery.monsterChestChance) }}</strong><span class="luck-bonus"> + {{ formatLuckPercent(lottery.chestLuckBonus) }} (luck)</span></p></h5>
+          </div>
+          <div class="lottery-chest__list">
+            <div *ngFor="let chest of lotteryChests" [class.lottery-chest__item]="true">
+              <div class="chest-header">
+                <h5>{{ chest.name }}</h5>
+                <mat-icon
+                  [matTooltip]="getChestDropsTooltip(chest)"
+                  matTooltipClass="chest-tooltip"
+                  aria-label="Informations"
+                  class="info-icon"
+                >
+                  info
+                </mat-icon>
+              </div>
+              <span>{{ formatResourceValue(getResourceAmount(chest.resourceId)) }} en stock</span>
               <button
+                class="lottery-chest__button"
                 type="button"
                 [disabled]="getResourceAmount(chest.resourceId) < 1"
                 (click)="openLotteryChest(chest.id)">
                 Ouvrir
               </button>
-            </li>
-          </ul>
-          <p *ngIf="lottery.cooldownRemainingSeconds > 0">
-            Prochaine loterie dans {{ formatCooldown(lottery.cooldownRemainingSeconds) }}
-          </p>
-          <p>Une tentative toutes les {{ lottery.cooldownMinutes }} minutes. Chaque récompense est tirée à part : la chance est faible, et le tirage peut ne rien donner.</p>
-          <ul>
-            <li *ngFor="let drop of lotteryLoot">
-              {{ getResourceName(drop.resourceId) }} ×{{ drop.amount }} — {{ formatLuckPercent(drop.chance) }}<span class="luck-bonus">+{{ formatLuckPercent(lotteryLuckBonus(drop.chance)) }} (luck)</span>
-            </li>
-            <li *ngIf="lottery.biomeEggAvailable">
-              Œuf aléatoire ({{ lottery.biomeName }}) ×1 — {{ formatLuckPercent(lottery.biomeEggChance) }}<span class="luck-bonus">+{{ formatLuckPercent(lotteryLuckBonus(lottery.biomeEggChance)) }} (luck)</span>
-            </li>
-          </ul>
+            </div>
+          </div>
+        </section>
+        <section class="lottery-panel" *ngIf="lottery.unlocked">
+          <div class="loterieHeader">
+            <div class="texts">
+              <p *ngIf="lottery.cooldownRemainingSeconds > 0">
+                Prochaine loterie dans {{ formatCooldown(lottery.cooldownRemainingSeconds) }}
+              </p>
+              <p>Une tentative toutes les {{ lottery.cooldownMinutes }} minutes.</p>
+            </div>
+            <mat-icon
+              [matTooltip]="getLoterieDropsTooltip()"
+              matTooltipClass="lottery-tooltip"
+              aria-label="Informations"
+              class="info-icon"
+            >
+              info
+            </mat-icon>
+          </div>
           <button type="button" [disabled]="lottery.cooldownRemainingSeconds > 0" (click)="activateLottery()">
             {{ lottery.cooldownRemainingSeconds > 0 ? 'Loterie en recharge…' : 'Activer la loterie' }}
           </button>

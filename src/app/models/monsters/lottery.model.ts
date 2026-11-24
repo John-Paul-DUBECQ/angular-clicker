@@ -106,7 +106,7 @@ export const LOTTERY_UNLOCK_METHOD = UnlockMethod.plannedCombatCompleted('planne
 
 export const LOTTERY_STATS: LotteryStats = {
   cooldownMinutes: 30,
-  monsterChestChance: 1,
+  monsterChestChance: 0.01,
   luckMultiplier: 1,
   dropsMultiplier: 1,
 };
@@ -181,3 +181,7 @@ export const LIST_CHEST: ChestDefinition[] = [
     ],
   },
 ];
+function getResourceName(resourceId: string) {
+  throw new Error('Function not implemented.');
+}
+

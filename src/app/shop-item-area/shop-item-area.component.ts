@@ -7,9 +7,10 @@ const POPUP_VIEWPORT_MARGIN = 12;
 const POPUP_SELECTOR = '.shop-item-popup--fixed';
 
 @Component({
-  selector: 'app-shop-item-area',
-  templateUrl: './shop-item-area.component.html',
-  styleUrls: ['./shop-item-area.component.css']
+    selector: 'app-shop-item-area',
+    templateUrl: './shop-item-area.component.html',
+    styleUrls: ['./shop-item-area.component.css'],
+    standalone: false
 })
 export class ShopItemAreaComponent {
 

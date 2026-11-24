@@ -6,9 +6,10 @@ const POPUP_VIEWPORT_MARGIN = 12;
 const POPUP_SELECTOR = '.power-popup--fixed';
 
 @Component({
-  selector: 'app-power-area',
-  templateUrl: './power-area.component.html',
-  styleUrls: ['./power-area.component.css']
+    selector: 'app-power-area',
+    templateUrl: './power-area.component.html',
+    styleUrls: ['./power-area.component.css'],
+    standalone: false
 })
 export class PowerAreaComponent {
 

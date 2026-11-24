@@ -23,27 +23,15 @@
     "@angular/router": "^21.2.26",
     "bootstrap": "^5.3.8",
     "rxjs": "~6.6.0",
+    "sweetalert2": "^11.10.0",
     "tslib": "^2.0.0",
-    "zone.js": "~0.15.1",
-    "sweetalert2": "^11.10.0"
+    "zone.js": "~0.15.1"
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "^21.2.31",
     "@angular/cli": "^21.2.31",
     "@angular/compiler-cli": "^21.2.26",
-    "@types/jasmine": "~3.6.0",
     "@types/node": "^12.11.1",
-    "codelyzer": "^6.0.0",
-    "jasmine-core": "~3.6.0",
-    "jasmine-spec-reporter": "~5.0.0",
-    "karma": "~6.4.4",
-    "karma-chrome-launcher": "~3.1.0",
-    "karma-coverage": "~2.0.3",
-    "karma-jasmine": "~4.0.0",
-    "karma-jasmine-html-reporter": "^1.5.0",
-    "protractor": "~7.0.0",
-    "ts-node": "~8.3.0",
-    "tslint": "~6.1.0",
     "typescript": "~5.9.3"
   },
   "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"

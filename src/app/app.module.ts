@@ -5,7 +5,7 @@ import { CommonModule } from '@angular/common';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { GameService } from "./models/game/game.service";
-import { HttpClientModule } from "@angular/common/http";
+import { provideHttpClient, withInterceptorsFromDi } from "@angular/common/http";
 import { WorkerAreaComponent } from './worker-area/worker-area.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { MatIconModule } from '@angular/material/icon';
@@ -18,28 +18,21 @@ import { LoreMessageComponent } from './lore-message/lore-message.component';
 import { EssenceShopItemAreaComponent } from './essence-shop-item-area/essence-shop-item-area.component';
 import { HouseAreaComponent } from './house-area/house-area.component';
 
-@NgModule({
-  declarations: [
-    AppComponent,
-    FormatNumberPipe,
-    WorkerAreaComponent,
-    ShopItemAreaComponent,
-    SunAreaComponent,
-    PowerAreaComponent,
-    LoreMessageComponent,
-    EssenceShopItemAreaComponent,
-    HouseAreaComponent,
-  ],
-  imports: [
-    BrowserModule,
-    CommonModule,
-    AppRoutingModule,
-    HttpClientModule,
-    BrowserAnimationsModule,
-    MatIconModule,
-    MatTooltipModule,
-  ],
-  providers: [GameService],
-  bootstrap: [AppComponent]
-})
+@NgModule({ declarations: [
+        AppComponent,
+        FormatNumberPipe,
+        WorkerAreaComponent,
+        ShopItemAreaComponent,
+        SunAreaComponent,
+        PowerAreaComponent,
+        LoreMessageComponent,
+        EssenceShopItemAreaComponent,
+        HouseAreaComponent,
+    ],
+    bootstrap: [AppComponent], imports: [BrowserModule,
+        CommonModule,
+        AppRoutingModule,
+        BrowserAnimationsModule,
+        MatIconModule,
+        MatTooltipModule], providers: [GameService, provideHttpClient(withInterceptorsFromDi())] })
 export class AppModule { }

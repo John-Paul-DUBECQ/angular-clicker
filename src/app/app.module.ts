@@ -9,7 +9,7 @@ import { HttpClientModule } from "@angular/common/http";
 import { WorkerAreaComponent } from './worker-area/worker-area.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { MatIconModule } from '@angular/material/icon';
-import {MatLegacyTooltipModule as MatTooltipModule} from '@angular/material/legacy-tooltip';
+import {MatTooltipModule} from '@angular/material/tooltip';
 import { ShopItemAreaComponent } from './shop-item-area/shop-item-area.component';
 import { SunAreaComponent } from './sun-area/sun-area.component';
 import { PowerAreaComponent } from './power-area/power-area.component';

@@ -677,7 +677,9 @@ export class GameStateService {
     if (!monster) return false;
     const seconds = this.primeState.getFightDurationSeconds(offerId);
     const hp = Math.max(1, Math.floor(
-      this.workerState.getBaseProductionPerSecond() * offer.hpPerSecond * seconds
+      this.workerState.getBaseProductionPerSecond()
+      * offer.hpPerSecond
+      * seconds
     ));
     const started = this.monsterState.startPrime(monster, seconds, hp)
       && this.primeState.beginFight(offerId);

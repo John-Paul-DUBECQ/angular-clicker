@@ -489,8 +489,8 @@
 }
 
 .missions-panel__header,
-.mission-slot__heading,
-.mission-slot-unlock {
+.prime-slot__heading,
+.prime-slot-unlock {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -499,120 +499,119 @@
 
 .missions-panel__header h2,
 .missions-panel__header p,
-.mission-slot p {
+.prime-slot p {
   margin: 0;
 }
 
 .missions-panel__header h2 {
-  color: #e8c547;
+  color: #ffffff;
   font-size: 1.1rem;
 }
 
 .missions-panel__header p {
   margin-top: 4px;
-  color: #bdb6a4;
+  color: #ffffff;
   font-size: 0.78rem;
 }
 
 .missions-panel__header > strong,
-.mission-slot__heading span {
+.prime-slot__heading span {
   flex-shrink: 0;
-  color: #f0d56f;
+  color: #ffffff;
   font-size: 0.82rem;
 }
 
-.mission-slots {
+.prime-slots {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   gap: 10px;
   margin-top: 14px;
 }
 
-.mission-slot {
+.prime-slot {
   min-width: 0;
   padding: 12px;
-  border: 1px solid #4d4431;
+  border: 1px solid var(--feature-missions);
   border-radius: 7px;
-  background: #2a251b;
+  background: #292929;
 }
 
-.mission-slot__heading {
+.prime-slot__heading {
   align-items: center;
   margin-bottom: 10px;
 }
 
-.mission-slot p {
+.prime-slot p {
   min-height: 2.5em;
   color: #f1eee5;
   font-size: 0.88rem;
 }
 
-.mission-slot__progress {
+.prime-slot__progress {
   margin-top: 12px;
-  color: #bdb6a4;
+  color: color-mix(in srgb, var(--feature-missions) 80%, #fff);
   font-size: 0.74rem;
 }
 
-.mission-slot__progress > span {
+.prime-slot__progress > span {
   display: block;
   margin-bottom: 5px;
 }
 
-.mission-slot__progress > div {
+.prime-slot__progress > div {
   height: 7px;
   overflow: hidden;
   border-radius: 5px;
   background: #171717;
 }
 
-.mission-slot__progress i {
+.prime-slot__progress i {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, #9b7723, #e8c547);
+  background: linear-gradient(90deg, var(--feature-missions), color-mix(in srgb, var(--feature-missions) 80%, #fff));
 }
 
-.mission-slot__cooldown {
+.prime-slot__cooldown {
   margin-top: 12px;
-  color: #c6b679;
+  color: color-mix(in srgb, var(--feature-missions) 80%, #fff);
   font-size: 0.8rem;
 }
 
-.mission-slot button,
-.mission-slot-unlock button {
+.prime-slot button,
+.prime-slot-unlock button {
   padding: 7px 10px;
-  border: 1px solid #877039;
-  border-radius: 5px;
-  background: #4a3c1f;
-  color: #fff1bb;
+  border: 1px solid var(--feature-missions);
+  background: color-mix(in srgb, var(--feature-missions) 50%, transparent);
+  color: #ffffff;
   cursor: pointer;
   font-size: 0.78rem;
 }
 
-.mission-slot button {
+.prime-slot button {
   margin-top: 12px;
 }
 
-.mission-slot button:disabled,
-.mission-slot-unlock button:disabled {
+.prime-slot button:disabled,
+.prime-slot-unlock button:disabled {
   opacity: 0.48;
   cursor: not-allowed;
 }
 
-.mission-slot-unlock {
+.prime-slot-unlock {
   align-items: center;
   margin-top: 14px;
   padding: 12px;
-  border: 1px dashed #66542a;
+  border: 1px dashed var(--feature-missions);
   border-radius: 7px;
 }
 
-.mission-slot-unlock > div {
+.prime-slot-unlock > div {
   display: grid;
   gap: 4px;
 }
 
-.mission-slot-unlock span {
-  color: #bdb6a4;
+.prime-slot-unlock span {
+  color: #ffffff;
   font-size: 0.76rem;
 }
 
@@ -2931,7 +2930,7 @@
   gap: 12px;
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid #66542a;
+  border-top: 1px solid #555555;
 }
 
 .prime-offer img,
@@ -2939,6 +2938,24 @@
   width: 72px;
   height: 72px;
   object-fit: contain;
+}
+
+.headerPrimeName {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.prime-offer-content button {
+  padding: 7px 10px;
+    border: 1px solid var(--feature-missions);
+    background: 
+color-mix(in srgb, var(--feature-missions) 50%, transparent);
+    color: #ffffff;
+    cursor: pointer;
+    font-size: 0.78rem;
 }
 
 .prime-offer h3,

@@ -133,19 +133,18 @@
       <div class="missions-panel__header">
         <div>
           <h2>Missions</h2>
-          <p>Termine des mini-quêtes pour gagner des tickets. Les emplacements se rechargent après chaque mission.</p>
         </div>
         <strong>{{ formatResourceValue(getResourceAmount('ticket')) }} ticket(s)</strong>
       </div>
-      <div class="mission-slots">
-        <article class="mission-slot" *ngFor="let slot of game.missionSlots; trackBy: trackByMissionSlot">
+      <div class="prime-slots">
+        <article class="prime-slot" *ngFor="let slot of game.missionSlots; trackBy: trackByMissionSlot">
           <ng-container *ngIf="slot.mission; else missionCoolingDown">
-            <div class="mission-slot__heading">
+            <div class="prime-slot__heading">
               <strong>Mission {{ slot.id + 1 }}</strong>
               <span>+{{ slot.mission.ticketReward }} ticket(s)</span>
             </div>
             <p>{{ slot.mission.objective.description }}</p>
-            <div class="mission-slot__progress">
+            <div class="prime-slot__progress">
               <span>{{ formatResourceValue(slot.mission.objective.progress) }} / {{ formatResourceValue(slot.mission.objective.target) }}</span>
               <div><i [style.width.%]="slot.mission.objective.target > 0 ? (100 * slot.mission.objective.progress / slot.mission.objective.target > 100 ? 100 : 100 * slot.mission.objective.progress / slot.mission.objective.target) : 0"></i></div>
             </div>
@@ -154,18 +153,18 @@
             </button>
           </ng-container>
           <ng-template #missionCoolingDown>
-            <div class="mission-slot__heading">
+            <div class="prime-slot__heading">
               <strong>Mission {{ slot.id + 1 }}</strong>
               <span *ngIf="slot.cooldownReason === 'completed'">Terminée · +{{ slot.lastReward }} ticket(s)</span>
               <span *ngIf="slot.cooldownReason === 'rerolled'">Quête relancée</span>
             </div>
             <p *ngIf="slot.cooldownReason === 'completed'">Une nouvelle mission sera disponible après la recharge.</p>
             <p *ngIf="slot.cooldownReason === 'rerolled'">La nouvelle quête est en attente.</p>
-            <div class="mission-slot__cooldown">Disponible dans {{ formatCooldown(slot.cooldownRemainingSeconds) }}</div>
+            <div class="prime-slot__cooldown">Disponible dans {{ formatCooldown(slot.cooldownRemainingSeconds) }}</div>
           </ng-template>
         </article>
       </div>
-      <div class="mission-slot-unlock" *ngIf="game.nextMissionSlotCost as slotCost">
+      <div class="prime-slot-unlock" *ngIf="game.nextMissionSlotCost as slotCost">
         <div>
           <strong>Débloquer un emplacement supplémentaire</strong>
           <span *ngIf="slotCost.essence">Coût : {{ slotCost.essence }} essences</span>
@@ -183,22 +182,22 @@
       <div class="missions-panel__header">
         <div>
           <h2>Panneau des primes</h2>
-          <p>Jusqu'à trois cibles du biome restent affichées. Les réussir rapporte beaucoup plus de respect que leur fuite n'en retire. Un monstre raté dans la nature retire aussi un peu de respect.</p>
         </div>
       </div>
       <article class="prime-offer" *ngFor="let offer of game.primeBoard?.offers; trackBy: trackByPrimeOffer">
         <img *ngIf="offer.imageUrl" [src]="offer.imageUrl" [alt]="offer.monsterName" />
-        <div>
-          <h3>{{ offer.monsterName }}</h3>
-          <p>Affichée encore {{ formatCooldown(offer.remainingSeconds) }}. Temps pour la tuer : {{ offer.timeLimitSeconds }} s. PV : {{ offer.hpPerSecond }} fois le DPS AFK, par seconde.</p>
-          <p>Réussite : +{{ offer.gain }} respect ({{ offer.gainLabel }}). Fuite : -{{ offer.loss }}.</p>
+        <div class="prime-offer-content">
+          <div class="headerPrimeName">
+            <h3>{{ offer.monsterName }}</h3>
+            <span>{{ formatCooldown(offer.remainingSeconds) }}</span>
+          </div>
+          <p> Temps pour la tuer : {{ offer.timeLimitSeconds }} s.</p>
+          <p>Réussite : +{{ offer.gain }} respect ({{ offer.gainLabel }}).
+             Fuite : -{{ offer.loss }}.</p>
           <p>Récompense : {{ offer.rewardLabel }}</p>
           <button type="button" [disabled]="!!game.currentMonster" (click)="startPrime(offer.id)">Accepter la prime</button>
         </div>
       </article>
-      <p class="mission-slot__cooldown" *ngIf="(game.primeBoard?.offers?.length || 0) < 3">
-        Prochaine prime dans {{ formatCooldown(game.primeBoard?.nextPrimeInSeconds || 0) }}
-      </p>
     </div>
   </ng-template>
   <ng-template #featureColors>

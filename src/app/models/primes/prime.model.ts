@@ -15,9 +15,9 @@ export const PRIME_MAX_OFFERS = 3;
 export const TRADER_INTERVAL_MS = 5 * 60 * 1000;
 export const TRADER_BASE_DURATION_MS = 5 * 60 * 1000;
 export const PRIME_TIME_MIN_SECONDS = 20;
-export const PRIME_TIME_MAX_SECONDS = 60;
-export const PRIME_HP_PER_SECOND_MIN = 15;
-export const PRIME_HP_PER_SECOND_MAX = 50;
+export const PRIME_TIME_MAX_SECONDS = 45;
+export const PRIME_HP_PER_SECOND_MIN = 5;
+export const PRIME_HP_PER_SECOND_MAX = 20;
 export const PRIME_HOUSE_ID = 'prime-relay-house';
 export const PRIME_HOUSE_CHANCE_PER_LEVEL = 0.08;
 export const PRIME_HOUSE_DURATION_PER_LEVEL_SECONDS = 60;
@@ -293,13 +293,10 @@ export function round2(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
-/** Au plus deux décimales, sans notation scientifique. */
-export function formatPrimeAmount(value: number): string {
-  if (!Number.isFinite(value)) return '0';
-  return round2(value).toLocaleString('fr-FR', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  });
+export function formatRespectGain(base: number, flatBonus: number, percentBonus: number): string {
+  const integer = base + flatBonus;
+  const percentPoints = Math.round(percentBonus * 100);
+  return `${integer} + ${percentPoints}% des bonus`;
 }
 
 /** Respect gagné avant bonus. Un Mosh (loot 1) rapporte 100. */
@@ -316,13 +313,6 @@ export function primeRespectLoss(monster: Pick<Monster, 'lootMultiplier'>): numb
 
 export function respectGain(base: number, flatBonus: number, percentBonus: number): number {
   return Math.max(1, Math.floor((base + flatBonus) * (1 + percentBonus)));
-}
-
-/** `12 + 25% des bonus` : l'entier inclut le bonus fixe, le pourcentage est à part. */
-export function formatRespectGain(base: number, flatBonus: number, percentBonus: number): string {
-  const integer = base + flatBonus;
-  const percentPoints = Math.round(percentBonus * 100);
-  return `${integer} + ${percentPoints}% des bonus`;
 }
 
 export function discountedGoldCost(goldCost: number, discount: number): number {

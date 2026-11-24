@@ -10,8 +10,6 @@ import { MonsterRewardNotificationService } from '../game/monster-reward-notific
 import {
   buildPrimeReward,
   discountedGoldCost,
-  formatPrimeAmount,
-  formatRespectGain,
   pickPrimeMonster,
   primeRespectGainBase,
   primeRespectLoss,
@@ -40,7 +38,9 @@ import {
   PrimeTraderView,
   TRADER_BASE_DURATION_MS,
   TRADER_INTERVAL_MS,
+  formatRespectGain,
 } from './prime.model';
+import { formatNumberValue } from 'src/app/pipes/format-number.pipe';
 
 const EMPTY_HOUSE_BONUSES: PrimeHouseBonuses = { chanceBonus: 0, extraDurationSeconds: 0 };
 
@@ -459,10 +459,10 @@ export class PrimeStateService {
     resources?: { resourceId: string; amount: number }[]
   ): string {
     const parts: string[] = [];
-    if (goldReward) parts.push(`${formatPrimeAmount(goldReward)} or`);
-    if (essenceReward) parts.push(`${formatPrimeAmount(essenceReward)} essence`);
+    if (goldReward) parts.push(`${formatNumberValue(goldReward, 0)} or`);
+    if (essenceReward) parts.push(`${formatNumberValue(essenceReward, 0)} essence`);
     (resources ?? []).forEach((reward) => {
-      parts.push(`${formatPrimeAmount(reward.amount)} ${this.resourceName(reward.resourceId)}`);
+      parts.push(`${formatNumberValue(reward.amount, 0)} ${this.resourceName(reward.resourceId)}`);
     });
     return parts.join(', ');
   }

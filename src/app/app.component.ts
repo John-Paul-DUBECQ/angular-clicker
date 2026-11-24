@@ -27,7 +27,7 @@ import {
 } from './models/resource-trade';
 import { PrimeOfferView, PrimeTradeView, PrimeTraderView } from './models/primes/prime.model';
 import { FEATURE_COLOR_OPTIONS, HOUSE_TAG_COLOR_OPTIONS } from './models/feature-colors';
-import {MatTooltipModule} from '@angular/material/tooltip';
+import {MatLegacyTooltipModule as MatTooltipModule} from '@angular/material/legacy-tooltip';
 import Swal from 'sweetalert2';
 
 @Component({

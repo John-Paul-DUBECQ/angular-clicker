@@ -232,7 +232,6 @@
   padding: 4px;
   user-select: none;
   -webkit-user-drag: none;
-  user-drag: none;
 }
 
 .vessel-lane__ship:hover {
@@ -252,7 +251,6 @@
   pointer-events: none;
   user-select: none;
   -webkit-user-drag: none;
-  user-drag: none;
 }
 
 .vessel-lane__placeholder {
@@ -1702,7 +1700,6 @@
   -ms-user-select: none;
   user-select: none;
   -webkit-user-drag: none;
-  user-drag: none;
 }
 
 .monster-area__placeholder {

@@ -1,88 +1,118 @@
-<div id="worker-area" *ngIf="workerSelected">
+@if (workerSelected) {
+  <div id="worker-area">
     <div class="left-part-worker-area">
-        <div class="worker-name" [ngClass]="getLevelNameClass()">{{ workerSelected.name }}</div>
-        <div class="worker-level">Level : {{ workerSelected.level }}</div>
+      <div class="worker-name" [ngClass]="getLevelNameClass()">{{ workerSelected.name }}</div>
+      <div class="worker-level">Level : {{ workerSelected.level }}</div>
     </div>
     <div class="center-part-worker-area">
-        <div class="worker-productivity" *ngIf="!isClickWorker">{{ clicksPerSecond | formatNumber }}/s</div>
-        <div class="worker-productivity" *ngIf="isClickWorker">{{ totalClickDamage | formatNumber }} dégâts totaux/clic</div>
+      @if (!isClickWorker) {
+        <div class="worker-productivity">{{ clicksPerSecond | formatNumber }}/s</div>
+      }
+      @if (isClickWorker) {
+        <div class="worker-productivity">{{ totalClickDamage | formatNumber }} dégâts totaux/clic</div>
+      }
+      @if (nextWorkerUnlocks.length) {
         <div
-            #unlockRef
-            class="next-worker-unlock"
-            *ngIf="nextWorkerUnlocks.length"
-            (mouseenter)="onUnlockMouseEnter()"
-            (mouseleave)="onUnlockMouseLeave()"
-        >
-            Prochain palier
+          #unlockRef
+          class="next-worker-unlock"
+          (mouseenter)="onUnlockMouseEnter()"
+          (mouseleave)="onUnlockMouseLeave()"
+          >
+          Prochain palier
         </div>
+      }
     </div>
     <div class="worker-buy-button">
-        <div class="worker-upgrade-stack" *ngIf="upgradePricePreview as pricePreview">
-            <div
-                class="worker-upgrade-control"
-                (mouseenter)="upgradeButtonHovered = true"
-                (mouseleave)="upgradeButtonHovered = false">
-                <button
-                    #upgradeRef
-                    class="btn btn-secondary"
-                    [disabled]="!pricePreview.canBuy"
-                    title="Ctrl/Shift + clic, ou M/Q seul ou + clic : achat groupé"
-                    (click)="onUpgradeClick($event)">
-                    {{ getUpgradePricePreviewLabel(pricePreview) }} {{ pricePreview.totalPrice | formatNumber }}
-                </button>
-            </div>
+      @if (upgradePricePreview; as pricePreview) {
+        <div class="worker-upgrade-stack">
+          <div
+            class="worker-upgrade-control"
+            (mouseenter)="upgradeButtonHovered = true"
+            (mouseleave)="upgradeButtonHovered = false">
+            <button
+              #upgradeRef
+              class="btn btn-secondary"
+              [disabled]="!pricePreview.canBuy"
+              title="Ctrl/Shift + clic, ou M/Q seul ou + clic : achat groupé"
+              (click)="onUpgradeClick($event)">
+              {{ getUpgradePricePreviewLabel(pricePreview) }} {{ pricePreview.totalPrice | formatNumber }}
+            </button>
+          </div>
         </div>
-        <div
-            #infoRef
-            class="worker-info-trigger"
-            [class.worker-info-trigger--disabled]="!workerSelected.bought"
-            (mouseenter)="workerSelected.bought && onInfoMouseEnter()"
-            (mouseleave)="workerSelected.bought && onInfoMouseLeave()"
-        >ℹ</div>
+      }
+      <div
+        #infoRef
+        class="worker-info-trigger"
+        [class.worker-info-trigger--disabled]="!workerSelected.bought"
+        (mouseenter)="workerSelected.bought && onInfoMouseEnter()"
+        (mouseleave)="workerSelected.bought && onInfoMouseLeave()"
+      >ℹ</div>
     </div>
-</div>
+  </div>
+}
 
 <!-- Popup style Cookie Clicker au survol (position: fixed pour sortir du overflow parent) -->
-<div
-    *ngIf="unlockPopupVisible && unlockPopupStyle && nextWorkerUnlocks.length"
+@if (unlockPopupVisible && unlockPopupStyle && nextWorkerUnlocks.length) {
+  <div
     class="worker-unlock-popup worker-unlock-popup--fixed"
     [ngStyle]="unlockPopupStyle"
->
+    >
     <span class="worker-unlock-popup__tag">Prochains paliers (par niveau)</span>
     <ul class="worker-unlock-popup__list">
-        <li *ngFor="let u of nextWorkerUnlocks" class="worker-unlock-popup__item">
-            <div class="worker-unlock-popup__item-header">
-                <img
-                    *ngIf="u.imageUrl"
-                    [src]="u.imageUrl"
-                    [alt]=""
-                    class="worker-unlock-popup__icon"
+      @for (u of nextWorkerUnlocks; track u) {
+        <li class="worker-unlock-popup__item">
+          <div class="worker-unlock-popup__item-header">
+            @if (u.imageUrl) {
+              <img
+                [src]="u.imageUrl"
+                [alt]=""
+                class="worker-unlock-popup__icon"
                 />
-                <span *ngIf="!u.imageUrl" class="worker-unlock-popup__icon-placeholder">{{ u.name.charAt(0) || '?' }}</span>
-                <span class="worker-unlock-popup__name">{{ u.name }}</span>
-                <span class="worker-unlock-popup__tag worker-unlock-popup__tag--item" *ngIf="u.unlockType === 'item'">Item</span>
-                <span class="worker-unlock-popup__tag worker-unlock-popup__tag--spell" *ngIf="u.unlockType === 'spell'">Sort</span>
-                <span class="worker-unlock-popup__level" *ngIf="u.levelRequired != null">Niv. {{ u.levelRequired }}</span>
-                <span class="worker-unlock-popup__price" *ngIf="u.price != null">{{ u.price | formatNumber }}</span>
-                <span class="worker-unlock-popup__mana" *ngIf="u.manaCost != null">{{ u.manaCost | formatNumber }} mana</span>
-            </div>
-            <p class="worker-unlock-popup__description" [innerHTML]="u.description"></p>
+            }
+            @if (!u.imageUrl) {
+              <span class="worker-unlock-popup__icon-placeholder">{{ u.name.charAt(0) || '?' }}</span>
+            }
+            <span class="worker-unlock-popup__name">{{ u.name }}</span>
+            @if (u.unlockType === 'item') {
+              <span class="worker-unlock-popup__tag worker-unlock-popup__tag--item">Item</span>
+            }
+            @if (u.unlockType === 'spell') {
+              <span class="worker-unlock-popup__tag worker-unlock-popup__tag--spell">Sort</span>
+            }
+            @if (u.levelRequired != null) {
+              <span class="worker-unlock-popup__level">Niv. {{ u.levelRequired }}</span>
+            }
+            @if (u.price != null) {
+              <span class="worker-unlock-popup__price">{{ u.price | formatNumber }}</span>
+            }
+            @if (u.manaCost != null) {
+              <span class="worker-unlock-popup__mana">{{ u.manaCost | formatNumber }} mana</span>
+            }
+          </div>
+          <p class="worker-unlock-popup__description" [innerHTML]="u.description"></p>
         </li>
+      }
     </ul>
     <p class="worker-unlock-popup__cta">Monte en niveau pour débloquer.</p>
-</div>
+  </div>
+}
 
 <!-- Popup Infos worker (description + passifs) -->
-<div
-    *ngIf="infoPopupVisible && infoPopupStyle"
+@if (infoPopupVisible && infoPopupStyle) {
+  <div
     class="worker-info-popup worker-info-popup--fixed"
     [ngStyle]="infoPopupStyle"
->
-    <p class="worker-info-popup__description" *ngIf="workerDescription">{{ workerDescription }}</p>
-    <dl class="worker-info-popup__stats" *ngIf="workerInfoStats.lines.length">
-        <ng-container *ngFor="let line of workerInfoStats.lines">
-            <dt class="worker-info-popup__label">{{ line.label }}</dt>
-            <dd class="worker-info-popup__value">{{ line.value }}</dd>
-        </ng-container>
-    </dl>
-</div>
+    >
+    @if (workerDescription) {
+      <p class="worker-info-popup__description">{{ workerDescription }}</p>
+    }
+    @if (workerInfoStats.lines.length) {
+      <dl class="worker-info-popup__stats">
+        @for (line of workerInfoStats.lines; track line) {
+          <dt class="worker-info-popup__label">{{ line.label }}</dt>
+          <dd class="worker-info-popup__value">{{ line.value }}</dd>
+        }
+      </dl>
+    }
+  </div>
+}

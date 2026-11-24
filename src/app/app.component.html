@@ -1,132 +1,174 @@
 <div class="app-wrapper">
   <ng-template #workerSectionMenu>
-    <nav class="worker-section-tabs" *ngIf="game.essenceShopUnlocked || game.explorerUnlocked" aria-label="Sections du jeu">
-      <button
-        type="button"
-        [class.worker-section-tabs__item--active]="workerView === 'workers'"
-        (click)="setWorkerView('workers')">
-        Personnages
-      </button>
-      <button
-        type="button"
-        *ngIf="game.essenceShopUnlocked"
-        [class.worker-section-tabs__item--active]="workerView === 'essenceShop'"
-        (click)="setWorkerView('essenceShop')">
-        Shop d’essences
-        <i class="worker-section-tabs__notification" *ngIf="hasNewEssenceShop" aria-hidden="true"></i>
-      </button>
-      <button
-        type="button"
-        *ngIf="game.explorerUnlocked"
-        [class.worker-section-tabs__item--active]="workerView === 'quests'"
-        (click)="setWorkerView('quests')">
-        Aventures
-      </button>
-    </nav>
-    <section class="essence-shop-panel" *ngIf="game.essenceShopUnlocked && workerView === 'essenceShop'">
-      <div class="essence-shop-panel__header">
-        <div>
-          <h2>Shop d’essences</h2>
-          <p>Modifie les monstres, sans limite de niveau.</p>
-        </div>
-        <strong>{{ formatResourceValue(game.monsterEssence != null ? game.monsterEssence : 0) }}</strong>
-      </div>
-      <div class="essence-shop-summary">
-        <span>Apparition <b>{{ formatPercent(game.essenceShopStats?.spawnRate || 1) }}</b></span>
-        <span>PV <b>{{ formatPercent(game.essenceShopStats?.hp || 1) }}</b></span>
-        <span>Temps <b>{{ formatPercent(game.essenceShopStats?.time || 1) }}</b></span>
-        <span>Essence <b>{{ formatPercent(game.essenceShopStats?.essence || 1) }}</b></span>
-      </div>
-      <div class="essence-shop-list">
-        <ng-container *ngFor="let entry of essenceShopItemsWithIndex; trackBy: trackByEssenceShopEntry">
-          <app-essence-shop-item-area
-            [item]="entry.item"
-            [itemIndex]="entry.index"
-            (bought)="onEssenceShopItemBought()">
-          </app-essence-shop-item-area>
-        </ng-container>
-      </div>
-    </section>
-    <section class="planned-combat-panel" *ngIf="game.explorerUnlocked && workerView === 'quests'">
-      <div class="planned-combat-panel__header">
-        <div>
-          <h2>Aventures</h2>
-          <p>Choisis un biome pour changer les monstres du mode normal. Chaque ennemi a des PV fixes.</p>
-        </div>
-      </div>
-      <nav class="quest-biomes" aria-label="Choisir un biome">
+    @if (game.essenceShopUnlocked || game.explorerUnlocked) {
+      <nav class="worker-section-tabs" aria-label="Sections du jeu">
         <button
           type="button"
-          *ngFor="let biome of monsterBiomes"
-          [disabled]="!isBiomeUnlocked(biome.id)"
-          [class.quest-biomes__item--active]="game.selectedBiome === biome.id"
-          [attr.aria-pressed]="game.selectedBiome === biome.id"
-          (click)="setSelectedBiome(biome.id)">
-          {{ biome.name }}
-          <span *ngIf="biome.levelCount">({{ getCompletedBiomeLevels(biome.id) }}/{{ biome.levelCount }})</span>
-          <span *ngIf="!isBiomeUnlocked(biome.id)"> · Verrouillé</span>
+          [class.worker-section-tabs__item--active]="workerView === 'workers'"
+          (click)="setWorkerView('workers')">
+          Personnages
         </button>
-      </nav>
-      <p class="quest-biome-description">{{ selectedBiomeDescription }}</p>
-      <div class="planned-combat-list" *ngIf="plannedCombatsForSelectedBiome.length > 0; else noQuestsForBiome">
-        <article class="planned-combat" *ngFor="let combat of plannedCombatsForSelectedBiome; trackBy: trackByPlannedCombat">
-          <div class="planned-combat__heading">
-            <strong>Palier {{ combat.level }} · {{ combat.name }}</strong>
-            <span *ngIf="combat.unlocked">{{ combat.wins }} victoire(s)</span>
-            <span *ngIf="!combat.unlocked">Verrouillé</span>
-          </div>
-          <p>{{ combat.description }}</p>
-          <div class="planned-combat__meta">
-            {{ formatMonsterHp(combat.totalHp) }} PV au total · {{ combat.enemies.length }} ennemi(s) · {{ combat.timeLimitSeconds }}s
-          </div>
-          <div class="planned-combat__meta" *ngIf="combat.damageMode === 'click'">
-            Dégâts au clic uniquement
-          </div>
-          <div class="planned-combat__meta" *ngIf="combat.damageMode === 'afk'">
-            Dégâts AFK uniquement
-          </div>
-          <div class="planned-combat__meta" *ngIf="combat.damageMode === 'pet'">
-            Dégâts de familier uniquement
-          </div>
-          
-          <div class="planned-combat__meta" *ngIf="combat.cooldownRemainingSeconds > 0">
-            Relance possible dans {{ formatCooldown(combat.cooldownRemainingSeconds) }}
-          </div>
-          <div class="planned-combat__rewards">
-            <div class="planned-combat__reward" *ngIf="combat.wins === 0; else repeatReward">
-              <strong>Première victoire</strong>
-              <span *ngIf="combat.firstReward.clicks">+{{ formatResourceValue(combat.firstReward.clicks) }} clics</span>
-              <span *ngIf="combat.firstReward.essence">+{{ formatResourceValue(combat.firstReward.essence) }} essence</span>
-              <span *ngFor="let reward of combat.firstReward.resources">+{{ formatResourceValue(reward.amount) }} {{ getResourceName(reward.resourceId) }}</span>
-            </div>
-            <ng-template #repeatReward>
-              <div class="planned-combat__reward">
-                <strong>Victoire suivante</strong>
-                <span *ngIf="combat.repeatReward.clicks">+{{ formatResourceValue(combat.repeatReward.clicks) }} clics</span>
-                <span *ngIf="combat.repeatReward.essence">+{{ formatResourceValue(combat.repeatReward.essence) }} essence</span>
-                <span *ngFor="let reward of combat.repeatReward.resources">+{{ formatResourceValue(reward.amount) }} {{ getResourceName(reward.resourceId) }}</span>
-              </div>
-            </ng-template>
-          </div>
-          <button type="button" [disabled]="!combat.unlocked || !!game.currentMonster || combat.cooldownRemainingSeconds > 0" (click)="startPlannedCombat(combat.id)">
-            {{ game.currentMonster ? 'Combat en cours' : (combat.cooldownRemainingSeconds > 0 ? 'En recharge...' : 'Lancer le combat') }}
+        @if (game.essenceShopUnlocked) {
+          <button
+            type="button"
+            [class.worker-section-tabs__item--active]="workerView === 'essenceShop'"
+            (click)="setWorkerView('essenceShop')">
+            Shop d’essences
+            @if (hasNewEssenceShop) {
+              <i class="worker-section-tabs__notification" aria-hidden="true"></i>
+            }
           </button>
-          <ng-container *ngIf="combat.trapEncounter && combat.wins >= combat.trapEncounter.unlockWins">
+        }
+        @if (game.explorerUnlocked) {
+          <button
+            type="button"
+            [class.worker-section-tabs__item--active]="workerView === 'quests'"
+            (click)="setWorkerView('quests')">
+            Aventures
+          </button>
+        }
+      </nav>
+    }
+    @if (game.essenceShopUnlocked && workerView === 'essenceShop') {
+      <section class="essence-shop-panel">
+        <div class="essence-shop-panel__header">
+          <div>
+            <h2>Shop d’essences</h2>
+            <p>Modifie les monstres, sans limite de niveau.</p>
+          </div>
+          <strong>{{ formatResourceValue(game.monsterEssence != null ? game.monsterEssence : 0) }}</strong>
+        </div>
+        <div class="essence-shop-summary">
+          <span>Apparition <b>{{ formatPercent(game.essenceShopStats?.spawnRate || 1) }}</b></span>
+          <span>PV <b>{{ formatPercent(game.essenceShopStats?.hp || 1) }}</b></span>
+          <span>Temps <b>{{ formatPercent(game.essenceShopStats?.time || 1) }}</b></span>
+          <span>Essence <b>{{ formatPercent(game.essenceShopStats?.essence || 1) }}</b></span>
+        </div>
+        <div class="essence-shop-list">
+          @for (entry of essenceShopItemsWithIndex; track trackByEssenceShopEntry($index, entry)) {
+            <app-essence-shop-item-area
+              [item]="entry.item"
+              [itemIndex]="entry.index"
+              (bought)="onEssenceShopItemBought()">
+            </app-essence-shop-item-area>
+          }
+        </div>
+      </section>
+    }
+    @if (game.explorerUnlocked && workerView === 'quests') {
+      <section class="planned-combat-panel">
+        <div class="planned-combat-panel__header">
+          <div>
+            <h2>Aventures</h2>
+            <p>Choisis un biome pour changer les monstres du mode normal. Chaque ennemi a des PV fixes.</p>
+          </div>
+        </div>
+        <nav class="quest-biomes" aria-label="Choisir un biome">
+          @for (biome of monsterBiomes; track biome) {
             <button
               type="button"
-              [disabled]="!!game.currentMonster || combat.cooldownRemainingSeconds > 0 || getResourceAmount('trap') < combat.trapEncounter.trapCost"
-              (click)="usePlannedCombatBait(combat.id)">
-              {{ combat.cooldownRemainingSeconds > 0 ? 'Boss en recharge...' : 'Utiliser ' + combat.trapEncounter.trapCost + ' piège(s) pour ' + combat.trapEncounter.rewards[0].amount + ' ' + getResourceName(combat.trapEncounter.rewards[0].resourceId) }}
+              [disabled]="!isBiomeUnlocked(biome.id)"
+              [class.quest-biomes__item--active]="game.selectedBiome === biome.id"
+              [attr.aria-pressed]="game.selectedBiome === biome.id"
+              (click)="setSelectedBiome(biome.id)">
+              {{ biome.name }}
+              @if (biome.levelCount) {
+                <span>({{ getCompletedBiomeLevels(biome.id) }}/{{ biome.levelCount }})</span>
+              }
+              @if (!isBiomeUnlocked(biome.id)) {
+                <span> · Verrouillé</span>
+              }
             </button>
-          </ng-container>
-        </article>
-      </div>
-      <ng-template #noQuestsForBiome>
-        <p class="planned-combat-empty">
-          Aucun palier n’est encore défini pour ce biome. Les combats de la plage et de la mine sont à venir.
-        </p>
-      </ng-template>
-    </section>
+          }
+        </nav>
+        <p class="quest-biome-description">{{ selectedBiomeDescription }}</p>
+        @if (plannedCombatsForSelectedBiome.length > 0) {
+          <div class="planned-combat-list">
+            @for (combat of plannedCombatsForSelectedBiome; track trackByPlannedCombat($index, combat)) {
+              <article class="planned-combat">
+                <div class="planned-combat__heading">
+                  <strong>Palier {{ combat.level }} · {{ combat.name }}</strong>
+                  @if (combat.unlocked) {
+                    <span>{{ combat.wins }} victoire(s)</span>
+                  }
+                  @if (!combat.unlocked) {
+                    <span>Verrouillé</span>
+                  }
+                </div>
+                <p>{{ combat.description }}</p>
+                <div class="planned-combat__meta">
+                  {{ formatMonsterHp(combat.totalHp) }} PV au total · {{ combat.enemies.length }} ennemi(s) · {{ combat.timeLimitSeconds }}s
+                </div>
+                @if (combat.damageMode === 'click') {
+                  <div class="planned-combat__meta">
+                    Dégâts au clic uniquement
+                  </div>
+                }
+                @if (combat.damageMode === 'afk') {
+                  <div class="planned-combat__meta">
+                    Dégâts AFK uniquement
+                  </div>
+                }
+                @if (combat.damageMode === 'pet') {
+                  <div class="planned-combat__meta">
+                    Dégâts de familier uniquement
+                  </div>
+                }
+                @if (combat.cooldownRemainingSeconds > 0) {
+                  <div class="planned-combat__meta">
+                    Relance possible dans {{ formatCooldown(combat.cooldownRemainingSeconds) }}
+                  </div>
+                }
+                <div class="planned-combat__rewards">
+                  @if (combat.wins === 0) {
+                    <div class="planned-combat__reward">
+                      <strong>Première victoire</strong>
+                      @if (combat.firstReward.clicks) {
+                        <span>+{{ formatResourceValue(combat.firstReward.clicks) }} clics</span>
+                      }
+                      @if (combat.firstReward.essence) {
+                        <span>+{{ formatResourceValue(combat.firstReward.essence) }} essence</span>
+                      }
+                      @for (reward of combat.firstReward.resources; track reward) {
+                        <span>+{{ formatResourceValue(reward.amount) }} {{ getResourceName(reward.resourceId) }}</span>
+                      }
+                    </div>
+                  } @else {
+                    <div class="planned-combat__reward">
+                      <strong>Victoire suivante</strong>
+                      @if (combat.repeatReward.clicks) {
+                        <span>+{{ formatResourceValue(combat.repeatReward.clicks) }} clics</span>
+                      }
+                      @if (combat.repeatReward.essence) {
+                        <span>+{{ formatResourceValue(combat.repeatReward.essence) }} essence</span>
+                      }
+                      @for (reward of combat.repeatReward.resources; track reward) {
+                        <span>+{{ formatResourceValue(reward.amount) }} {{ getResourceName(reward.resourceId) }}</span>
+                      }
+                    </div>
+                  }
+                </div>
+                <button type="button" [disabled]="!combat.unlocked || !!game.currentMonster || combat.cooldownRemainingSeconds > 0" (click)="startPlannedCombat(combat.id)">
+                  {{ game.currentMonster ? 'Combat en cours' : (combat.cooldownRemainingSeconds > 0 ? 'En recharge...' : 'Lancer le combat') }}
+                </button>
+                @if (combat.trapEncounter && combat.wins >= combat.trapEncounter.unlockWins) {
+                  <button
+                    type="button"
+                    [disabled]="!!game.currentMonster || combat.cooldownRemainingSeconds > 0 || getResourceAmount('trap') < combat.trapEncounter.trapCost"
+                    (click)="usePlannedCombatBait(combat.id)">
+                    {{ combat.cooldownRemainingSeconds > 0 ? 'Boss en recharge...' : 'Utiliser ' + combat.trapEncounter.trapCost + ' piège(s) pour ' + combat.trapEncounter.rewards[0].amount + ' ' + getResourceName(combat.trapEncounter.rewards[0].resourceId) }}
+                  </button>
+                }
+              </article>
+            }
+          </div>
+        } @else {
+          <p class="planned-combat-empty">
+            Aucun palier n’est encore défini pour ce biome. Les combats de la plage et de la mine sont à venir.
+          </p>
+        }
+      </section>
+    }
   </ng-template>
   <ng-template #missionsSection>
     <div class="missions-panel">
@@ -137,1003 +179,1285 @@
         <strong>{{ formatResourceValue(getResourceAmount('ticket')) }} ticket(s)</strong>
       </div>
       <div class="prime-slots">
-        <article class="prime-slot" *ngFor="let slot of game.missionSlots; trackBy: trackByMissionSlot">
-          <ng-container *ngIf="slot.mission; else missionCoolingDown">
-            <div class="prime-slot__heading">
-              <strong>Mission {{ slot.id + 1 }}</strong>
-              <span>+{{ slot.mission.ticketReward }} ticket(s)</span>
-            </div>
-            <p>{{ slot.mission.objective.description }}</p>
-            <div class="prime-slot__progress">
-              <span>{{ formatResourceValue(slot.mission.objective.progress) }} / {{ formatResourceValue(slot.mission.objective.target) }}</span>
-              <div><i [style.width.%]="slot.mission.objective.target > 0 ? (100 * slot.mission.objective.progress / slot.mission.objective.target > 100 ? 100 : 100 * slot.mission.objective.progress / slot.mission.objective.target) : 0"></i></div>
-            </div>
-            <button type="button" [disabled]="!slot.rerollAvailable" (click)="rerollMission(slot.id)">
-              Relancer la quête
-            </button>
-          </ng-container>
-          <ng-template #missionCoolingDown>
-            <div class="prime-slot__heading">
-              <strong>Mission {{ slot.id + 1 }}</strong>
-              <span *ngIf="slot.cooldownReason === 'completed'">Terminée · +{{ slot.lastReward }} ticket(s)</span>
-              <span *ngIf="slot.cooldownReason === 'rerolled'">Quête relancée</span>
-            </div>
-            <p *ngIf="slot.cooldownReason === 'completed'">Une nouvelle mission sera disponible après la recharge.</p>
-            <p *ngIf="slot.cooldownReason === 'rerolled'">La nouvelle quête est en attente.</p>
-            <div class="prime-slot__cooldown">Disponible dans {{ formatCooldown(slot.cooldownRemainingSeconds) }}</div>
-          </ng-template>
-        </article>
-      </div>
-      <div class="prime-slot-unlock" *ngIf="game.nextMissionSlotCost as slotCost">
-        <div>
-          <strong>Débloquer un emplacement supplémentaire</strong>
-          <span *ngIf="slotCost.essence">Coût : {{ slotCost.essence }} essences</span>
-          <span *ngIf="slotCost.tickets">Coût : {{ slotCost.tickets }} tickets</span>
-        </div>
-        <button
-          type="button"
-          [disabled]="slotCost.essence ? (game.monsterEssence || 0) < slotCost.essence : getResourceAmount('ticket') < (slotCost.tickets || 0)"
-          (click)="unlockNextMissionSlot()">
-          Débloquer
-        </button>
-      </div>
-    </div>
-    <div class="missions-panel" *ngIf="game.primeBoard?.unlocked">
-      <div class="missions-panel__header">
-        <div>
-          <h2>Panneau des primes</h2>
-        </div>
-      </div>
-      <article class="prime-offer" *ngFor="let offer of game.primeBoard?.offers; trackBy: trackByPrimeOffer">
-        <img *ngIf="offer.imageUrl" [src]="offer.imageUrl" [alt]="offer.monsterName" />
-        <div class="prime-offer-content">
-          <div class="headerPrimeName">
-            <h3>{{ offer.monsterName }}</h3>
-            <span>{{ formatCooldown(offer.remainingSeconds) }}</span>
-          </div>
-          <p> Temps : {{ offer.timeLimitSeconds }} s.</p>
-          <p>Gain : +{{ offer.gain }} respect ({{ offer.gainLabel }}).
-            <br> Fuite : -{{ offer.loss }}.</p>
-          <p>Récompense : {{ offer.rewardLabel }}</p>
-          <button type="button" [disabled]="!!game.currentMonster" (click)="startPrime(offer.id)">Accepter la prime</button>
-        </div>
-      </article>
-    </div>
-  </ng-template>
-  <ng-template #featureColors>
-    <div class="settings-colors">
-      <h4>Couleurs</h4>
-      <label *ngFor="let option of featureColorOptions">
-        <span>{{ option.label }}</span>
-        <input type="color" [value]="featureColor(option.id)" (change)="setFeatureColor(option.id, $any($event.target).value)" />
-      </label>
-      <label *ngFor="let option of houseTagColorOptions">
-        <span>{{ option.label }}</span>
-        <input type="color" [value]="houseTagColor(option.id)" (change)="setHouseTagColor(option.id, $any($event.target).value)" />
-      </label>
-    </div>
-  </ng-template>
-  <ng-template #devTools>
-    <div class="settings-dev">
-      <h4>Développeur / testeur</h4>
-      <p>or 1000000 · essence 100 · appat 10 · vendeur</p>
-      <input
-        type="text"
-        [value]="devCommand"
-        (input)="devCommand = $any($event.target).value"
-        (keyup.enter)="applyDevCommand()"
-        aria-label="Commande de test" />
-      <button type="button" (click)="applyDevCommand()">Appliquer</button>
-      <p *ngIf="devCommandMessage">{{ devCommandMessage }}</p>
-    </div>
-  </ng-template>
-
-
-  <ng-template #tradersSection>
-    <section class="traders-panel" *ngFor="let trader of game.primeBoard?.traders; trackBy: trackByPrimeTrader">
-      <div class="traders-panel__header">
-        <img *ngIf="trader.imageUrl" class="trader-portrait" [src]="trader.imageUrl" [alt]="trader.name" />
-        <div class="traders-panel__info-container">
-          <div class="traders-panel__content">
-            <h2>{{ trader.name }}</h2>
-            <strong>{{ formatCooldown(trader.remainingSeconds) }}</strong>
-          </div>
-          <p>{{ trader.dialogue }}</p>
-        </div>
-      </div>
-      <div class="trader-shop">
-        <div *ngFor="let trade of trader.trades; trackBy: trackByPrimeTrade">
-          <div class="trader-shop__item" >
-            <div class="trader-shop__item-header">
-              {{ trade.name }}
-              <mat-icon
-              [matTooltip]="trade.description"
-              matTooltipClass="trade-tooltip"
-              aria-label="Informations"
-              class="trade-tooltip"
-            >
-              info
-            </mat-icon>
-            </div>
-            <span>
-              {{ trade.costs.length
-                ? 'Coût : ' + formatResourceValue(trade.costs[0].amount) + ' ' + getResourceName(trade.costs[0].resourceId) + ' (' + formatResourceValue(getResourceAmount(trade.costs[0].resourceId)) + ')'
-                : trade.goldCost != null ? 'Coût : ' + formatResourceValue(trade.goldCost) + ' or' : 'Aucun coût' }}
-            </span>
-            
-            <button
-              type="button"
-              class="trader-shop__button"
-              [disabled]="!trade.canBuy || (trade.costs.length && getResourceAmount(trade.costs[0].resourceId) < trade.costs[0].amount)"
-              (click)="buyPrimeTrade(trade)">
-              Acheter <br> {{ trade.remaining + ' / ' + trade.maxPerVisit }}
-            </button>
-            
-            <strong>{{ trade.resourceRewards.length && trade.resourceRewards[0].owned != null
-              ? 'Reçu : ' + formatResourceValue(trade.resourceRewards[0].amount) + ' ' + trade.resourceRewards[0].name + ' (' + formatResourceValue(trade.resourceRewards[0].owned) + ')'
-              : trade.goldReward != 0 ? 'Reçu : ' + formatResourceValue(trade.goldReward) + ' or' : trade.essenceReward != 0 ? 'Reçu : ' + formatResourceValue(trade.essenceReward) + ' essence' : 'Aucun reçu' }}</strong>
-          </div>
-        </div>
-      </div>
-      <div
-        class="trader-popup"
-        *ngIf="traderPopup as popup"
-        [style.left]="popup.left"
-        [style.top]="popup.top">
-        <div class="trader-popup__header">
-          <strong>{{ popup.trade.name }}</strong>
-          <span *ngIf="popup.trade.discountedGoldCost != null">{{ formatResourceValue(popup.trade.discountedGoldCost) }} or</span>
-        </div>
-        <p>{{ popup.trade.description }}</p>
-        <p *ngIf="popup.trade.lockedReason">Verrouillé : {{ popup.trade.lockedReason }}</p>
-        <p *ngIf="popup.trade.costs.length">
-          <span *ngFor="let cost of popup.trade.costs" [class.kitchen-dish__cost--missing]="cost.owned < cost.amount">
-            {{ cost.name }} {{ formatResourceValue(cost.amount) }} ({{ formatResourceValue(cost.owned) }})
-          </span>
-        </p>
-        <p>Reçu : {{ popup.trade.rewardsLabel }}</p>
-        <p>Encore {{ popup.trade.remaining }} / {{ popup.trade.maxPerVisit }} ce passage.</p>
-        <p>Clique pour acheter.</p>
-      </div>
-    </section>
-    <ng-template #noTrader>
-      <section class="traders-panel">
-        <h2>Marchands</h2>
-        <p>Aucun marchand n'est là pour le moment.</p>
-      </section>
-    </ng-template>
-  </ng-template>
-
-
-  <ng-template #shopTrades>
-    <section class="shop-trades" *ngIf="game.missionsUnlocked">
-      <div class="shop-trades__quantities" aria-label="Quantité à échanger">
-        <button
-          type="button"
-          *ngFor="let quantity of resourceTradeQuantities"
-          [attr.aria-pressed]="tradeQuantity === quantity"
-          [class.shop-trades__quantity--active]="tradeQuantity === quantity"
-          (click)="tradeQuantity = quantity">
-          {{ quantity === 'max' ? 'Max' : '×' + quantity }}
-        </button>
-      </div>
-      <article class="shop-trades__item" *ngFor="let trade of visibleResourceTrades; trackBy: trackByResourceTrade">
-        <div>
-          <span>
-            Coût : {{ formatResourceValue(getResourceTradeCost(trade)) }} 
-            {{ getResourceName(trade.inputResourceId) }} ({{ formatResourceValue(getResourceAmount(trade.inputResourceId)) }})
-          </span>
-        </div>
-        <button type="button" [disabled]="!canTradeResource(trade)" (click)="tradeResource(trade)">
-          Échanger
-        </button>
-        <strong>{{ formatResourceValue(trade.outputAmount * getResourceTradeQuantity(trade)) }}
-          {{ getResourceName(trade.outputResourceId) }} ({{ formatResourceValue(getResourceAmount(trade.outputResourceId)) }})</strong>
-      </article>
-      <p *ngIf="visibleResourceTrades.length === 0">Aucun échange disponible pour le moment.</p>
-    </section>
-  </ng-template>
-
-  <div class="app-layout">
-    <nav class="desktop-section-rail" aria-label="Navigation principale">
-      <button
-        type="button"
-        [class.desktop-section-rail__item--active]="desktopView === 'characters'"
-        [attr.aria-pressed]="desktopView === 'characters'"
-        title="Personnages"
-        (click)="setDesktopView('characters')">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="7" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3.5 19v-2.2A4.8 4.8 0 0 1 8.3 12h1.4a4.8 4.8 0 0 1 4.8 4.8V19M14.5 19v-1.8a5 5 0 0 1 5-5h1"/></svg>
-        <span>Personnages</span>
-      </button>
-      <button
-        type="button"
-        *ngIf="game.housesUnlocked && game.houses && game.houses.length > 0"
-        [class.desktop-section-rail__item--active]="desktopView === 'houses'"
-        [attr.aria-pressed]="desktopView === 'houses'"
-        title="Maisons"
-        (click)="setDesktopView('houses')">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5"/><path d="M6.5 9.5V20h11V9.5"/><path d="M9.5 20v-6h5v6"/></svg>
-        <span>Maisons</span>
-        <i class="desktop-section-rail__notification" *ngIf="hasNewHouses" aria-hidden="true"></i>
-      </button>
-      <button
-        type="button"
-        *ngIf="sortedShopItemsWithIndex.length > 0 || game.missionsUnlocked"
-        [class.desktop-section-rail__item--active]="desktopView === 'shop'"
-        [attr.aria-pressed]="desktopView === 'shop'"
-        data-feature="shop"
-        title="Shop"
-        (click)="setDesktopView('shop')">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16l-1.5 11h-13L4 9Z"/><path d="M8 9V6.5a4 4 0 0 1 8 0V9"/></svg>
-        <span>Shop</span>
-        <i class="desktop-section-rail__notification" *ngIf="hasNewShopItems" aria-hidden="true"></i>
-      </button>
-      <button
-        type="button"
-        *ngIf="game.essenceShopUnlocked"
-        [class.desktop-section-rail__item--active]="desktopView === 'essenceShop'"
-        [attr.aria-pressed]="desktopView === 'essenceShop'"
-        title="Shop d'essence"
-        (click)="setDesktopView('essenceShop')">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20c-4.5-2.4-7-5.4-7-9a7 7 0 0 1 14 0c0 3.6-2.5 6.6-7 9Z"/><path d="M12 16V8M12 12c-2.3-.5-3.7-1.8-4.3-3.7M12 13.5c2.1-.4 3.5-1.7 4.2-3.5"/></svg>
-        <span>Essence</span>
-        <i class="desktop-section-rail__notification" *ngIf="hasNewEssenceShop" aria-hidden="true"></i>
-      </button>
-      <button
-        type="button"
-        *ngIf="game.explorerUnlocked"
-        [class.desktop-section-rail__item--active]="desktopView === 'quests'"
-        [attr.aria-pressed]="desktopView === 'quests'"
-        data-feature="mobs"
-        title="Aventures"
-        (click)="setDesktopView('quests')">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16v10H4z"/><path d="M7 8V6h10v2M8 12h8M8 15h5"/></svg>
-        <span>Aventures</span>
-      </button>
-      <button type="button" *ngIf="game.kitchen?.unlocked" data-feature="kitchen" [class.desktop-section-rail__item--active]="desktopView === 'kitchen'" title="Cuisine" (click)="setDesktopView('kitchen')">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3v18M5 7h7v7H5M12 7h7v11h-7"/></svg><span>Cuisine</span>
-        <i class="desktop-section-rail__notification" *ngIf="hasNewKitchenDishes" aria-hidden="true"></i>
-      </button>
-      <button type="button" data-feature="garden" [class.desktop-section-rail__item--active]="desktopView === 'garden'" title="Jardin" (click)="setDesktopView('garden')">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21V9M12 12c-4 0-7-2.5-7-6 4 0 7 2.5 7 6ZM12 15c4 0 7-2.5 7-6-4 0-7 2.5-7 6Z"/></svg><span>Jardin</span>
-      </button>
-      <button type="button" data-feature="breeding" [class.desktop-section-rail__item--active]="desktopView === 'breeding'" title="Élevage" (click)="setDesktopView('breeding')">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="13" rx="6" ry="7.5"/><path d="M12 5.5c.8-2 2.6-2.8 3.6-1.6 1 1.2-.2 2.6-1.6 3"/></svg><span>Élevage</span>
-      </button>
-
-      <button type="button" data-feature="missions" *ngIf="game.missionsUnlocked" [class.desktop-section-rail__item--active]="desktopView === 'missions'" title="Missions" (click)="setDesktopView('missions')">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="m14.2 9.8 5-5"/></svg><span>Missions</span>
-        <i class="desktop-section-rail__notification" *ngIf="hasNewMissions" aria-hidden="true"></i>
-      </button>
-      <button type="button" data-feature="traders" *ngIf="game.primeBoard?.traders?.length" [class.desktop-section-rail__item--active]="desktopView === 'traders'" title="Marchands" (click)="setDesktopView('traders')">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16l-1.2 11H5.2z"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/></svg><span>Marchands</span>
-      </button>
-
-      <button type="button" *ngIf="game.lottery?.unlocked" data-feature="lottery" [class.desktop-section-rail__item--active]="desktopView === 'lottery'" title="Loterie" (click)="setDesktopView('lottery')">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v16H3z"/><circle cx="8" cy="9" r="1"/><circle cx="16" cy="9" r="1"/><circle cx="8" cy="15" r="1"/><circle cx="16" cy="15" r="1"/><circle cx="12" cy="12" r="1"/></svg><span>Loterie</span>
-        <i class="desktop-section-rail__notification" *ngIf="hasNewLottery" aria-hidden="true"></i>
-      </button>
-      <button type="button" class="desktop-section-rail__settings" title="Paramètres" aria-label="Paramètres" (click)="openSettings($event)">⚙</button>
-    </nav>
-    <div class="column column-left">
-      <div class="desktop-side-resources">
-        <div><span>Essence</span><strong>{{ formatResourceValue(game.monsterEssence != null ? game.monsterEssence : 0) }}</strong></div>
-        <div><span>Appât</span><strong>{{ formatResourceValue(getResourceAmount('bait')) }}</strong></div>
-        <div *ngIf="game.primeBoard?.unlocked" [matTooltip]="game.primeBoard?.gainLabel || ''" matTooltipPosition="right">
-          <span>Respect</span><strong>{{ formatResourceValue(game.primeBoard?.respect || 0) }}</strong>
-        </div>
-        <div><span>Tickets</span><strong>{{ formatResourceValue(getResourceAmount('ticket')) }}</strong></div>
-        <div><span>Pièges</span><strong>{{ formatResourceValue(getResourceAmount('trap')) }}</strong></div>
-      </div>
-      <div class="kitchen-buff-bar" *ngIf="game.kitchen?.activeDishes?.length">
-        <span *ngFor="let dish of game.kitchen?.activeDishes || []; trackBy: trackByDish">{{ dish.name }} {{ formatCooldown(dish.remainingSeconds) }}</span>
-      </div>
-      <ng-container *ngIf="desktopView === 'shop'">
-        <div class="shop-items-list" *ngIf="sortedShopItemsWithIndex.length > 0">
-          <ng-container *ngFor="let entry of sortedShopItemsWithIndex; trackBy: trackByShopEntry">
-            <app-shop-item-area
-              [shopItemSelected]="entry.item"
-              [itemIndex]="entry.index"
-              (bought)="onShopItemBought()">
-            </app-shop-item-area>
-          </ng-container>
-        </div>
-        <p class="shop-items-empty" *ngIf="sortedShopItemsWithIndex.length === 0">Aucun objet à acheter pour le moment.</p>
-        <ng-container *ngTemplateOutlet="shopTrades"></ng-container>
-      </ng-container>
-      <div class="workers-list" *ngIf="desktopView === 'characters'">
-        <ng-container *ngFor="let worker of workersAvailable; let i = index; trackBy: trackByIndex">
-          <app-worker-area
-            *ngIf="worker.doesAppearInGame"
-            [workerSelected]="worker"
-            [workerIndex]="i"
-            [workersAvailable]="workersAvailable"
-            [clicks]="game.clicks"
-            (upgraded)="onWorkerUpgraded()">
-          </app-worker-area>
-        </ng-container>
-      </div>
-      <section class="houses-area" *ngIf="desktopView === 'houses' && game.housesUnlocked && game.houses && game.houses.length > 0">
-        <div class="houses-area__header">
-          <h2>Maisons</h2>
-          <button
-            type="button"
-            class="houses-area__max-toggle"
-            [class.houses-area__max-toggle--active]="hideMaxLevelHouses"
-            [attr.aria-pressed]="hideMaxLevelHouses"
-            (click)="hideMaxLevelHouses = !hideMaxLevelHouses">
-            {{ hideMaxLevelHouses ? 'Niveaux max masqués' : 'Masquer les niveaux max' }}
-          </button>
-        </div>
-        <div class="houses-area__filters" aria-label="Filtrer les maisons">
-          <button
-            type="button"
-            [class.houses-area__filter--active]="selectedHouseTag === null"
-            [attr.aria-pressed]="selectedHouseTag === null"
-            (click)="selectedHouseTag = null">
-            Toutes
-          </button>
-          <button
-            type="button"
-            *ngFor="let tag of houseTags"
-            [class.houses-area__filter--active]="selectedHouseTag === tag"
-            [attr.aria-pressed]="selectedHouseTag === tag"
-            [style.color]="houseTagColor(tag)"
-            [style.border-color]="houseTagColor(tag)"
-            (click)="selectedHouseTag = tag">
-            {{ tag }}
-          </button>
-        </div>
-        <ng-container *ngFor="let house of visibleHouses; let i = index; trackBy: trackByHouse">
-          <app-house-area
-            [style.--house-accent]="houseAccent(house)"
-            [house]="house"
-            [essence]="game.monsterEssence || 0"
-            [respect]="game.primeBoard?.respect || 0"
-            [resources]="resources"
-            [collapsed]="!!collapsedHouseIds[house.id]"
-            (collapsedChange)="toggleHouseCollapsed(house.id)"
-            (upgraded)="onHouseUpgraded(house.houseIndex != null ? house.houseIndex : i)">
-          </app-house-area>
-        </ng-container>
-        <button type="button" class="houses-area__resources-button" (click)="toggleResources()">
-          Voir toutes les ressources
-        </button>
-      </section>
-      <ng-container *ngIf="desktopView === 'essenceShop' || desktopView === 'quests'">
-      <ng-container *ngTemplateOutlet="workerSectionMenu"></ng-container>
-      </ng-container>
-
-      <section class="kitchen-panel" *ngIf="desktopView === 'kitchen' && game.kitchen as kitchen">
-        <div class="kitchen-panel__filters" aria-label="Filtrer les plats">
-          <button type="button" [class.kitchen-panel__filter--active]="selectedKitchenTag === null" (click)="selectedKitchenTag = null">Tous</button>
-          <button type="button" *ngFor="let tag of kitchenTags" [class.kitchen-panel__filter--active]="selectedKitchenTag === tag" (click)="selectedKitchenTag = tag">{{ tag }}</button>
-        </div>
-        <article class="kitchen-dish" *ngFor="let dish of visibleKitchenDishes; trackBy: trackByDish">
-          <header>
-            <div class="kitchen-dish__header">
-              <img *ngIf="dish.imageUrl" [src]="dish.imageUrl" [alt]="dish.name" class="kitchen-dish__image" />
-              <h5>{{ dish.name + " (" + dish.stock + ")"}}</h5>
-            </div>
-            <span *ngIf="dish.active">{{ formatCooldown(dish.remainingSeconds)}}  </span> 
-          </header>
-          <p>{{ dish.description }} <br> Durée : {{ dish.baseDurationSeconds }} s<span *ngIf="dish.durationBonusSeconds"> + {{ dish.durationBonusSeconds }} s</span></p>
-          <ul>
-            <li *ngFor="let effect of dish.effectLabels; trackBy: trackByPosition"><b>{{ effect }}</b></li>
-          </ul>
-          <div class="dishBottomInfo">
-            <div class="leftInfodish">
-              <p class="kitchen-dish__costs">
-                Coût :
-                <span *ngFor="let ingredient of dish.ingredients; trackBy: trackByIngredient" [class.kitchen-dish__cost--missing]="ingredient.owned < ingredient.amount">
-                  {{ ingredient.name }} {{ ingredient.amount }} ({{ formatResourceValue(ingredient.owned) }})
-                </span>
-              </p>
-            </div>
-            <div class="kitchen-dish__actions">
-              <button type="button" [disabled]="!dish.canCook" (click)="cookDish(dish.id)">Préparer</button>
-              <button type="button" [disabled]="dish.stock < 1" (click)="useDish(dish.id)">Manger</button>
-            </div>
-          </div>
-        </article>
-      </section>
-
-      <section class="future-section-panel feature-garden" *ngIf="desktopView === 'garden'">
-        <h2>Jardin</h2>
-        <p>Cette section sera ajoutée prochainement.</p>
-      </section>
-      <section class="breeding-panel" *ngIf="desktopView === 'breeding'">
-        <h2>Élevage</h2>
-        <nav class="breeding-panel__tabs" aria-label="Élevage">
-          <button type="button" [class.breeding-panel__tab--active]="breedingView === 'monsters'" (click)="breedingView = 'monsters'">Liste des monstres</button>
-          <button type="button" [class.breeding-panel__tab--active]="breedingView === 'eggs'" (click)="breedingView = 'eggs'">Œufs</button>
-        </nav>
-        <div class="breeding-panel__body" *ngIf="breedingView === 'monsters'" aria-label="Liste des monstres"></div>
-        <div class="breeding-panel__body" *ngIf="breedingView === 'eggs'" aria-label="Œufs"></div>
-      </section>
-      <ng-container *ngIf="desktopView === 'missions' && game.missionsUnlocked">
-        <ng-container *ngTemplateOutlet="missionsSection"></ng-container>
-      </ng-container>
-      <ng-container *ngIf="desktopView === 'traders'">
-        <ng-container *ngTemplateOutlet="tradersSection"></ng-container>
-      </ng-container>
-
-      <ng-container *ngIf="desktopView === 'lottery' && game.lottery as lottery">
-        <section class="lottery-chest">
-          <div class="infoChest">
-            <h5>Chance : <span class="luck-bonus">{{ lottery.luck }}</span> <p>Chance de coffre par monstre : <strong>{{ formatLuckPercent(lottery.monsterChestChance) }}</strong><span class="luck-bonus"> + {{ formatLuckPercent(lottery.chestLuckBonus) }} (luck)</span></p></h5>
-          </div>
-          <div class="lottery-chest__list">
-            <div *ngFor="let chest of lotteryChests" [class.lottery-chest__item]="true">
-              <div class="chest-header">
-                <h5>{{ chest.name }}</h5>
-                <mat-icon
-                  [matTooltip]="getChestDropsTooltip(chest)"
-                  matTooltipClass="chest-tooltip"
-                  aria-label="Informations"
-                  class="info-icon"
-                >
-                  info
-                </mat-icon>
+        @for (slot of game.missionSlots; track trackByMissionSlot($index, slot)) {
+          <article class="prime-slot">
+            @if (slot.mission) {
+              <div class="prime-slot__heading">
+                <strong>Mission {{ slot.id + 1 }}</strong>
+                <span>+{{ slot.mission.ticketReward }} ticket(s)</span>
               </div>
-              <span>{{ formatResourceValue(getResourceAmount(chest.resourceId)) }} en stock</span>
-              <button
-                class="lottery-chest__button"
-                type="button"
-                [disabled]="getResourceAmount(chest.resourceId) < 1"
-                (click)="openLotteryChest(chest.id)">
-                Ouvrir
+              <p>{{ slot.mission.objective.description }}</p>
+              <div class="prime-slot__progress">
+                <span>{{ formatResourceValue(slot.mission.objective.progress) }} / {{ formatResourceValue(slot.mission.objective.target) }}</span>
+                <div><i [style.width.%]="slot.mission.objective.target > 0 ? (100 * slot.mission.objective.progress / slot.mission.objective.target > 100 ? 100 : 100 * slot.mission.objective.progress / slot.mission.objective.target) : 0"></i></div>
+              </div>
+              <button type="button" [disabled]="!slot.rerollAvailable" (click)="rerollMission(slot.id)">
+                Relancer la quête
               </button>
-            </div>
+            } @else {
+              <div class="prime-slot__heading">
+                <strong>Mission {{ slot.id + 1 }}</strong>
+                @if (slot.cooldownReason === 'completed') {
+                  <span>Terminée · +{{ slot.lastReward }} ticket(s)</span>
+                }
+                @if (slot.cooldownReason === 'rerolled') {
+                  <span>Quête relancée</span>
+                }
+              </div>
+              @if (slot.cooldownReason === 'completed') {
+                <p>Une nouvelle mission sera disponible après la recharge.</p>
+              }
+              @if (slot.cooldownReason === 'rerolled') {
+                <p>La nouvelle quête est en attente.</p>
+              }
+              <div class="prime-slot__cooldown">Disponible dans {{ formatCooldown(slot.cooldownRemainingSeconds) }}</div>
+            }
+          </article>
+        }
+      </div>
+      @if (game.nextMissionSlotCost; as slotCost) {
+        <div class="prime-slot-unlock">
+          <div>
+            <strong>Débloquer un emplacement supplémentaire</strong>
+            @if (slotCost.essence) {
+              <span>Coût : {{ slotCost.essence }} essences</span>
+            }
+            @if (slotCost.tickets) {
+              <span>Coût : {{ slotCost.tickets }} tickets</span>
+            }
           </div>
-        </section>
-        <section class="lottery-panel" *ngIf="lottery.unlocked">
-          <div class="loterieHeader">
-            <div class="texts">
-              <p *ngIf="lottery.cooldownRemainingSeconds > 0">
-                Prochaine loterie dans {{ formatCooldown(lottery.cooldownRemainingSeconds) }}
-              </p>
-              <p>Une tentative toutes les {{ lottery.cooldownMinutes }} minutes.</p>
-            </div>
-            <mat-icon
-              [matTooltip]="getLoterieDropsTooltip()"
-              matTooltipClass="lottery-tooltip"
-              aria-label="Informations"
-              class="info-icon"
-            >
-              info
-            </mat-icon>
-          </div>
-          <button type="button" [disabled]="lottery.cooldownRemainingSeconds > 0" (click)="activateLottery()">
-            {{ lottery.cooldownRemainingSeconds > 0 ? 'Loterie en recharge…' : 'Activer la loterie' }}
+          <button
+            type="button"
+            [disabled]="slotCost.essence ? (game.monsterEssence || 0) < slotCost.essence : getResourceAmount('ticket') < (slotCost.tickets || 0)"
+            (click)="unlockNextMissionSlot()">
+            Débloquer
           </button>
-        </section>
-      </ng-container>
+        </div>
+      }
     </div>
-    
-    <div
-      class="column column-center"
-      [class.column-center--solar]="game.solarAreaExpanded"
-      [class.column-center--combat]="!!game.currentMonster"
-      (click)="onSolarMainAreaClick($event)">
-      <!-- Lane vaisseaux : uniquement colonne centrale, hauteur aléatoire, mouvement fluide (position = temps) -->
-      <div #vesselLane class="vessel-lane" *ngIf="game.vesselUnlocked && game.activeVessels && game.activeVessels.length > 0">
-        <div
-          *ngFor="let v of game.activeVessels; trackBy: trackByVesselInstance"
-          class="vessel-lane__ship"
-          [style.transform]="getVesselTransform(v)"
-          [style.top.%]="v.topPercent"
-          [title]="v.name"
-          (mousedown)="onVesselClick(v.instanceId); $event.stopPropagation(); $event.preventDefault()">
-          <img *ngIf="v.imageUrl" [src]="v.imageUrl" [alt]="v.name" class="vessel-lane__img" />
-          <span *ngIf="!v.imageUrl" class="vessel-lane__placeholder">{{ v.name.charAt(0) }}</span>
+    @if (game.primeBoard?.unlocked) {
+      <div class="missions-panel">
+        <div class="missions-panel__header">
+          <div>
+            <h2>Panneau des primes</h2>
+          </div>
         </div>
+        @for (offer of game.primeBoard?.offers; track trackByPrimeOffer($index, offer)) {
+          <article class="prime-offer">
+            @if (offer.imageUrl) {
+              <img [src]="offer.imageUrl" [alt]="offer.monsterName" />
+            }
+            <div class="prime-offer-content">
+              <div class="headerPrimeName">
+                <h3>{{ offer.monsterName }}</h3>
+                <span>{{ formatCooldown(offer.remainingSeconds) }}</span>
+              </div>
+              <p> Temps : {{ offer.timeLimitSeconds }} s.</p>
+              <p>Gain : +{{ offer.gain }} respect ({{ offer.gainLabel }}).
+                <br> Fuite : -{{ offer.loss }}.</p>
+                <p>Récompense : {{ offer.rewardLabel }}</p>
+                <button type="button" [disabled]="!!game.currentMonster" (click)="startPrime(offer.id)">Accepter la prime</button>
+              </div>
+            </article>
+          }
+        </div>
+      }
+    </ng-template>
+    <ng-template #featureColors>
+      <div class="settings-colors">
+        <h4>Couleurs</h4>
+        @for (option of featureColorOptions; track option) {
+          <label>
+            <span>{{ option.label }}</span>
+            <input type="color" [value]="featureColor(option.id)" (change)="setFeatureColor(option.id, $any($event.target).value)" />
+          </label>
+        }
+        @for (option of houseTagColorOptions; track option) {
+          <label>
+            <span>{{ option.label }}</span>
+            <input type="color" [value]="houseTagColor(option.id)" (change)="setHouseTagColor(option.id, $any($event.target).value)" />
+          </label>
+        }
       </div>
-      <div class="streak-bar" *ngIf="game.streakUnlocked">
-        <div class="streak-bar__label">{{ game.streakActive && game.streakDamageMultiplier ? '×' + game.streakDamageMultiplier : '' }}</div>
-        <div class="streak-bar__track">
-          <div
-            class="streak-bar__fill"
-            [class.streak-bar__fill--active]="game.streakActive && !game.weaknessBuffActive"
-            [class.streak-bar__fill--active-weakness]="game.streakActive && game.weaknessBuffActive"
-            [style.width.%]="streakBarPercent">
-          </div>
+    </ng-template>
+    <ng-template #devTools>
+      <div class="settings-dev">
+        <h4>Développeur / testeur</h4>
+        <p>or 1000000 · essence 100 · appat 10 · vendeur</p>
+        <input
+          type="text"
+          [value]="devCommand"
+          (input)="devCommand = $any($event.target).value"
+          (keyup.enter)="applyDevCommand()"
+          aria-label="Commande de test" />
+          <button type="button" (click)="applyDevCommand()">Appliquer</button>
+          @if (devCommandMessage) {
+            <p>{{ devCommandMessage }}</p>
+          }
         </div>
-        <div class="monster-gauge" *ngIf="game.monsterUnlocked">
-          <div class="monster-gauge__left">
-            <span class="monster-gauge__label">{{ game.currentMonster ? 'Combat !' : 'Prochain mob :' }}</span>
-          </div>
-          <div
-            class="monster-gauge__darkness-circle"
-            [style.--encounter-pct]="game.encounterMeterPercent != null ? game.encounterMeterPercent : 0"
-            title="Plus c'est sombre, plus le monstre est proche">
-          </div>
-        </div>
-      </div>
-      <aside class="desktop-power-dock" *ngIf="game.powerUnlocked" aria-label="Sorts">
-        <div class="desktop-power-dock__mana" title="Mana">
-          <span>{{ game.mana | formatNumber:0 }} / {{ game.maxMana | formatNumber:0 }}</span>
-        </div>
-        <div class="desktop-power-dock__list">
-          <ng-container *ngFor="let entry of sortedPowersWithIndex; trackBy: trackByPowerEntry">
-            <app-power-area
-              [powerSelected]="entry.power"
-              [powerIndex]="entry.index"
-              [manaCost]="getPowerManaCost(entry.index)"
-              [baitCost]="getPowerBaitCost(entry.index)"
-              [canCast]="getCanCastPower(entry.index)"
-              [effectRemainingPercent]="getEffectRemainingPercent(entry.power.id)"
-              (bought)="onPowerBought()"
-              (cast)="onPowerCast(entry.index)">
-            </app-power-area>
-          </ng-container>
-        </div>
-      </aside>
-      <div
-        class="column-center__main column-center__main--game-ui"
-        [class.column-center__main--solar]="game.solarAreaExpanded"
-        [class.column-center__main--combat]="!!game.currentMonster">
-        <div class="column-center__hud">
-        <div
-          class="monster-title"
-          [class.monster-title--boss]="game.currentMonster && (game.currentMonster.isBoss || game.currentMonster.isPrime)"
-          *ngIf="game.currentMonster">
-          <div class="monster-title__heading">
-            <span class="monster-title__boss" *ngIf="game.currentMonster.isPrime">PRIME</span>
-            <span class="monster-title__boss" *ngIf="game.currentMonster.isBoss && !game.currentMonster.isPrime">DANGER BOSS</span>
-            <span class="monster-title__name">
-              {{ game.currentMonster.name }}<span *ngIf="game.queuedMonsterCount && game.queuedMonsterCount > 0"> + {{ game.queuedMonsterCount }}</span>
-            </span>
-            <button
-              *ngIf="game.currentMonster.isPlannedCombat || game.currentMonster.isPrime"
-              type="button"
-              class="planned-combat-cancel"
-              [attr.aria-label]="game.currentMonster.isPrime ? 'Annuler la prime' : 'Annuler le combat scénarisé'"
-              (click)="game.currentMonster.isPrime ? cancelPrime($event) : cancelPlannedCombat($event)">
-              Annuler
-            </button>
-          </div>
-          <div class="monster-title__details">
-            <span class="monster-title__hp" *ngIf="!game.currentMonster.healthBars">
-              {{ formatMonsterHp(game.currentMonster.currentHp) }} HP
-            </span>
-            <ng-container *ngIf="game.currentMonster.healthBars as healthBars">
-              <span class="monster-title__hp">{{ formatMonsterHp(getHealthBarTotal(healthBars.current)) }} HP</span>
-              <span class="monster-title__hp monster-title__hp--click" *ngIf="healthBars.max.click > 0">
-                {{ formatMonsterHp(healthBars.current.click) }}
-              </span>
-              <span class="monster-title__hp-separator" *ngIf="healthBars.max.afk > 0 && healthBars.max.click > 0">+</span>
-              <span class="monster-title__hp monster-title__hp--afk" *ngIf="healthBars.max.afk > 0">
-                {{ formatMonsterHp(healthBars.current.afk) }}
-              </span>
-              <span class="monster-title__hp-separator" *ngIf="healthBars.max.pet > 0 && (healthBars.max.click > 0 || healthBars.max.afk > 0)">+</span>
-              <span class="monster-title__hp monster-title__hp--pet" *ngIf="healthBars.max.pet > 0">
-                {{ formatMonsterHp(healthBars.current.pet) }}
-              </span>
-            </ng-container>
-            <span *ngIf="game.currentMonster.damageMode === 'click'">Clics uniquement</span>
-            <span *ngIf="game.currentMonster.damageMode === 'afk'">AFK uniquement</span>
-            <span *ngIf="game.currentMonster.damageMode === 'pet'">Familier uniquement</span>
-            <span *ngIf="game.currentMonster.plannedCombatEnemyCount">
-              Ennemi {{ game.currentMonster.plannedCombatEnemyNumber }}/{{ game.currentMonster.plannedCombatEnemyCount }}
-            </span>
-            <span class="monster-title__timer">{{ game.currentMonster.remainingSeconds }} s</span>
-          </div>
-          <div class="monster-title__hp-track" *ngIf="!game.currentMonster.healthBars">
-            <div class="monster-title__hp-fill" [style.width.%]="getMonsterHpPercent()"></div>
-          </div>
-          <div class="monster-title__hp-track monster-title__hp-track--split" *ngIf="game.currentMonster.healthBars">
-            <div class="monster-title__hp-fill monster-title__hp-fill--click" [style.width.%]="getHealthBarPercent('click')"></div>
-            <div class="monster-title__hp-fill monster-title__hp-fill--afk" [style.width.%]="getHealthBarPercent('afk')"></div>
-            <div class="monster-title__hp-fill monster-title__hp-fill--pet" [style.width.%]="getHealthBarPercent('pet')"></div>
-          </div>
-        </div>
-        <div class="score-area">
-          <p class="value-click">{{ game.clicks | formatNumber }}</p>
-          <p
-            class="value-auto-per-second"
-            [class.value-auto-per-second--buff]="game.damageBuffActive"
-          >{{ game.valueAutoPerSecond | formatNumber }}/s</p>
-          <p class="value-click-damage">
-            {{ game.clickValue | formatNumber }} dégâts/clic
-          </p>
-        </div>
-        </div>
-        <div class="center-zone-wrapper">
-          <div
-            *ngIf="!game.monsterUnlocked || !game.currentMonster"
-            id="click-area"
-            (click)="!game.solarAreaExpanded && click($event)">
-          </div>
-          <div
-            *ngIf="game.monsterUnlocked && game.currentMonster"
-            id="monster-area"
-            class="monster-area"
-            [class.monster-area--boss]="game.currentMonster.isBoss || game.currentMonster.isPrime"
-            (click)="!game.solarAreaExpanded && click($event)">
-            <img
-              *ngIf="game.currentMonster.imageUrl"
-              [src]="game.currentMonster.imageUrl"
-              [alt]="game.currentMonster.name"
-              class="monster-area__img"
-            />
-            <span *ngIf="!game.currentMonster.imageUrl" class="monster-area__placeholder">{{ game.currentMonster.name.charAt(0) }}</span>
-            <div class="monster-area__hp-track" *ngIf="!game.currentMonster.healthBars">
-              <div
-                class="monster-area__hp-fill"
-                [style.width.%]="getMonsterHpPercent()">
+      </ng-template>
+
+
+      <ng-template #tradersSection>
+        @for (trader of game.primeBoard?.traders; track trackByPrimeTrader($index, trader)) {
+          <section class="traders-panel">
+            <div class="traders-panel__header">
+              @if (trader.imageUrl) {
+                <img class="trader-portrait" [src]="trader.imageUrl" [alt]="trader.name" />
+              }
+              <div class="traders-panel__info-container">
+                <div class="traders-panel__content">
+                  <h2>{{ trader.name }}</h2>
+                  <strong>{{ formatCooldown(trader.remainingSeconds) }}</strong>
+                </div>
+                <p>{{ trader.dialogue }}</p>
               </div>
             </div>
-            <div class="monster-area__hp-track monster-area__hp-track--split" *ngIf="game.currentMonster.healthBars">
-              <div class="monster-area__hp-fill monster-area__hp-fill--click" [style.width.%]="getHealthBarPercent('click')"></div>
-              <div class="monster-area__hp-fill monster-area__hp-fill--afk" [style.width.%]="getHealthBarPercent('afk')"></div>
-              <div class="monster-area__hp-fill monster-area__hp-fill--pet" [style.width.%]="getHealthBarPercent('pet')"></div>
+            <div class="trader-shop">
+              @for (trade of trader.trades; track trackByPrimeTrade($index, trade)) {
+                <div>
+                  <div class="trader-shop__item" >
+                    <div class="trader-shop__item-header">
+                      {{ trade.name }}
+                      <mat-icon
+                        [matTooltip]="trade.description"
+                        matTooltipClass="trade-tooltip"
+                        aria-label="Informations"
+                        class="trade-tooltip"
+                        >
+                        info
+                      </mat-icon>
+                    </div>
+                    <span>
+                      {{ trade.costs.length
+                      ? 'Coût : ' + formatResourceValue(trade.costs[0].amount) + ' ' + getResourceName(trade.costs[0].resourceId) + ' (' + formatResourceValue(getResourceAmount(trade.costs[0].resourceId)) + ')'
+                      : trade.goldCost != null ? 'Coût : ' + formatResourceValue(trade.goldCost) + ' or' : 'Aucun coût' }}
+                    </span>
+                    <button
+                      type="button"
+                      class="trader-shop__button"
+                      [disabled]="!trade.canBuy || (trade.costs.length && getResourceAmount(trade.costs[0].resourceId) < trade.costs[0].amount)"
+                      (click)="buyPrimeTrade(trade)">
+                      Acheter <br> {{ trade.remaining + ' / ' + trade.maxPerVisit }}
+                    </button>
+                    <strong>{{ trade.resourceRewards.length && trade.resourceRewards[0].owned != null
+                      ? 'Reçu : ' + formatResourceValue(trade.resourceRewards[0].amount) + ' ' + trade.resourceRewards[0].name + ' (' + formatResourceValue(trade.resourceRewards[0].owned) + ')'
+                    : trade.goldReward != 0 ? 'Reçu : ' + formatResourceValue(trade.goldReward) + ' or' : trade.essenceReward != 0 ? 'Reçu : ' + formatResourceValue(trade.essenceReward) + ' essence' : 'Aucun reçu' }}</strong>
+                  </div>
+                </div>
+              }
             </div>
-            <div class="monster-area__timer">{{ game.currentMonster.remainingSeconds }}s</div>
+            @if (traderPopup; as popup) {
+              <div
+                class="trader-popup"
+                [style.left]="popup.left"
+                [style.top]="popup.top">
+                <div class="trader-popup__header">
+                  <strong>{{ popup.trade.name }}</strong>
+                  @if (popup.trade.discountedGoldCost != null) {
+                    <span>{{ formatResourceValue(popup.trade.discountedGoldCost) }} or</span>
+                  }
+                </div>
+                <p>{{ popup.trade.description }}</p>
+                @if (popup.trade.lockedReason) {
+                  <p>Verrouillé : {{ popup.trade.lockedReason }}</p>
+                }
+                @if (popup.trade.costs.length) {
+                  <p>
+                    @for (cost of popup.trade.costs; track cost) {
+                      <span [class.kitchen-dish__cost--missing]="cost.owned < cost.amount">
+                        {{ cost.name }} {{ formatResourceValue(cost.amount) }} ({{ formatResourceValue(cost.owned) }})
+                      </span>
+                    }
+                  </p>
+                }
+                <p>Reçu : {{ popup.trade.rewardsLabel }}</p>
+                <p>Encore {{ popup.trade.remaining }} / {{ popup.trade.maxPerVisit }} ce passage.</p>
+                <p>Clique pour acheter.</p>
+              </div>
+            }
+          </section>
+        }
+        <ng-template #noTrader>
+          <section class="traders-panel">
+            <h2>Marchands</h2>
+            <p>Aucun marchand n'est là pour le moment.</p>
+          </section>
+        </ng-template>
+      </ng-template>
+
+
+      <ng-template #shopTrades>
+        @if (game.missionsUnlocked) {
+          <section class="shop-trades">
+            <div class="shop-trades__quantities" aria-label="Quantité à échanger">
+              @for (quantity of resourceTradeQuantities; track quantity) {
+                <button
+                  type="button"
+                  [attr.aria-pressed]="tradeQuantity === quantity"
+                  [class.shop-trades__quantity--active]="tradeQuantity === quantity"
+                  (click)="tradeQuantity = quantity">
+                  {{ quantity === 'max' ? 'Max' : '×' + quantity }}
+                </button>
+              }
+            </div>
+            @for (trade of visibleResourceTrades; track trackByResourceTrade($index, trade)) {
+              <article class="shop-trades__item">
+                <div>
+                  <span>
+                    Coût : {{ formatResourceValue(getResourceTradeCost(trade)) }}
+                    {{ getResourceName(trade.inputResourceId) }} ({{ formatResourceValue(getResourceAmount(trade.inputResourceId)) }})
+                  </span>
+                </div>
+                <button type="button" [disabled]="!canTradeResource(trade)" (click)="tradeResource(trade)">
+                  Échanger
+                </button>
+                <strong>{{ formatResourceValue(trade.outputAmount * getResourceTradeQuantity(trade)) }}
+                {{ getResourceName(trade.outputResourceId) }} ({{ formatResourceValue(getResourceAmount(trade.outputResourceId)) }})</strong>
+              </article>
+            }
+            @if (visibleResourceTrades.length === 0) {
+              <p>Aucun échange disponible pour le moment.</p>
+            }
+          </section>
+        }
+      </ng-template>
+
+      <div class="app-layout">
+        <nav class="desktop-section-rail" aria-label="Navigation principale">
+          <button
+            type="button"
+            [class.desktop-section-rail__item--active]="desktopView === 'characters'"
+            [attr.aria-pressed]="desktopView === 'characters'"
+            title="Personnages"
+            (click)="setDesktopView('characters')">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="7" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3.5 19v-2.2A4.8 4.8 0 0 1 8.3 12h1.4a4.8 4.8 0 0 1 4.8 4.8V19M14.5 19v-1.8a5 5 0 0 1 5-5h1"/></svg>
+            <span>Personnages</span>
+          </button>
+          @if (game.housesUnlocked && game.houses && game.houses.length > 0) {
+            <button
+              type="button"
+              [class.desktop-section-rail__item--active]="desktopView === 'houses'"
+              [attr.aria-pressed]="desktopView === 'houses'"
+              title="Maisons"
+              (click)="setDesktopView('houses')">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5"/><path d="M6.5 9.5V20h11V9.5"/><path d="M9.5 20v-6h5v6"/></svg>
+              <span>Maisons</span>
+              @if (hasNewHouses) {
+                <i class="desktop-section-rail__notification" aria-hidden="true"></i>
+              }
+            </button>
+          }
+          @if (sortedShopItemsWithIndex.length > 0 || game.missionsUnlocked) {
+            <button
+              type="button"
+              [class.desktop-section-rail__item--active]="desktopView === 'shop'"
+              [attr.aria-pressed]="desktopView === 'shop'"
+              data-feature="shop"
+              title="Shop"
+              (click)="setDesktopView('shop')">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16l-1.5 11h-13L4 9Z"/><path d="M8 9V6.5a4 4 0 0 1 8 0V9"/></svg>
+              <span>Shop</span>
+              @if (hasNewShopItems) {
+                <i class="desktop-section-rail__notification" aria-hidden="true"></i>
+              }
+            </button>
+          }
+          @if (game.essenceShopUnlocked) {
+            <button
+              type="button"
+              [class.desktop-section-rail__item--active]="desktopView === 'essenceShop'"
+              [attr.aria-pressed]="desktopView === 'essenceShop'"
+              title="Shop d'essence"
+              (click)="setDesktopView('essenceShop')">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20c-4.5-2.4-7-5.4-7-9a7 7 0 0 1 14 0c0 3.6-2.5 6.6-7 9Z"/><path d="M12 16V8M12 12c-2.3-.5-3.7-1.8-4.3-3.7M12 13.5c2.1-.4 3.5-1.7 4.2-3.5"/></svg>
+              <span>Essence</span>
+              @if (hasNewEssenceShop) {
+                <i class="desktop-section-rail__notification" aria-hidden="true"></i>
+              }
+            </button>
+          }
+          @if (game.explorerUnlocked) {
+            <button
+              type="button"
+              [class.desktop-section-rail__item--active]="desktopView === 'quests'"
+              [attr.aria-pressed]="desktopView === 'quests'"
+              data-feature="mobs"
+              title="Aventures"
+              (click)="setDesktopView('quests')">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16v10H4z"/><path d="M7 8V6h10v2M8 12h8M8 15h5"/></svg>
+              <span>Aventures</span>
+            </button>
+          }
+          @if (game.kitchen?.unlocked) {
+            <button type="button" data-feature="kitchen" [class.desktop-section-rail__item--active]="desktopView === 'kitchen'" title="Cuisine" (click)="setDesktopView('kitchen')">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3v18M5 7h7v7H5M12 7h7v11h-7"/></svg><span>Cuisine</span>
+              @if (hasNewKitchenDishes) {
+                <i class="desktop-section-rail__notification" aria-hidden="true"></i>
+              }
+            </button>
+          }
+          <button type="button" data-feature="garden" [class.desktop-section-rail__item--active]="desktopView === 'garden'" title="Jardin" (click)="setDesktopView('garden')">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21V9M12 12c-4 0-7-2.5-7-6 4 0 7 2.5 7 6ZM12 15c4 0 7-2.5 7-6-4 0-7 2.5-7 6Z"/></svg><span>Jardin</span>
+          </button>
+          <button type="button" data-feature="breeding" [class.desktop-section-rail__item--active]="desktopView === 'breeding'" title="Élevage" (click)="setDesktopView('breeding')">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="13" rx="6" ry="7.5"/><path d="M12 5.5c.8-2 2.6-2.8 3.6-1.6 1 1.2-.2 2.6-1.6 3"/></svg><span>Élevage</span>
+          </button>
+
+          @if (game.missionsUnlocked) {
+            <button type="button" data-feature="missions" [class.desktop-section-rail__item--active]="desktopView === 'missions'" title="Missions" (click)="setDesktopView('missions')">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="m14.2 9.8 5-5"/></svg><span>Missions</span>
+              @if (hasNewMissions) {
+                <i class="desktop-section-rail__notification" aria-hidden="true"></i>
+              }
+            </button>
+          }
+          @if (game.primeBoard?.traders?.length) {
+            <button type="button" data-feature="traders" [class.desktop-section-rail__item--active]="desktopView === 'traders'" title="Marchands" (click)="setDesktopView('traders')">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16l-1.2 11H5.2z"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/></svg><span>Marchands</span>
+            </button>
+          }
+
+          @if (game.lottery?.unlocked) {
+            <button type="button" data-feature="lottery" [class.desktop-section-rail__item--active]="desktopView === 'lottery'" title="Loterie" (click)="setDesktopView('lottery')">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v16H3z"/><circle cx="8" cy="9" r="1"/><circle cx="16" cy="9" r="1"/><circle cx="8" cy="15" r="1"/><circle cx="16" cy="15" r="1"/><circle cx="12" cy="12" r="1"/></svg><span>Loterie</span>
+              @if (hasNewLottery) {
+                <i class="desktop-section-rail__notification" aria-hidden="true"></i>
+              }
+            </button>
+          }
+          <button type="button" class="desktop-section-rail__settings" title="Paramètres" aria-label="Paramètres" (click)="openSettings($event)">⚙</button>
+        </nav>
+        <div class="column column-left">
+          <div class="desktop-side-resources">
+            <div><span>Essence</span><strong>{{ formatResourceValue(game.monsterEssence != null ? game.monsterEssence : 0) }}</strong></div>
+            <div><span>Appât</span><strong>{{ formatResourceValue(getResourceAmount('bait')) }}</strong></div>
+            @if (game.primeBoard?.unlocked) {
+              <div [matTooltip]="game.primeBoard?.gainLabel || ''" matTooltipPosition="right">
+                <span>Respect</span><strong>{{ formatResourceValue(game.primeBoard?.respect || 0) }}</strong>
+              </div>
+            }
+            <div><span>Tickets</span><strong>{{ formatResourceValue(getResourceAmount('ticket')) }}</strong></div>
+            <div><span>Pièges</span><strong>{{ formatResourceValue(getResourceAmount('trap')) }}</strong></div>
           </div>
-          <app-sun-area
-            [sunUnlocked]="game.sunUnlocked || false"
-            [sunSpeedFactor]="game.sunSpeedFactor != null ? game.sunSpeedFactor : 1"
-            [sunSizeFactor]="game.sunSizeFactor != null ? game.sunSizeFactor : 1"
-            [sunDamageMultiplier]="game.sunDamageMultiplier"
-            [doubleSun]="game.solarAreaExpanded || false"
-            [activeSolarColor]="game.activeSolarColor || 'yellow'"
-            (clicked)="onSunClicked()">
-          </app-sun-area>
+          @if (game.kitchen?.activeDishes?.length) {
+            <div class="kitchen-buff-bar">
+              @for (dish of game.kitchen?.activeDishes || []; track trackByDish($index, dish)) {
+                <span>{{ dish.name }} {{ formatCooldown(dish.remainingSeconds) }}</span>
+              }
+            </div>
+          }
+          @if (desktopView === 'shop') {
+            @if (sortedShopItemsWithIndex.length > 0) {
+              <div class="shop-items-list">
+                @for (entry of sortedShopItemsWithIndex; track trackByShopEntry($index, entry)) {
+                  <app-shop-item-area
+                    [shopItemSelected]="entry.item"
+                    [itemIndex]="entry.index"
+                    (bought)="onShopItemBought()">
+                  </app-shop-item-area>
+                }
+              </div>
+            }
+            @if (sortedShopItemsWithIndex.length === 0) {
+              <p class="shop-items-empty">Aucun objet à acheter pour le moment.</p>
+            }
+            <ng-container *ngTemplateOutlet="shopTrades"></ng-container>
+          }
+          @if (desktopView === 'characters') {
+            <div class="workers-list">
+              @for (worker of workersAvailable; track trackByIndex(i, worker); let i = $index) {
+                @if (worker.doesAppearInGame) {
+                  <app-worker-area
+                    [workerSelected]="worker"
+                    [workerIndex]="i"
+                    [workersAvailable]="workersAvailable"
+                    [clicks]="game.clicks"
+                    (upgraded)="onWorkerUpgraded()">
+                  </app-worker-area>
+                }
+              }
+            </div>
+          }
+          @if (desktopView === 'houses' && game.housesUnlocked && game.houses && game.houses.length > 0) {
+            <section class="houses-area">
+              <div class="houses-area__header">
+                <h2>Maisons</h2>
+                <button
+                  type="button"
+                  class="houses-area__max-toggle"
+                  [class.houses-area__max-toggle--active]="hideMaxLevelHouses"
+                  [attr.aria-pressed]="hideMaxLevelHouses"
+                  (click)="hideMaxLevelHouses = !hideMaxLevelHouses">
+                  {{ hideMaxLevelHouses ? 'Niveaux max masqués' : 'Masquer les niveaux max' }}
+                </button>
+              </div>
+              <div class="houses-area__filters" aria-label="Filtrer les maisons">
+                <button
+                  type="button"
+                  [class.houses-area__filter--active]="selectedHouseTag === null"
+                  [attr.aria-pressed]="selectedHouseTag === null"
+                  (click)="selectedHouseTag = null">
+                  Toutes
+                </button>
+                @for (tag of houseTags; track tag) {
+                  <button
+                    type="button"
+                    [class.houses-area__filter--active]="selectedHouseTag === tag"
+                    [attr.aria-pressed]="selectedHouseTag === tag"
+                    [style.color]="houseTagColor(tag)"
+                    [style.border-color]="houseTagColor(tag)"
+                    (click)="selectedHouseTag = tag">
+                    {{ tag }}
+                  </button>
+                }
+              </div>
+              @for (house of visibleHouses; track trackByHouse(i, house); let i = $index) {
+                <app-house-area
+                  [style.--house-accent]="houseAccent(house)"
+                  [house]="house"
+                  [essence]="game.monsterEssence || 0"
+                  [respect]="game.primeBoard?.respect || 0"
+                  [resources]="resources"
+                  [collapsed]="!!collapsedHouseIds[house.id]"
+                  (collapsedChange)="toggleHouseCollapsed(house.id)"
+                  (upgraded)="onHouseUpgraded(house.houseIndex != null ? house.houseIndex : i)">
+                </app-house-area>
+              }
+              <button type="button" class="houses-area__resources-button" (click)="toggleResources()">
+                Voir toutes les ressources
+              </button>
+            </section>
+          }
+          @if (desktopView === 'essenceShop' || desktopView === 'quests') {
+            <ng-container *ngTemplateOutlet="workerSectionMenu"></ng-container>
+          }
+
+          @if (desktopView === 'kitchen' && game.kitchen; as kitchen) {
+            <section class="kitchen-panel">
+              <div class="kitchen-panel__filters" aria-label="Filtrer les plats">
+                <button type="button" [class.kitchen-panel__filter--active]="selectedKitchenTag === null" (click)="selectedKitchenTag = null">Tous</button>
+                @for (tag of kitchenTags; track tag) {
+                  <button type="button" [class.kitchen-panel__filter--active]="selectedKitchenTag === tag" (click)="selectedKitchenTag = tag">{{ tag }}</button>
+                }
+              </div>
+              @for (dish of visibleKitchenDishes; track trackByDish($index, dish)) {
+                <article class="kitchen-dish">
+                  <header>
+                    <div class="kitchen-dish__header">
+                      @if (dish.imageUrl) {
+                        <img [src]="dish.imageUrl" [alt]="dish.name" class="kitchen-dish__image" />
+                      }
+                      <h5>{{ dish.name + " (" + dish.stock + ")"}}</h5>
+                    </div>
+                    @if (dish.active) {
+                      <span>{{ formatCooldown(dish.remainingSeconds)}}  </span>
+                    }
+                  </header>
+                  <p>{{ dish.description }} <br> Durée : {{ dish.baseDurationSeconds }} s@if (dish.durationBonusSeconds) {
+                    <span> + {{ dish.durationBonusSeconds }} s</span>
+                  }</p>
+                  <ul>
+                    @for (effect of dish.effectLabels; track trackByPosition($index)) {
+                      <li><b>{{ effect }}</b></li>
+                    }
+                  </ul>
+                  <div class="dishBottomInfo">
+                    <div class="leftInfodish">
+                      <p class="kitchen-dish__costs">
+                        Coût :
+                        @for (ingredient of dish.ingredients; track trackByIngredient($index, ingredient)) {
+                          <span [class.kitchen-dish__cost--missing]="ingredient.owned < ingredient.amount">
+                            {{ ingredient.name }} {{ ingredient.amount }} ({{ formatResourceValue(ingredient.owned) }})
+                          </span>
+                        }
+                      </p>
+                    </div>
+                    <div class="kitchen-dish__actions">
+                      <button type="button" [disabled]="!dish.canCook" (click)="cookDish(dish.id)">Préparer</button>
+                      <button type="button" [disabled]="dish.stock < 1" (click)="useDish(dish.id)">Manger</button>
+                    </div>
+                  </div>
+                </article>
+              }
+            </section>
+          }
+
+          @if (desktopView === 'garden') {
+            <section class="future-section-panel feature-garden">
+              <h2>Jardin</h2>
+              <p>Cette section sera ajoutée prochainement.</p>
+            </section>
+          }
+          @if (desktopView === 'breeding') {
+            <section class="breeding-panel">
+              <h2>Élevage</h2>
+              <nav class="breeding-panel__tabs" aria-label="Élevage">
+                <button type="button" [class.breeding-panel__tab--active]="breedingView === 'monsters'" (click)="breedingView = 'monsters'">Liste des monstres</button>
+                <button type="button" [class.breeding-panel__tab--active]="breedingView === 'eggs'" (click)="breedingView = 'eggs'">Œufs</button>
+              </nav>
+              @if (breedingView === 'monsters') {
+                <div class="breeding-panel__body" aria-label="Liste des monstres"></div>
+              }
+              @if (breedingView === 'eggs') {
+                <div class="breeding-panel__body" aria-label="Œufs"></div>
+              }
+            </section>
+          }
+          @if (desktopView === 'missions' && game.missionsUnlocked) {
+            <ng-container *ngTemplateOutlet="missionsSection"></ng-container>
+          }
+          @if (desktopView === 'traders') {
+            <ng-container *ngTemplateOutlet="tradersSection"></ng-container>
+          }
+
+          @if (desktopView === 'lottery' && game.lottery; as lottery) {
+            <section class="lottery-chest">
+              <div class="infoChest">
+                <h5>Chance : <span class="luck-bonus">{{ lottery.luck }}</span> <p>Chance de coffre par monstre : <strong>{{ formatLuckPercent(lottery.monsterChestChance) }}</strong><span class="luck-bonus"> + {{ formatLuckPercent(lottery.chestLuckBonus) }} (luck)</span></p></h5>
+              </div>
+              <div class="lottery-chest__list">
+                @for (chest of lotteryChests; track chest) {
+                  <div [class.lottery-chest__item]="true">
+                    <div class="chest-header">
+                      <h5>{{ chest.name }}</h5>
+                      <mat-icon
+                        [matTooltip]="getChestDropsTooltip(chest)"
+                        matTooltipClass="chest-tooltip"
+                        aria-label="Informations"
+                        class="info-icon"
+                        >
+                        info
+                      </mat-icon>
+                    </div>
+                    <span>{{ formatResourceValue(getResourceAmount(chest.resourceId)) }} en stock</span>
+                    <button
+                      class="lottery-chest__button"
+                      type="button"
+                      [disabled]="getResourceAmount(chest.resourceId) < 1"
+                      (click)="openLotteryChest(chest.id)">
+                      Ouvrir
+                    </button>
+                  </div>
+                }
+              </div>
+            </section>
+            @if (lottery.unlocked) {
+              <section class="lottery-panel">
+                <div class="loterieHeader">
+                  <div class="texts">
+                    @if (lottery.cooldownRemainingSeconds > 0) {
+                      <p>
+                        Prochaine loterie dans {{ formatCooldown(lottery.cooldownRemainingSeconds) }}
+                      </p>
+                    }
+                    <p>Une tentative toutes les {{ lottery.cooldownMinutes }} minutes.</p>
+                  </div>
+                  <mat-icon
+                    [matTooltip]="getLoterieDropsTooltip()"
+                    matTooltipClass="lottery-tooltip"
+                    aria-label="Informations"
+                    class="info-icon"
+                    >
+                    info
+                  </mat-icon>
+                </div>
+                <button type="button" [disabled]="lottery.cooldownRemainingSeconds > 0" (click)="activateLottery()">
+                  {{ lottery.cooldownRemainingSeconds > 0 ? 'Loterie en recharge…' : 'Activer la loterie' }}
+                </button>
+              </section>
+            }
+          }
+        </div>
+
+        <div
+          class="column column-center"
+          [class.column-center--solar]="game.solarAreaExpanded"
+          [class.column-center--combat]="!!game.currentMonster"
+          (click)="onSolarMainAreaClick($event)">
+          <!-- Lane vaisseaux : uniquement colonne centrale, hauteur aléatoire, mouvement fluide (position = temps) -->
+          @if (game.vesselUnlocked && game.activeVessels && game.activeVessels.length > 0) {
+            <div #vesselLane class="vessel-lane">
+              @for (v of game.activeVessels; track trackByVesselInstance($index, v)) {
+                <div
+                  class="vessel-lane__ship"
+                  [style.transform]="getVesselTransform(v)"
+                  [style.top.%]="v.topPercent"
+                  [title]="v.name"
+                  (mousedown)="onVesselClick(v.instanceId); $event.stopPropagation(); $event.preventDefault()">
+                  @if (v.imageUrl) {
+                    <img [src]="v.imageUrl" [alt]="v.name" class="vessel-lane__img" />
+                  }
+                  @if (!v.imageUrl) {
+                    <span class="vessel-lane__placeholder">{{ v.name.charAt(0) }}</span>
+                  }
+                </div>
+              }
+            </div>
+          }
+          @if (game.streakUnlocked) {
+            <div class="streak-bar">
+              <div class="streak-bar__label">{{ game.streakActive && game.streakDamageMultiplier ? '×' + game.streakDamageMultiplier : '' }}</div>
+              <div class="streak-bar__track">
+                <div
+                  class="streak-bar__fill"
+                  [class.streak-bar__fill--active]="game.streakActive && !game.weaknessBuffActive"
+                  [class.streak-bar__fill--active-weakness]="game.streakActive && game.weaknessBuffActive"
+                  [style.width.%]="streakBarPercent">
+                </div>
+              </div>
+              @if (game.monsterUnlocked) {
+                <div class="monster-gauge">
+                  <div class="monster-gauge__left">
+                    <span class="monster-gauge__label">{{ game.currentMonster ? 'Combat !' : 'Prochain mob :' }}</span>
+                  </div>
+                  <div
+                    class="monster-gauge__darkness-circle"
+                    [style.--encounter-pct]="game.encounterMeterPercent != null ? game.encounterMeterPercent : 0"
+                    title="Plus c'est sombre, plus le monstre est proche">
+                  </div>
+                </div>
+              }
+            </div>
+          }
+          @if (game.powerUnlocked) {
+            <aside class="desktop-power-dock" aria-label="Sorts">
+              <div class="desktop-power-dock__mana" title="Mana">
+                <span>{{ game.mana | formatNumber:0 }} / {{ game.maxMana | formatNumber:0 }}</span>
+              </div>
+              <div class="desktop-power-dock__list">
+                @for (entry of sortedPowersWithIndex; track trackByPowerEntry($index, entry)) {
+                  <app-power-area
+                    [powerSelected]="entry.power"
+                    [powerIndex]="entry.index"
+                    [manaCost]="getPowerManaCost(entry.index)"
+                    [baitCost]="getPowerBaitCost(entry.index)"
+                    [canCast]="getCanCastPower(entry.index)"
+                    [effectRemainingPercent]="getEffectRemainingPercent(entry.power.id)"
+                    (bought)="onPowerBought()"
+                    (cast)="onPowerCast(entry.index)">
+                  </app-power-area>
+                }
+              </div>
+            </aside>
+          }
+          <div
+            class="column-center__main column-center__main--game-ui"
+            [class.column-center__main--solar]="game.solarAreaExpanded"
+            [class.column-center__main--combat]="!!game.currentMonster">
+            <div class="column-center__hud">
+              @if (game.currentMonster) {
+                <div
+                  class="monster-title"
+                  [class.monster-title--boss]="game.currentMonster && (game.currentMonster.isBoss || game.currentMonster.isPrime)"
+                  >
+                  <div class="monster-title__heading">
+                    @if (game.currentMonster.isPrime) {
+                      <span class="monster-title__boss">PRIME</span>
+                    }
+                    @if (game.currentMonster.isBoss && !game.currentMonster.isPrime) {
+                      <span class="monster-title__boss">DANGER BOSS</span>
+                    }
+                    <span class="monster-title__name">
+                      {{ game.currentMonster.name }}@if (game.queuedMonsterCount && game.queuedMonsterCount > 0) {
+                      <span> + {{ game.queuedMonsterCount }}</span>
+                    }
+                  </span>
+                  @if (game.currentMonster.isPlannedCombat || game.currentMonster.isPrime) {
+                    <button
+                      type="button"
+                      class="planned-combat-cancel"
+                      [attr.aria-label]="game.currentMonster.isPrime ? 'Annuler la prime' : 'Annuler le combat scénarisé'"
+                      (click)="game.currentMonster.isPrime ? cancelPrime($event) : cancelPlannedCombat($event)">
+                      Annuler
+                    </button>
+                  }
+                </div>
+                <div class="monster-title__details">
+                  @if (!game.currentMonster.healthBars) {
+                    <span class="monster-title__hp">
+                      {{ formatMonsterHp(game.currentMonster.currentHp) }} HP
+                    </span>
+                  }
+                  @if (game.currentMonster.healthBars; as healthBars) {
+                    <span class="monster-title__hp">{{ formatMonsterHp(getHealthBarTotal(healthBars.current)) }} HP</span>
+                    @if (healthBars.max.click > 0) {
+                      <span class="monster-title__hp monster-title__hp--click">
+                        {{ formatMonsterHp(healthBars.current.click) }}
+                      </span>
+                    }
+                    @if (healthBars.max.afk > 0 && healthBars.max.click > 0) {
+                      <span class="monster-title__hp-separator">+</span>
+                    }
+                    @if (healthBars.max.afk > 0) {
+                      <span class="monster-title__hp monster-title__hp--afk">
+                        {{ formatMonsterHp(healthBars.current.afk) }}
+                      </span>
+                    }
+                    @if (healthBars.max.pet > 0 && (healthBars.max.click > 0 || healthBars.max.afk > 0)) {
+                      <span class="monster-title__hp-separator">+</span>
+                    }
+                    @if (healthBars.max.pet > 0) {
+                      <span class="monster-title__hp monster-title__hp--pet">
+                        {{ formatMonsterHp(healthBars.current.pet) }}
+                      </span>
+                    }
+                  }
+                  @if (game.currentMonster.damageMode === 'click') {
+                    <span>Clics uniquement</span>
+                  }
+                  @if (game.currentMonster.damageMode === 'afk') {
+                    <span>AFK uniquement</span>
+                  }
+                  @if (game.currentMonster.damageMode === 'pet') {
+                    <span>Familier uniquement</span>
+                  }
+                  @if (game.currentMonster.plannedCombatEnemyCount) {
+                    <span>
+                      Ennemi {{ game.currentMonster.plannedCombatEnemyNumber }}/{{ game.currentMonster.plannedCombatEnemyCount }}
+                    </span>
+                  }
+                  <span class="monster-title__timer">{{ game.currentMonster.remainingSeconds }} s</span>
+                </div>
+                @if (!game.currentMonster.healthBars) {
+                  <div class="monster-title__hp-track">
+                    <div class="monster-title__hp-fill" [style.width.%]="getMonsterHpPercent()"></div>
+                  </div>
+                }
+                @if (game.currentMonster.healthBars) {
+                  <div class="monster-title__hp-track monster-title__hp-track--split">
+                    <div class="monster-title__hp-fill monster-title__hp-fill--click" [style.width.%]="getHealthBarPercent('click')"></div>
+                    <div class="monster-title__hp-fill monster-title__hp-fill--afk" [style.width.%]="getHealthBarPercent('afk')"></div>
+                    <div class="monster-title__hp-fill monster-title__hp-fill--pet" [style.width.%]="getHealthBarPercent('pet')"></div>
+                  </div>
+                }
+              </div>
+            }
+            <div class="score-area">
+              <p class="value-click">{{ game.clicks | formatNumber }}</p>
+              <p
+                class="value-auto-per-second"
+                [class.value-auto-per-second--buff]="game.damageBuffActive"
+              >{{ game.valueAutoPerSecond | formatNumber }}/s</p>
+              <p class="value-click-damage">
+                {{ game.clickValue | formatNumber }} dégâts/clic
+              </p>
+            </div>
+          </div>
+          <div class="center-zone-wrapper">
+            @if (!game.monsterUnlocked || !game.currentMonster) {
+              <div
+                id="click-area"
+                (click)="!game.solarAreaExpanded && click($event)">
+              </div>
+            }
+            @if (game.monsterUnlocked && game.currentMonster) {
+              <div
+                id="monster-area"
+                class="monster-area"
+                [class.monster-area--boss]="game.currentMonster.isBoss || game.currentMonster.isPrime"
+                (click)="!game.solarAreaExpanded && click($event)">
+                @if (game.currentMonster.imageUrl) {
+                  <img
+                    [src]="game.currentMonster.imageUrl"
+                    [alt]="game.currentMonster.name"
+                    class="monster-area__img"
+                    />
+                }
+                @if (!game.currentMonster.imageUrl) {
+                  <span class="monster-area__placeholder">{{ game.currentMonster.name.charAt(0) }}</span>
+                }
+                @if (!game.currentMonster.healthBars) {
+                  <div class="monster-area__hp-track">
+                    <div
+                      class="monster-area__hp-fill"
+                      [style.width.%]="getMonsterHpPercent()">
+                    </div>
+                  </div>
+                }
+                @if (game.currentMonster.healthBars) {
+                  <div class="monster-area__hp-track monster-area__hp-track--split">
+                    <div class="monster-area__hp-fill monster-area__hp-fill--click" [style.width.%]="getHealthBarPercent('click')"></div>
+                    <div class="monster-area__hp-fill monster-area__hp-fill--afk" [style.width.%]="getHealthBarPercent('afk')"></div>
+                    <div class="monster-area__hp-fill monster-area__hp-fill--pet" [style.width.%]="getHealthBarPercent('pet')"></div>
+                  </div>
+                }
+                <div class="monster-area__timer">{{ game.currentMonster.remainingSeconds }}s</div>
+              </div>
+            }
+            <app-sun-area
+              [sunUnlocked]="game.sunUnlocked || false"
+              [sunSpeedFactor]="game.sunSpeedFactor != null ? game.sunSpeedFactor : 1"
+              [sunSizeFactor]="game.sunSizeFactor != null ? game.sunSizeFactor : 1"
+              [sunDamageMultiplier]="game.sunDamageMultiplier"
+              [doubleSun]="game.solarAreaExpanded || false"
+              [activeSolarColor]="game.activeSolarColor || 'yellow'"
+              (clicked)="onSunClicked()">
+            </app-sun-area>
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <div class="mobile-shell">
-    <header class="mobile-header">
-      <div class="mobile-header__brand">Clicker</div>
-      <button
-        type="button"
-        class="mobile-header__menu-button"
-        aria-label="Ouvrir le menu"
-        [attr.aria-expanded]="mobileMenuVisible"
-        (click)="toggleMobileMenu($event)">
-        <span></span><span></span><span></span>
-      </button>
-    </header>
+    <div class="mobile-shell">
+      <header class="mobile-header">
+        <div class="mobile-header__brand">Clicker</div>
+        <button
+          type="button"
+          class="mobile-header__menu-button"
+          aria-label="Ouvrir le menu"
+          [attr.aria-expanded]="mobileMenuVisible"
+          (click)="toggleMobileMenu($event)">
+          <span></span><span></span><span></span>
+        </button>
+      </header>
 
-    <nav class="mobile-menu" *ngIf="mobileMenuVisible" aria-label="Navigation principale">
-      <button type="button" [class.mobile-menu__item--active]="mobileScreen === 'game'" (click)="setMobileScreen('game')">Jeu</button>
-      <button type="button" [class.mobile-menu__item--active]="mobileScreen === 'shop'" (click)="setMobileScreen('shop')">Shop</button>
-      <button type="button" [class.mobile-menu__item--active]="mobileScreen === 'workers'" (click)="setMobileScreen('workers')">Persos</button>
-      <button *ngIf="game.missionsUnlocked" type="button" [class.mobile-menu__item--active]="mobileScreen === 'missions'" (click)="setMobileScreen('missions')">Missions</button>
-      <button *ngIf="game.primeBoard?.traders?.length" type="button" [class.mobile-menu__item--active]="mobileScreen === 'traders'" (click)="setMobileScreen('traders')">Marchands</button>
-      <button type="button" [class.mobile-menu__item--active]="mobileScreen === 'settings'" (click)="setMobileScreen('settings')">Paramètres</button>
-    </nav>
+      @if (mobileMenuVisible) {
+        <nav class="mobile-menu" aria-label="Navigation principale">
+          <button type="button" [class.mobile-menu__item--active]="mobileScreen === 'game'" (click)="setMobileScreen('game')">Jeu</button>
+          <button type="button" [class.mobile-menu__item--active]="mobileScreen === 'shop'" (click)="setMobileScreen('shop')">Shop</button>
+          <button type="button" [class.mobile-menu__item--active]="mobileScreen === 'workers'" (click)="setMobileScreen('workers')">Persos</button>
+          @if (game.missionsUnlocked) {
+            <button type="button" [class.mobile-menu__item--active]="mobileScreen === 'missions'" (click)="setMobileScreen('missions')">Missions</button>
+          }
+          @if (game.primeBoard?.traders?.length) {
+            <button type="button" [class.mobile-menu__item--active]="mobileScreen === 'traders'" (click)="setMobileScreen('traders')">Marchands</button>
+          }
+          <button type="button" [class.mobile-menu__item--active]="mobileScreen === 'settings'" (click)="setMobileScreen('settings')">Paramètres</button>
+        </nav>
+      }
 
-    <main class="mobile-content">
-      <section
-        class="mobile-screen mobile-screen--game"
-        [class.mobile-screen--solar]="game.solarAreaExpanded"
-        *ngIf="mobileScreen === 'game'"
-        (click)="onSolarMainAreaClick($event)">
-        <div class="mobile-game-status">
-          <span>{{ game.clicks | formatNumber }}</span>
-          <span>{{ game.valueAutoPerSecond | formatNumber }}/s</span>
-          <span class="mobile-game-status__damage">{{ game.clickValue | formatNumber }} dégâts/clic</span>
-          <span class="mobile-game-status__essence">{{ formatResourceValue(game.monsterEssence != null ? game.monsterEssence : 0) }} essence</span>
-          <span *ngIf="game.primeBoard?.unlocked" [matTooltip]="game.primeBoard?.gainLabel || ''">{{ formatResourceValue(game.primeBoard?.respect || 0) }} respect</span>
-        </div>
-        <div
-          class="mobile-monster-title"
-          [class.mobile-monster-title--boss]="game.currentMonster && (game.currentMonster.isBoss || game.currentMonster.isPrime)"
-          *ngIf="game.currentMonster">
-          <div class="mobile-monster-title__heading">
-            <span class="monster-title__boss" *ngIf="game.currentMonster.isPrime">PRIME</span>
-            <span class="monster-title__boss" *ngIf="game.currentMonster.isBoss && !game.currentMonster.isPrime">DANGER BOSS</span>
-            <span class="mobile-monster-title__name">{{ game.currentMonster.name }}</span>
-            <button
-              *ngIf="game.currentMonster.isPlannedCombat || game.currentMonster.isPrime"
-              type="button"
-              class="planned-combat-cancel"
-              [attr.aria-label]="game.currentMonster.isPrime ? 'Annuler la prime' : 'Annuler le combat scénarisé'"
-              (click)="game.currentMonster.isPrime ? cancelPrime($event) : cancelPlannedCombat($event)">
-              Annuler
-            </button>
-          </div>
-          <div class="mobile-monster-title__details">
-            <strong *ngIf="!game.currentMonster.healthBars">
-              {{ formatMonsterHp(game.currentMonster.currentHp) }} HP
-            </strong>
-            <ng-container *ngIf="game.currentMonster.healthBars as healthBars">
-              <strong>{{ formatMonsterHp(getHealthBarTotal(healthBars.current)) }} HP</strong>
-              <strong class="monster-title__hp--click" *ngIf="healthBars.max.click > 0">
-                {{ formatMonsterHp(healthBars.current.click) }}
-              </strong>
-              <span class="monster-title__hp-separator" *ngIf="healthBars.max.afk > 0 && healthBars.max.click > 0">+</span>
-              <strong class="monster-title__hp--afk" *ngIf="healthBars.max.afk > 0">
-                {{ formatMonsterHp(healthBars.current.afk) }}
-              </strong>
-              <span class="monster-title__hp-separator" *ngIf="healthBars.max.pet > 0 && (healthBars.max.click > 0 || healthBars.max.afk > 0)">+</span>
-              <strong class="monster-title__hp--pet" *ngIf="healthBars.max.pet > 0">
-                {{ formatMonsterHp(healthBars.current.pet) }}
-              </strong>
-            </ng-container>
-            <span *ngIf="game.currentMonster.damageMode === 'click'">Clics uniquement</span>
-            <span *ngIf="game.currentMonster.damageMode === 'afk'">AFK uniquement</span>
-            <span *ngIf="game.currentMonster.damageMode === 'pet'">Familier uniquement</span>
-            <span *ngIf="game.currentMonster.plannedCombatEnemyCount">
-              {{ game.currentMonster.plannedCombatEnemyNumber }}/{{ game.currentMonster.plannedCombatEnemyCount }}
-            </span>
-            <span>{{ game.currentMonster.remainingSeconds }} s</span>
-          </div>
-          <div class="mobile-monster-title__hp-track" *ngIf="!game.currentMonster.healthBars">
-            <div [style.width.%]="getMonsterHpPercent()"></div>
-          </div>
-          <div class="mobile-monster-title__hp-track mobile-monster-title__hp-track--split" *ngIf="game.currentMonster.healthBars">
-            <div class="monster-title__hp-fill--click" [style.width.%]="getHealthBarPercent('click')"></div>
-            <div class="monster-title__hp-fill--afk" [style.width.%]="getHealthBarPercent('afk')"></div>
-            <div class="monster-title__hp-fill--pet" [style.width.%]="getHealthBarPercent('pet')"></div>
-          </div>
-        </div>
-        <div class="mobile-center-zone center-zone-wrapper">
-          <div *ngIf="!game.monsterUnlocked || !game.currentMonster" id="click-area" (click)="!game.solarAreaExpanded && click($event)"></div>
-          <div *ngIf="game.monsterUnlocked && game.currentMonster" id="monster-area" class="monster-area" [class.monster-area--boss]="game.currentMonster.isBoss || game.currentMonster.isPrime" (click)="!game.solarAreaExpanded && click($event)">
-            <img *ngIf="game.currentMonster.imageUrl" [src]="game.currentMonster.imageUrl" [alt]="game.currentMonster.name" class="monster-area__img" />
-            <span *ngIf="!game.currentMonster.imageUrl" class="monster-area__placeholder">{{ game.currentMonster.name.charAt(0) }}</span>
-            <div class="monster-area__hp-track" *ngIf="!game.currentMonster.healthBars"><div class="monster-area__hp-fill" [style.width.%]="getMonsterHpPercent()"></div></div>
-            <div class="monster-area__hp-track monster-area__hp-track--split" *ngIf="game.currentMonster.healthBars">
-              <div class="monster-area__hp-fill monster-area__hp-fill--click" [style.width.%]="getHealthBarPercent('click')"></div>
-              <div class="monster-area__hp-fill monster-area__hp-fill--afk" [style.width.%]="getHealthBarPercent('afk')"></div>
-              <div class="monster-area__hp-fill monster-area__hp-fill--pet" [style.width.%]="getHealthBarPercent('pet')"></div>
+      <main class="mobile-content">
+        @if (mobileScreen === 'game') {
+          <section
+            class="mobile-screen mobile-screen--game"
+            [class.mobile-screen--solar]="game.solarAreaExpanded"
+            (click)="onSolarMainAreaClick($event)">
+            <div class="mobile-game-status">
+              <span>{{ game.clicks | formatNumber }}</span>
+              <span>{{ game.valueAutoPerSecond | formatNumber }}/s</span>
+              <span class="mobile-game-status__damage">{{ game.clickValue | formatNumber }} dégâts/clic</span>
+              <span class="mobile-game-status__essence">{{ formatResourceValue(game.monsterEssence != null ? game.monsterEssence : 0) }} essence</span>
+              @if (game.primeBoard?.unlocked) {
+                <span [matTooltip]="game.primeBoard?.gainLabel || ''">{{ formatResourceValue(game.primeBoard?.respect || 0) }} respect</span>
+              }
             </div>
-            <div class="monster-area__timer">{{ game.currentMonster.remainingSeconds }}s</div>
-          </div>
-        </div>
-        <div class="mobile-sun-lane">
-          <app-sun-area
-            [sunUnlocked]="game.sunUnlocked || false"
-            [sunSpeedFactor]="(game.sunSpeedFactor != null ? game.sunSpeedFactor : 1) * 0.5"
-            [sunSizeFactor]="game.sunSizeFactor != null ? game.sunSizeFactor : 1"
-            [sunDamageMultiplier]="game.sunDamageMultiplier"
-            [doubleSun]="game.solarAreaExpanded || false"
-            [activeSolarColor]="game.activeSolarColor || 'yellow'"
-            [mobileLayout]="true"
-            (clicked)="onSunClicked()">
-          </app-sun-area>
-        </div>
-        <div class="mobile-powers-dock" *ngIf="game.powerUnlocked">
-          <div class="mobile-power-list">
-            <ng-container *ngFor="let entry of sortedPowersWithIndex; trackBy: trackByPowerEntry">
-              <app-power-area
-                [powerSelected]="entry.power"
-                [powerIndex]="entry.index"
-                [manaCost]="getPowerManaCost(entry.index)"
-                [baitCost]="getPowerBaitCost(entry.index)"
-                [canCast]="getCanCastPower(entry.index)"
-                [effectRemainingPercent]="getEffectRemainingPercent(entry.power.id)"
-                (bought)="onPowerBought()"
-                (cast)="onPowerCast(entry.index)">
-              </app-power-area>
-            </ng-container>
-          </div>
-          <div class="mobile-mana">
-            <div class="mana-bar__track"><div class="mana-bar__fill" [style.width.%]="manaBarPercent"></div><span class="mana-label">{{ game.mana | formatNumber:0 }}/{{ game.maxMana | formatNumber:0 }}</span></div>
-          </div>
-        </div>
-      </section>
+            @if (game.currentMonster) {
+              <div
+                class="mobile-monster-title"
+                [class.mobile-monster-title--boss]="game.currentMonster && (game.currentMonster.isBoss || game.currentMonster.isPrime)"
+                >
+                <div class="mobile-monster-title__heading">
+                  @if (game.currentMonster.isPrime) {
+                    <span class="monster-title__boss">PRIME</span>
+                  }
+                  @if (game.currentMonster.isBoss && !game.currentMonster.isPrime) {
+                    <span class="monster-title__boss">DANGER BOSS</span>
+                  }
+                  <span class="mobile-monster-title__name">{{ game.currentMonster.name }}</span>
+                  @if (game.currentMonster.isPlannedCombat || game.currentMonster.isPrime) {
+                    <button
+                      type="button"
+                      class="planned-combat-cancel"
+                      [attr.aria-label]="game.currentMonster.isPrime ? 'Annuler la prime' : 'Annuler le combat scénarisé'"
+                      (click)="game.currentMonster.isPrime ? cancelPrime($event) : cancelPlannedCombat($event)">
+                      Annuler
+                    </button>
+                  }
+                </div>
+                <div class="mobile-monster-title__details">
+                  @if (!game.currentMonster.healthBars) {
+                    <strong>
+                      {{ formatMonsterHp(game.currentMonster.currentHp) }} HP
+                    </strong>
+                  }
+                  @if (game.currentMonster.healthBars; as healthBars) {
+                    <strong>{{ formatMonsterHp(getHealthBarTotal(healthBars.current)) }} HP</strong>
+                    @if (healthBars.max.click > 0) {
+                      <strong class="monster-title__hp--click">
+                        {{ formatMonsterHp(healthBars.current.click) }}
+                      </strong>
+                    }
+                    @if (healthBars.max.afk > 0 && healthBars.max.click > 0) {
+                      <span class="monster-title__hp-separator">+</span>
+                    }
+                    @if (healthBars.max.afk > 0) {
+                      <strong class="monster-title__hp--afk">
+                        {{ formatMonsterHp(healthBars.current.afk) }}
+                      </strong>
+                    }
+                    @if (healthBars.max.pet > 0 && (healthBars.max.click > 0 || healthBars.max.afk > 0)) {
+                      <span class="monster-title__hp-separator">+</span>
+                    }
+                    @if (healthBars.max.pet > 0) {
+                      <strong class="monster-title__hp--pet">
+                        {{ formatMonsterHp(healthBars.current.pet) }}
+                      </strong>
+                    }
+                  }
+                  @if (game.currentMonster.damageMode === 'click') {
+                    <span>Clics uniquement</span>
+                  }
+                  @if (game.currentMonster.damageMode === 'afk') {
+                    <span>AFK uniquement</span>
+                  }
+                  @if (game.currentMonster.damageMode === 'pet') {
+                    <span>Familier uniquement</span>
+                  }
+                  @if (game.currentMonster.plannedCombatEnemyCount) {
+                    <span>
+                      {{ game.currentMonster.plannedCombatEnemyNumber }}/{{ game.currentMonster.plannedCombatEnemyCount }}
+                    </span>
+                  }
+                  <span>{{ game.currentMonster.remainingSeconds }} s</span>
+                </div>
+                @if (!game.currentMonster.healthBars) {
+                  <div class="mobile-monster-title__hp-track">
+                    <div [style.width.%]="getMonsterHpPercent()"></div>
+                  </div>
+                }
+                @if (game.currentMonster.healthBars) {
+                  <div class="mobile-monster-title__hp-track mobile-monster-title__hp-track--split">
+                    <div class="monster-title__hp-fill--click" [style.width.%]="getHealthBarPercent('click')"></div>
+                    <div class="monster-title__hp-fill--afk" [style.width.%]="getHealthBarPercent('afk')"></div>
+                    <div class="monster-title__hp-fill--pet" [style.width.%]="getHealthBarPercent('pet')"></div>
+                  </div>
+                }
+              </div>
+            }
+            <div class="mobile-center-zone center-zone-wrapper">
+              @if (!game.monsterUnlocked || !game.currentMonster) {
+                <div id="click-area" (click)="!game.solarAreaExpanded && click($event)"></div>
+              }
+              @if (game.monsterUnlocked && game.currentMonster) {
+                <div id="monster-area" class="monster-area" [class.monster-area--boss]="game.currentMonster.isBoss || game.currentMonster.isPrime" (click)="!game.solarAreaExpanded && click($event)">
+                  @if (game.currentMonster.imageUrl) {
+                    <img [src]="game.currentMonster.imageUrl" [alt]="game.currentMonster.name" class="monster-area__img" />
+                  }
+                  @if (!game.currentMonster.imageUrl) {
+                    <span class="monster-area__placeholder">{{ game.currentMonster.name.charAt(0) }}</span>
+                  }
+                  @if (!game.currentMonster.healthBars) {
+                    <div class="monster-area__hp-track"><div class="monster-area__hp-fill" [style.width.%]="getMonsterHpPercent()"></div></div>
+                  }
+                  @if (game.currentMonster.healthBars) {
+                    <div class="monster-area__hp-track monster-area__hp-track--split">
+                      <div class="monster-area__hp-fill monster-area__hp-fill--click" [style.width.%]="getHealthBarPercent('click')"></div>
+                      <div class="monster-area__hp-fill monster-area__hp-fill--afk" [style.width.%]="getHealthBarPercent('afk')"></div>
+                      <div class="monster-area__hp-fill monster-area__hp-fill--pet" [style.width.%]="getHealthBarPercent('pet')"></div>
+                    </div>
+                  }
+                  <div class="monster-area__timer">{{ game.currentMonster.remainingSeconds }}s</div>
+                </div>
+              }
+            </div>
+            <div class="mobile-sun-lane">
+              <app-sun-area
+                [sunUnlocked]="game.sunUnlocked || false"
+                [sunSpeedFactor]="(game.sunSpeedFactor != null ? game.sunSpeedFactor : 1) * 0.5"
+                [sunSizeFactor]="game.sunSizeFactor != null ? game.sunSizeFactor : 1"
+                [sunDamageMultiplier]="game.sunDamageMultiplier"
+                [doubleSun]="game.solarAreaExpanded || false"
+                [activeSolarColor]="game.activeSolarColor || 'yellow'"
+                [mobileLayout]="true"
+                (clicked)="onSunClicked()">
+              </app-sun-area>
+            </div>
+            @if (game.powerUnlocked) {
+              <div class="mobile-powers-dock">
+                <div class="mobile-power-list">
+                  @for (entry of sortedPowersWithIndex; track trackByPowerEntry($index, entry)) {
+                    <app-power-area
+                      [powerSelected]="entry.power"
+                      [powerIndex]="entry.index"
+                      [manaCost]="getPowerManaCost(entry.index)"
+                      [baitCost]="getPowerBaitCost(entry.index)"
+                      [canCast]="getCanCastPower(entry.index)"
+                      [effectRemainingPercent]="getEffectRemainingPercent(entry.power.id)"
+                      (bought)="onPowerBought()"
+                      (cast)="onPowerCast(entry.index)">
+                    </app-power-area>
+                  }
+                </div>
+                <div class="mobile-mana">
+                  <div class="mana-bar__track"><div class="mana-bar__fill" [style.width.%]="manaBarPercent"></div><span class="mana-label">{{ game.mana | formatNumber:0 }}/{{ game.maxMana | formatNumber:0 }}</span></div>
+                </div>
+              </div>
+            }
+          </section>
+        }
 
-      <section class="mobile-screen" *ngIf="mobileScreen === 'shop'">
-        <h1 class="mobile-screen__title">Shop</h1>
-        <div class="mobile-items-list">
-          <ng-container *ngFor="let entry of sortedShopItemsWithIndex; trackBy: trackByShopEntry">
-            <app-shop-item-area [shopItemSelected]="entry.item" [itemIndex]="entry.index" (bought)="onShopItemBought()"></app-shop-item-area>
-          </ng-container>
-        </div>
-        <p class="shop-items-empty" *ngIf="sortedShopItemsWithIndex.length === 0">Aucun objet à acheter pour le moment.</p>
-        <ng-container *ngTemplateOutlet="shopTrades"></ng-container>
-      </section>
+        @if (mobileScreen === 'shop') {
+          <section class="mobile-screen">
+            <h1 class="mobile-screen__title">Shop</h1>
+            <div class="mobile-items-list">
+              @for (entry of sortedShopItemsWithIndex; track trackByShopEntry($index, entry)) {
+                <app-shop-item-area [shopItemSelected]="entry.item" [itemIndex]="entry.index" (bought)="onShopItemBought()"></app-shop-item-area>
+              }
+            </div>
+            @if (sortedShopItemsWithIndex.length === 0) {
+              <p class="shop-items-empty">Aucun objet à acheter pour le moment.</p>
+            }
+            <ng-container *ngTemplateOutlet="shopTrades"></ng-container>
+          </section>
+        }
 
-      <section class="mobile-screen" *ngIf="mobileScreen === 'workers'">
-        <h1 class="mobile-screen__title">Personnages</h1>
-        <ng-container *ngTemplateOutlet="workerSectionMenu"></ng-container>
-        <div class="mobile-workers-list" *ngIf="workerView === 'workers'">
-          <ng-container *ngFor="let worker of workersAvailable; let i = index; trackBy: trackByIndex">
-            <app-worker-area *ngIf="worker.doesAppearInGame" [workerSelected]="worker" [workerIndex]="i" [workersAvailable]="workersAvailable" [clicks]="game.clicks" (upgraded)="onWorkerUpgraded()"></app-worker-area>
-          </ng-container>
-        </div>
-      </section>
+        @if (mobileScreen === 'workers') {
+          <section class="mobile-screen">
+            <h1 class="mobile-screen__title">Personnages</h1>
+            <ng-container *ngTemplateOutlet="workerSectionMenu"></ng-container>
+            @if (workerView === 'workers') {
+              <div class="mobile-workers-list">
+                @for (worker of workersAvailable; track trackByIndex(i, worker); let i = $index) {
+                  @if (worker.doesAppearInGame) {
+                    <app-worker-area [workerSelected]="worker" [workerIndex]="i" [workersAvailable]="workersAvailable" [clicks]="game.clicks" (upgraded)="onWorkerUpgraded()"></app-worker-area>
+                  }
+                }
+              </div>
+            }
+          </section>
+        }
 
-      <section class="mobile-screen" *ngIf="mobileScreen === 'missions' && game.missionsUnlocked">
-        <ng-container *ngTemplateOutlet="missionsSection"></ng-container>
-      </section>
-      <section class="mobile-screen" *ngIf="mobileScreen === 'traders'">
-        <ng-container *ngTemplateOutlet="tradersSection"></ng-container>
-      </section>
+        @if (mobileScreen === 'missions' && game.missionsUnlocked) {
+          <section class="mobile-screen">
+            <ng-container *ngTemplateOutlet="missionsSection"></ng-container>
+          </section>
+        }
+        @if (mobileScreen === 'traders') {
+          <section class="mobile-screen">
+            <ng-container *ngTemplateOutlet="tradersSection"></ng-container>
+          </section>
+        }
 
-      <section class="mobile-screen mobile-screen--settings" *ngIf="mobileScreen === 'settings'">
-        <h1 class="mobile-screen__title">Paramètres</h1>
-        <div class="mobile-settings-stats">
-          <div><span>Temps de jeu</span><strong>{{ playTimeLabel }}</strong></div>
-          <div><span>Clics</span><strong>{{ totalManualClicks | formatNumber:0 }}</strong></div>
-          <div><span>Essence</span><strong>{{ formatResourceValue(game.monsterEssence != null ? game.monsterEssence : 0) }}</strong></div>
-        </div>
-        <div class="mobile-save-actions">
-          <button type="button" (click)="exportSave()">Exporter la sauvegarde</button>
-          <label>Importer la sauvegarde<input type="file" (change)="importSave($event)" accept=".json" /></label>
-        </div>
-        <p *ngIf="importError" class="settings-import-error">Erreur lors de l'importation : fichier invalide.</p>
-        <ng-container *ngTemplateOutlet="featureColors"></ng-container>
-        <ng-container *ngTemplateOutlet="devTools"></ng-container>
-        <h2 class="mobile-section-title">Lore déjà vu</h2>
-        <div class="mobile-lore-list" *ngIf="loreHistory.length > 0; else mobileNoLore">
-          <button type="button" *ngFor="let lore of loreHistory; let i = index" [class.mobile-lore-list__item--active]="i === selectedLoreIndex" (click)="selectLore(i)">{{ lore.title }}</button>
-        </div>
-        <ng-template #mobileNoLore><p class="settings-section__empty">Aucun message de lore pour le moment.</p></ng-template>
-        <div class="mobile-lore-detail" *ngIf="selectedLore">
-          <h3>{{ selectedLore.title }}</h3>
-          <p>{{ selectedLore.text }}</p>
-          <img *ngIf="selectedLore.imageUrl" [src]="selectedLore.imageUrl" alt="" />
-        </div>
-      </section>
-    </main>
+        @if (mobileScreen === 'settings') {
+          <section class="mobile-screen mobile-screen--settings">
+            <h1 class="mobile-screen__title">Paramètres</h1>
+            <div class="mobile-settings-stats">
+              <div><span>Temps de jeu</span><strong>{{ playTimeLabel }}</strong></div>
+              <div><span>Clics</span><strong>{{ totalManualClicks | formatNumber:0 }}</strong></div>
+              <div><span>Essence</span><strong>{{ formatResourceValue(game.monsterEssence != null ? game.monsterEssence : 0) }}</strong></div>
+            </div>
+            <div class="mobile-save-actions">
+              <button type="button" (click)="exportSave()">Exporter la sauvegarde</button>
+              <label>Importer la sauvegarde<input type="file" (change)="importSave($event)" accept=".json" /></label>
+            </div>
+            @if (importError) {
+              <p class="settings-import-error">Erreur lors de l'importation : fichier invalide.</p>
+            }
+            <ng-container *ngTemplateOutlet="featureColors"></ng-container>
+            <ng-container *ngTemplateOutlet="devTools"></ng-container>
+            <h2 class="mobile-section-title">Lore déjà vu</h2>
+            @if (loreHistory.length > 0) {
+              <div class="mobile-lore-list">
+                @for (lore of loreHistory; track lore; let i = $index) {
+                  <button type="button" [class.mobile-lore-list__item--active]="i === selectedLoreIndex" (click)="selectLore(i)">{{ lore.title }}</button>
+                }
+              </div>
+            } @else {
+              <p class="settings-section__empty">Aucun message de lore pour le moment.</p>
+            }
+            @if (selectedLore) {
+              <div class="mobile-lore-detail">
+                <h3>{{ selectedLore.title }}</h3>
+                <p>{{ selectedLore.text }}</p>
+                @if (selectedLore.imageUrl) {
+                  <img [src]="selectedLore.imageUrl" alt="" />
+                }
+              </div>
+            }
+          </section>
+        }
+      </main>
 
-    <nav class="mobile-tab-bar" [class.mobile-tab-bar--missions]="game.missionsUnlocked" aria-label="Navigation mobile">
-      <button type="button" [class.mobile-tab-bar__item--active]="mobileScreen === 'game'" (click)="setMobileScreen('game')"><span>◉</span>Jeu</button>
-      <button type="button" [class.mobile-tab-bar__item--active]="mobileScreen === 'shop'" (click)="setMobileScreen('shop')"><span>▣</span>Shop</button>
-      <button type="button" [class.mobile-tab-bar__item--active]="mobileScreen === 'workers'" (click)="setMobileScreen('workers')"><span>♙</span>Persos</button>
-      <button *ngIf="game.missionsUnlocked" type="button" [class.mobile-tab-bar__item--active]="mobileScreen === 'missions'" (click)="setMobileScreen('missions')"><span>◎</span>Missions<i *ngIf="hasNewMissions" class="mobile-tab-bar__notification" aria-hidden="true"></i></button>
+      <nav class="mobile-tab-bar" [class.mobile-tab-bar--missions]="game.missionsUnlocked" aria-label="Navigation mobile">
+        <button type="button" [class.mobile-tab-bar__item--active]="mobileScreen === 'game'" (click)="setMobileScreen('game')"><span>◉</span>Jeu</button>
+        <button type="button" [class.mobile-tab-bar__item--active]="mobileScreen === 'shop'" (click)="setMobileScreen('shop')"><span>▣</span>Shop</button>
+        <button type="button" [class.mobile-tab-bar__item--active]="mobileScreen === 'workers'" (click)="setMobileScreen('workers')"><span>♙</span>Persos</button>
+        @if (game.missionsUnlocked) {
+          <button type="button" [class.mobile-tab-bar__item--active]="mobileScreen === 'missions'" (click)="setMobileScreen('missions')"><span>◎</span>Missions@if (hasNewMissions) {
+          <i class="mobile-tab-bar__notification" aria-hidden="true"></i>
+        }</button>
+      }
       <button type="button" [class.mobile-tab-bar__item--active]="mobileScreen === 'settings'" (click)="setMobileScreen('settings')"><span>⚙</span>Paramètres</button>
     </nav>
   </div>
 </div>
 
-<div class="resources-overlay" *ngIf="resourcesVisible" (click)="toggleResources()">
-  <section class="resources-dialog" (click)="$event.stopPropagation()">
-    <div class="resources-dialog__header">
-      <h2>Toutes les ressources</h2>
-      <button type="button" aria-label="Fermer" (click)="toggleResources()">✕</button>
-    </div>
-    <div class="resources-dialog__list">
-      <article class="resource-row" *ngFor="let resource of resources; trackBy: trackByResource">
-        <div>
-          <strong>{{ resource.name }}</strong>
-          <p>{{ resource.description }}</p>
-        </div>
-        <span>{{ resource.amount | formatNumber:0 }}</span>
-      </article>
-    </div>
-  </section>
-</div>
-
-<app-lore-message
-  *ngIf="loreVisible"
-  [title]="loreTitle"
-  [text]="loreText"
-  [imageUrl]="loreImageUrl"
-  (closed)="onLoreClosed()">
-</app-lore-message>
-
-<div
-  class="settings-overlay"
-  *ngIf="settingsVisible"
-  (click)="closeSettings()">
-  <div
-    class="settings-dialog"
-    (click)="$event.stopPropagation()">
-    <div class="settings-dialog__header">
-      <h2 class="settings-dialog__title">Paramètres &amp; récap</h2>
-      <button
-        type="button"
-        class="settings-dialog__close"
-        (click)="closeSettings()">
-        ✕
-      </button>
-    </div>
-
-    <nav class="settings-tabs" role="tablist" aria-label="Sections des paramètres">
-      <button type="button" role="tab" [attr.aria-selected]="settingsTab === 'items'" [class.settings-tabs__item--active]="settingsTab === 'items'" (click)="setSettingsTab('items')">Objets achetés</button>
-      <button type="button" role="tab" [attr.aria-selected]="settingsTab === 'lore'" [class.settings-tabs__item--active]="settingsTab === 'lore'" (click)="setSettingsTab('lore')">Lore</button>
-      <button type="button" role="tab" [attr.aria-selected]="settingsTab === 'resources'" [class.settings-tabs__item--active]="settingsTab === 'resources'" (click)="setSettingsTab('resources')">Ressources</button>
-      <button type="button" role="tab" [attr.aria-selected]="settingsTab === 'bestiary'" [class.settings-tabs__item--active]="settingsTab === 'bestiary'" (click)="setSettingsTab('bestiary')">Bestiaire</button>
-      <button type="button" role="tab" [attr.aria-selected]="settingsTab === 'stats'" [class.settings-tabs__item--active]="settingsTab === 'stats'" (click)="setSettingsTab('stats')">Statistiques</button>
-      <button type="button" role="tab" [attr.aria-selected]="settingsTab === 'options'" [class.settings-tabs__item--active]="settingsTab === 'options'" (click)="setSettingsTab('options')">Options</button>
-    </nav>
-
-    <div class="settings-dialog__content">
-      <section class="settings-section" *ngIf="settingsTab === 'items'">
-        <h3 class="settings-section__title">Items achetés</h3>
-        <div class="settings-items-grid" *ngIf="boughtShopItemsWithIndex.length > 0; else noItems">
-          <ng-container *ngFor="let entry of boughtShopItemsWithIndex; trackBy: trackByShopEntry">
-            <app-shop-item-area
-              [shopItemSelected]="entry.item"
-              [itemIndex]="entry.index"
-              (bought)="onShopItemBought()">
-            </app-shop-item-area>
-          </ng-container>
-        </div>
-        <ng-template #noItems>
-          <p class="settings-section__empty">
-            Aucun item acheté pour le moment.
-          </p>
-        </ng-template>
-      </section>
-
-      <section class="settings-section settings-section--lore" *ngIf="settingsTab === 'lore'">
-        <h3 class="settings-section__title">Lore déjà vu</h3>
-        <div class="settings-lore">
-          <div class="settings-lore__list" *ngIf="loreHistory.length > 0; else noLore">
-            <button
-              type="button"
-              class="settings-lore__item"
-              *ngFor="let lore of loreHistory; let i = index"
-              [class.settings-lore__item--active]="i === selectedLoreIndex"
-              (click)="selectLore(i)">
-              <span class="settings-lore__item-title">{{ lore.title }}</span>
-            </button>
-          </div>
-          <ng-template #noLore>
-            <p class="settings-section__empty">
-              Aucun message de lore pour le moment.
-            </p>
-          </ng-template>
-
-          <div class="settings-lore__detail" *ngIf="selectedLore">
-            <h4 class="settings-lore__detail-title">{{ selectedLore.title }}</h4>
-            <p class="settings-lore__detail-text">
-              {{ selectedLore.text }}
-            </p>
-            <img class="settings-lore__detail-image" src={{selectedLore.imageUrl}}/>
-          </div>
-        </div>
-      </section>
-
-      <section class="settings-section" *ngIf="settingsTab === 'resources'">
-        <h3 class="settings-section__title">Liste des ressources</h3>
-        <div class="settings-resource-list">
-          <article class="settings-resource-row" *ngFor="let resource of resources; trackBy: trackByResource">
-            <div><strong>{{ resource.name }}</strong><p>{{ resource.description }}</p></div>
+@if (resourcesVisible) {
+  <div class="resources-overlay" (click)="toggleResources()">
+    <section class="resources-dialog" (click)="$event.stopPropagation()">
+      <div class="resources-dialog__header">
+        <h2>Toutes les ressources</h2>
+        <button type="button" aria-label="Fermer" (click)="toggleResources()">✕</button>
+      </div>
+      <div class="resources-dialog__list">
+        @for (resource of resources; track trackByResource($index, resource)) {
+          <article class="resource-row">
+            <div>
+              <strong>{{ resource.name }}</strong>
+              <p>{{ resource.description }}</p>
+            </div>
             <span>{{ resource.amount | formatNumber:0 }}</span>
           </article>
-        </div>
-      </section>
+        }
+      </div>
+    </section>
+  </div>
+}
 
-      <section class="settings-section" *ngIf="settingsTab === 'bestiary'">
-        <h3 class="settings-section__title">Bestiaire</h3>
-        <div class="settings-bestiary">
-          <article class="settings-bestiary__item" *ngFor="let monster of bestiaryMonsters">
-            <div class="settings-bestiary__heading">
-              <strong>{{ monster.name }}</strong>
-              <span>{{ getMonsterKillCount(monster.id) }} victoire(s)</span>
+@if (loreVisible) {
+  <app-lore-message
+    [title]="loreTitle"
+    [text]="loreText"
+    [imageUrl]="loreImageUrl"
+    (closed)="onLoreClosed()">
+  </app-lore-message>
+}
+
+@if (settingsVisible) {
+  <div
+    class="settings-overlay"
+    (click)="closeSettings()">
+    <div
+      class="settings-dialog"
+      (click)="$event.stopPropagation()">
+      <div class="settings-dialog__header">
+        <h2 class="settings-dialog__title">Paramètres &amp; récap</h2>
+        <button
+          type="button"
+          class="settings-dialog__close"
+          (click)="closeSettings()">
+          ✕
+        </button>
+      </div>
+      <nav class="settings-tabs" role="tablist" aria-label="Sections des paramètres">
+        <button type="button" role="tab" [attr.aria-selected]="settingsTab === 'items'" [class.settings-tabs__item--active]="settingsTab === 'items'" (click)="setSettingsTab('items')">Objets achetés</button>
+        <button type="button" role="tab" [attr.aria-selected]="settingsTab === 'lore'" [class.settings-tabs__item--active]="settingsTab === 'lore'" (click)="setSettingsTab('lore')">Lore</button>
+        <button type="button" role="tab" [attr.aria-selected]="settingsTab === 'resources'" [class.settings-tabs__item--active]="settingsTab === 'resources'" (click)="setSettingsTab('resources')">Ressources</button>
+        <button type="button" role="tab" [attr.aria-selected]="settingsTab === 'bestiary'" [class.settings-tabs__item--active]="settingsTab === 'bestiary'" (click)="setSettingsTab('bestiary')">Bestiaire</button>
+        <button type="button" role="tab" [attr.aria-selected]="settingsTab === 'stats'" [class.settings-tabs__item--active]="settingsTab === 'stats'" (click)="setSettingsTab('stats')">Statistiques</button>
+        <button type="button" role="tab" [attr.aria-selected]="settingsTab === 'options'" [class.settings-tabs__item--active]="settingsTab === 'options'" (click)="setSettingsTab('options')">Options</button>
+      </nav>
+      <div class="settings-dialog__content">
+        @if (settingsTab === 'items') {
+          <section class="settings-section">
+            <h3 class="settings-section__title">Items achetés</h3>
+            @if (boughtShopItemsWithIndex.length > 0) {
+              <div class="settings-items-grid">
+                @for (entry of boughtShopItemsWithIndex; track trackByShopEntry($index, entry)) {
+                  <app-shop-item-area
+                    [shopItemSelected]="entry.item"
+                    [itemIndex]="entry.index"
+                    (bought)="onShopItemBought()">
+                  </app-shop-item-area>
+                }
+              </div>
+            } @else {
+              <p class="settings-section__empty">
+                Aucun item acheté pour le moment.
+              </p>
+            }
+          </section>
+        }
+        @if (settingsTab === 'lore') {
+          <section class="settings-section settings-section--lore">
+            <h3 class="settings-section__title">Lore déjà vu</h3>
+            <div class="settings-lore">
+              @if (loreHistory.length > 0) {
+                <div class="settings-lore__list">
+                  @for (lore of loreHistory; track lore; let i = $index) {
+                    <button
+                      type="button"
+                      class="settings-lore__item"
+                      [class.settings-lore__item--active]="i === selectedLoreIndex"
+                      (click)="selectLore(i)">
+                      <span class="settings-lore__item-title">{{ lore.title }}</span>
+                    </button>
+                  }
+                </div>
+              } @else {
+                <p class="settings-section__empty">
+                  Aucun message de lore pour le moment.
+                </p>
+              }
+              @if (selectedLore) {
+                <div class="settings-lore__detail">
+                  <h4 class="settings-lore__detail-title">{{ selectedLore.title }}</h4>
+                  <p class="settings-lore__detail-text">
+                    {{ selectedLore.text }}
+                  </p>
+                  <img class="settings-lore__detail-image" src={{selectedLore.imageUrl}}/>
+                </div>
+              }
             </div>
-            <p>{{ monster.description }}</p>
-            <div class="settings-bestiary__meta">Apparition : {{ monster.probabilityToSpawn || 0 }}%</div>
-            <div class="settings-bestiary__drops">
-              <span *ngFor="let drop of monster.drops">{{ getMonsterDropName(drop.resourceId) }} ×{{ drop.amount }}</span>
-              <em *ngIf="!monster.drops || monster.drops.length === 0">Aucun drop connu</em>
+          </section>
+        }
+        @if (settingsTab === 'resources') {
+          <section class="settings-section">
+            <h3 class="settings-section__title">Liste des ressources</h3>
+            <div class="settings-resource-list">
+              @for (resource of resources; track trackByResource($index, resource)) {
+                <article class="settings-resource-row">
+                  <div><strong>{{ resource.name }}</strong><p>{{ resource.description }}</p></div>
+                  <span>{{ resource.amount | formatNumber:0 }}</span>
+                </article>
+              }
             </div>
-          </article>
-        </div>
-      </section>
-
-      <section class="settings-section" *ngIf="settingsTab === 'stats'">
-        <h3 class="settings-section__title">Statistiques</h3>
-        <div class="settings-stats-row">
-          <div class="settings-stat"><span class="settings-stat__label">Temps de jeu</span><span class="settings-stat__value">{{ playTimeLabel }}</span></div>
-          <div class="settings-stat"><span class="settings-stat__label">Clics (zone)</span><span class="settings-stat__value">{{ totalManualClicks | formatNumber:0 }}</span></div>
-          <div class="settings-stat"><span class="settings-stat__label">Essence</span><span class="settings-stat__value">{{ formatResourceValue(game.monsterEssence != null ? game.monsterEssence : 0) }}</span></div>
-          <div class="settings-stat"><span class="settings-stat__label">Monstres vaincus</span><span class="settings-stat__value">{{ totalMonsterKills | formatNumber:0 }}</span></div>
-        </div>
-      </section>
-
-      <section class="settings-section" *ngIf="settingsTab === 'options'">
-        <h3 class="settings-section__title">Options</h3>
-        <div class="settings-save-section">
-          <button type="button" class="settings-save-btn" (click)="exportSave()">Exporter la sauvegarde</button>
-          <label class="settings-import-label"><input type="file" (change)="importSave($event)" accept=".json" style="display: none;" />Importer la sauvegarde</label>
-        </div>
-        <div *ngIf="importError" class="settings-import-error">Erreur lors de l'importation : fichier invalide.</div>
-        <label class="settings-option"><input type="checkbox" [checked]="game.showDamageNumbers" (change)="setShowDamageNumbers($any($event.target).checked)" /> Afficher les dégâts à chaque clic</label>
-        <label class="settings-option"><input type="checkbox" [checked]="game.showCriticalHitNumbers" (change)="setShowCriticalHitNumbers($any($event.target).checked)" /> Afficher les coups critiques</label>
-        <ng-container *ngTemplateOutlet="featureColors"></ng-container>
-        <ng-container *ngTemplateOutlet="devTools"></ng-container>
-      </section>
+          </section>
+        }
+        @if (settingsTab === 'bestiary') {
+          <section class="settings-section">
+            <h3 class="settings-section__title">Bestiaire</h3>
+            <div class="settings-bestiary">
+              @for (monster of bestiaryMonsters; track monster) {
+                <article class="settings-bestiary__item">
+                  <div class="settings-bestiary__heading">
+                    <strong>{{ monster.name }}</strong>
+                    <span>{{ getMonsterKillCount(monster.id) }} victoire(s)</span>
+                  </div>
+                  <p>{{ monster.description }}</p>
+                  <div class="settings-bestiary__meta">Apparition : {{ monster.probabilityToSpawn || 0 }}%</div>
+                  <div class="settings-bestiary__drops">
+                    @for (drop of monster.drops; track drop) {
+                      <span>{{ getMonsterDropName(drop.resourceId) }} ×{{ drop.amount }}</span>
+                    }
+                    @if (!monster.drops || monster.drops.length === 0) {
+                      <em>Aucun drop connu</em>
+                    }
+                  </div>
+                </article>
+              }
+            </div>
+          </section>
+        }
+        @if (settingsTab === 'stats') {
+          <section class="settings-section">
+            <h3 class="settings-section__title">Statistiques</h3>
+            <div class="settings-stats-row">
+              <div class="settings-stat"><span class="settings-stat__label">Temps de jeu</span><span class="settings-stat__value">{{ playTimeLabel }}</span></div>
+              <div class="settings-stat"><span class="settings-stat__label">Clics (zone)</span><span class="settings-stat__value">{{ totalManualClicks | formatNumber:0 }}</span></div>
+              <div class="settings-stat"><span class="settings-stat__label">Essence</span><span class="settings-stat__value">{{ formatResourceValue(game.monsterEssence != null ? game.monsterEssence : 0) }}</span></div>
+              <div class="settings-stat"><span class="settings-stat__label">Monstres vaincus</span><span class="settings-stat__value">{{ totalMonsterKills | formatNumber:0 }}</span></div>
+            </div>
+          </section>
+        }
+        @if (settingsTab === 'options') {
+          <section class="settings-section">
+            <h3 class="settings-section__title">Options</h3>
+            <div class="settings-save-section">
+              <button type="button" class="settings-save-btn" (click)="exportSave()">Exporter la sauvegarde</button>
+              <label class="settings-import-label"><input type="file" (change)="importSave($event)" accept=".json" style="display: none;" />Importer la sauvegarde</label>
+            </div>
+            @if (importError) {
+              <div class="settings-import-error">Erreur lors de l'importation : fichier invalide.</div>
+            }
+            <label class="settings-option"><input type="checkbox" [checked]="game.showDamageNumbers" (change)="setShowDamageNumbers($any($event.target).checked)" /> Afficher les dégâts à chaque clic</label>
+            <label class="settings-option"><input type="checkbox" [checked]="game.showCriticalHitNumbers" (change)="setShowCriticalHitNumbers($any($event.target).checked)" /> Afficher les coups critiques</label>
+            <ng-container *ngTemplateOutlet="featureColors"></ng-container>
+            <ng-container *ngTemplateOutlet="devTools"></ng-container>
+          </section>
+        }
+      </div>
     </div>
   </div>
-</div>
+}

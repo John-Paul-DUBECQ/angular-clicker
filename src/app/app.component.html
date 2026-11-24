@@ -256,7 +256,7 @@
             </mat-icon>
             </div>
             <span>
-              {{ trade.costs?.length
+              {{ trade.costs.length
                 ? 'Coût : ' + formatResourceValue(trade.costs[0].amount) + ' ' + getResourceName(trade.costs[0].resourceId) + ' (' + formatResourceValue(getResourceAmount(trade.costs[0].resourceId)) + ')'
                 : trade.goldCost != null ? 'Coût : ' + formatResourceValue(trade.goldCost) + ' or' : 'Aucun coût' }}
             </span>
@@ -264,12 +264,12 @@
             <button
               type="button"
               class="trader-shop__button"
-              [disabled]="!trade.canBuy || (trade.costs?.length && getResourceAmount(trade.costs[0].resourceId) < trade.costs[0].amount)"
+              [disabled]="!trade.canBuy || (trade.costs.length && getResourceAmount(trade.costs[0].resourceId) < trade.costs[0].amount)"
               (click)="buyPrimeTrade(trade)">
               Acheter <br> {{ trade.remaining + ' / ' + trade.maxPerVisit }}
             </button>
             
-            <strong>{{ trade.resourceRewards?.length && trade.resourceRewards[0].owned != null
+            <strong>{{ trade.resourceRewards.length && trade.resourceRewards[0].owned != null
               ? 'Reçu : ' + formatResourceValue(trade.resourceRewards[0].amount) + ' ' + trade.resourceRewards[0].name + ' (' + formatResourceValue(trade.resourceRewards[0].owned) + ')'
               : trade.goldReward != 0 ? 'Reçu : ' + formatResourceValue(trade.goldReward) + ' or' : trade.essenceReward != 0 ? 'Reçu : ' + formatResourceValue(trade.essenceReward) + ' essence' : 'Aucun reçu' }}</strong>
           </div>

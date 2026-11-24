@@ -239,7 +239,7 @@ export class GameStateService {
         * streakMult) / TICKS_PER_SECOND;
     let monsterDied = false;
     if (this.monsterState.hasCurrentMonster()) {
-      monsterDied = this.monsterState.dealDamage(autoPerTick, workers, workersAvailable, 'afk');
+      monsterDied = this.monsterState.dealDamage(autoPerTick, workers, workersAvailable, this.getShopMult, 'afk');
     } else {
       this.resources.addClicks(autoPerTick);
     }
@@ -252,7 +252,7 @@ export class GameStateService {
       this.houseState.getPrimeHouseBonuses(),
       this.workerState.getBaseProductionPerSecond()
     );
-    this.monsterState.tick(workers, workersAvailable, solarBonuses.monsterSpawnRateMultiplier);
+    this.monsterState.tick(workers, workersAvailable, this.getShopMult, solarBonuses.monsterSpawnRateMultiplier);
     this.houseState.tick(1 / TICKS_PER_SECOND, () => {
       this.resources.addResource('bait', 1);
     });
@@ -494,7 +494,7 @@ export class GameStateService {
       } else if (this.showDamageNumbers) {
         this.showDamage(damage, clientX, clientY);
       }
-      if (this.monsterState.dealDamage(damage, workers, workersAvailable, 'click')) {
+      if (this.monsterState.dealDamage(damage, workers, workersAvailable, this.getShopMult, 'click')) {
         this.saveToLocalStorage();
       }
       this.resources.addManaOnClick(0.5 + solarBonuses.manaPerClickBonus);
@@ -690,7 +690,7 @@ export class GameStateService {
   cancelPrime(): boolean {
     const workers = this.workerState.getWorkers();
     const workersAvailable = this.workerState.getWorkersAvailable();
-    const cancelled = this.monsterState.cancelPrime(workers, workersAvailable);
+    const cancelled = this.monsterState.cancelPrime(workers, workersAvailable, this.getShopMult);
     if (!cancelled) return false;
     this.primeState.endFight();
     this.saveToLocalStorage();
@@ -828,6 +828,7 @@ export class GameStateService {
       this.shopState.getUnlockBonus('vessel-rush', 'count')
     );
     this.powerState.castPower(
+      this.getShopMult,
       powerIndex,
       cost ?? undefined,
       (count, durationSeconds) => this.vesselState.summonVesselRush(
@@ -842,7 +843,7 @@ export class GameStateService {
   clickVessel(instanceId: string): void {
     const workers = this.workerState.getWorkers();
     const workersAvailable = this.workerState.getWorkersAvailable();
-    this.vesselState.clickVessel(instanceId, workers, workersAvailable);
+    this.vesselState.clickVessel(instanceId, workers, workersAvailable, this.getShopMult);
   }
 
   startPlannedCombat(combatId: string): boolean {
@@ -856,7 +857,7 @@ export class GameStateService {
   cancelPlannedCombat(): boolean {
     const workers = this.workerState.getWorkers();
     const workersAvailable = this.workerState.getWorkersAvailable();
-    const cancelled = this.monsterState.cancelPlannedCombat(workers, workersAvailable);
+    const cancelled = this.monsterState.cancelPlannedCombat(workers, workersAvailable, this.getShopMult);
     if (cancelled) this.saveToLocalStorage();
     return cancelled;
   }

@@ -213,7 +213,7 @@ describe('GameStateService solar bonuses', () => {
     const expectedDamage = (clickValue + autoPerSecond * 1.05 * 0.003) * 2 * 1.05;
 
     spyOn(Math, 'random').and.returnValue(0);
-    monsterState.forceSpawnNext(workers, workersAvailable);
+    monsterState.forceSpawnNext(workers, workersAvailable, getShopMult);
     const monsterBefore = monsterState.getCurrentMonsterView(workers, workersAvailable);
     expect(monsterBefore).not.toBeNull();
 
@@ -236,7 +236,7 @@ describe('GameStateService solar bonuses', () => {
     monsterState.setSelectedBiome('beach');
 
     spyOn(Math, 'random').and.returnValue(0.99);
-    monsterState.forceSpawnNext(workerState.getWorkers(), workersAvailable);
+    monsterState.forceSpawnNext(workerState.getWorkers(), workersAvailable, getShopMult);
 
     const monster = monsterState.getCurrentMonsterView(workerState.getWorkers(), workersAvailable);
     expect(monster).not.toBeNull();
@@ -252,7 +252,7 @@ describe('GameStateService solar bonuses', () => {
     workerState.setWorkers([alchemist, explorer]);
 
     spyOn(Math, 'random').and.returnValue(0.99);
-    monsterState.forceSpawnNext(workerState.getWorkers(), workersAvailable);
+    monsterState.forceSpawnNext(workerState.getWorkers(), workersAvailable, getShopMult);
 
     const monster = monsterState.getCurrentMonsterView(workerState.getWorkers(), workersAvailable);
     expect(monster?.monsterId).toBe('monster1');
@@ -269,7 +269,7 @@ describe('GameStateService solar bonuses', () => {
     });
     monsterState.setSelectedBiome('mine');
 
-    monsterState.forceSpawnNext(workerState.getWorkers(), workersAvailable);
+    monsterState.forceSpawnNext(workerState.getWorkers(), workersAvailable, getShopMult);
 
     expect(monsterState.getCurrentMonsterView(workerState.getWorkers(), workersAvailable)).toBeNull();
   });
@@ -375,7 +375,7 @@ describe('GameStateService solar bonuses', () => {
     expect(firstEnemy?.plannedCombatEnemyNumber).toBe(1);
     expect(firstEnemy?.plannedCombatEnemyCount).toBe(2);
 
-    expect(monsterState.dealDamage(1e15, workerState.getWorkers(), workersAvailable)).toBeTrue();
+    expect(monsterState.dealDamage(1e15, workerState.getWorkers(), workersAvailable, getShopMult)).toBeTrue();
 
     const secondEnemy = monsterState.getCurrentMonsterView(workerState.getWorkers(), workersAvailable);
     expect(secondEnemy?.name).toBe('Mosh');
@@ -384,7 +384,7 @@ describe('GameStateService solar bonuses', () => {
     expect(secondEnemy?.remainingSeconds).toBe(firstEnemy?.remainingSeconds);
     expect(monsterState.getPlannedCombatWins()['planned-forest-03']).toBeUndefined();
 
-    expect(monsterState.dealDamage(4e14, workerState.getWorkers(), workersAvailable)).toBeTrue();
+    expect(monsterState.dealDamage(4e14, workerState.getWorkers(), workersAvailable, getShopMult)).toBeTrue();
     expect(monsterState.getCurrentMonsterView(workerState.getWorkers(), workersAvailable)).toBeNull();
     expect(monsterState.getPlannedCombatWins()['planned-forest-03']).toBe(1);
   });
@@ -482,18 +482,18 @@ describe('GameStateService solar bonuses', () => {
       combat.damageMode = 'click';
       expect(gameState.startPlannedCombat(combat.id)).toBeTrue();
       const initialHp = monsterState.getCurrentMonsterView(workers, workersAvailable)!.currentHp;
-      expect(monsterState.dealDamage(1e5, workers, workersAvailable, 'afk')).toBeFalse();
+      expect(monsterState.dealDamage(1e5, workers, workersAvailable, getShopMult, 'afk')).toBeFalse();
       expect(monsterState.getCurrentMonsterView(workers, workersAvailable)!.currentHp).toBe(initialHp);
-      expect(monsterState.dealDamage(1e5, workers, workersAvailable, 'click')).toBeFalse();
+      expect(monsterState.dealDamage(1e5, workers, workersAvailable, getShopMult, 'click')).toBeFalse();
       expect(monsterState.getCurrentMonsterView(workers, workersAvailable)!.currentHp).toBe(initialHp - 1e5);
       expect(gameState.cancelPlannedCombat()).toBeTrue();
 
       combat.damageMode = 'afk';
       expect(gameState.startPlannedCombat(combat.id)).toBeTrue();
       const afkInitialHp = monsterState.getCurrentMonsterView(workers, workersAvailable)!.currentHp;
-      expect(monsterState.dealDamage(1e5, workers, workersAvailable, 'click')).toBeFalse();
+      expect(monsterState.dealDamage(1e5, workers, workersAvailable, getShopMult, 'click')).toBeFalse();
       expect(monsterState.getCurrentMonsterView(workers, workersAvailable)!.currentHp).toBe(afkInitialHp);
-      expect(monsterState.dealDamage(1e5, workers, workersAvailable, 'afk')).toBeFalse();
+      expect(monsterState.dealDamage(1e5, workers, workersAvailable, getShopMult, 'afk')).toBeFalse();
       expect(monsterState.getCurrentMonsterView(workers, workersAvailable)!.currentHp).toBe(afkInitialHp - 1e5);
       expect(gameState.cancelPlannedCombat()).toBeTrue();
     } finally {

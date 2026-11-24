@@ -8,7 +8,7 @@ import { WEAKNESS_POWER_ID, weaknessPowerEffect } from '../powers/effects/weakne
 import { SPAWN_MOB_POWER_ID, spawnMobEffect } from '../powers/effects/spawn-mob-effect';
 import { MONSTER_TIME_POWER_ID, monsterTimeEffect } from '../powers/effects/monster-time-effect';
 import { MonsterStateService } from './monster-state.service';
-import { WorkerStateService } from './worker-state.service';
+import { GetShopMultiplierForWorker, WorkerStateService } from './worker-state.service';
 import { VESSEL_RUSH_POWER_ID, vesselRushEffect } from '../powers/effects/vessel-rush-effect';
 
 /** Registre des effets par id de pouvoir. Un fichier par power, enregistré ici. */
@@ -116,11 +116,12 @@ export class PowerStateService {
 
   /** Lance le sort à l'index donné. effectiveManaCost si fourni (ex. après réduction shop), sinon base. */
   castPower(
+    getShopMult: GetShopMultiplierForWorker,
     powerIndex: number,
     effectiveManaCost: number | undefined,
     summonVessels: (count: number, durationSeconds: number) => void,
     effectiveCooldownSeconds?: number,
-    upgrades: PowerUpgradeMultipliers = { duration: 1, strength: 1 }
+    upgrades: PowerUpgradeMultipliers = { duration: 1, strength: 1 },
   ): boolean {
     if (powerIndex < 0 || powerIndex >= this.powersAvailable.length) return false;
     const power = this.powersAvailable[powerIndex];
@@ -154,7 +155,7 @@ export class PowerStateService {
       spawnMonster: () => {
         const workers = this.workerState.getWorkers();
         const workersAvailable = this.workerState.getWorkersAvailable();
-        this.monsterState.forceSpawnNext(workers, workersAvailable);
+        this.monsterState.forceSpawnNext(workers, workersAvailable, getShopMult);
       },
       addMonsterTime: (seconds: number) => {
         this.monsterState.addTimeToCurrentMonster(seconds * upgrades.duration);

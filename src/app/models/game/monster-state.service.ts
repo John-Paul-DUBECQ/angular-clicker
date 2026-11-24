@@ -5,7 +5,7 @@ import { listMonster } from '../monsters/list-monster';
 import { isMonsterUnlocked, MONSTER_WORKER_INDEX } from '../unlocks/monster-unlock';
 import { UnlockContext } from '../unlocks/unlock-method';
 import { ResourcesService } from './resources.service';
-import { WorkerStateService } from './worker-state.service';
+import { GetShopMultiplierForWorker, WorkerStateService } from './worker-state.service';
 import { MonsterRewardNotificationService } from './monster-reward-notification.service';
 import { EssenceShopStateService } from './essence-shop-state.service';
 import { ResourceReward } from '../resource';
@@ -127,7 +127,7 @@ export class MonsterStateService {
   }
 
   /** Spawn un monstre : tiré selon probabilityToSpawn ; difficulté (PV) et récompenses scale avec lootMultiplier. 1/10 = "DANGER BOSS" en plus. */
-  private spawnMonsterInternal(workers: WorkerAutoData[], workersAvailable: WorkerAutoData[]): void {
+  private spawnMonsterInternal(workers: WorkerAutoData[], workersAvailable: WorkerAutoData[], getShopMult: GetShopMultiplierForWorker): void {
     if (!this.isMonsterUnlocked(workers, workersAvailable)) return;
 
     const monsterLevel = workersAvailable[MONSTER_WORKER_INDEX]?.level ?? 0;
@@ -138,7 +138,7 @@ export class MonsterStateService {
     const lootMult = Math.max(0.1, monster.lootMultiplier ?? 1);
     this.clearHealthBars();
     this.isBoss = Math.random() < 1 / BOSS_CHANCE;
-    const baseProduction = this.workerState.getBaseProductionPerSecond();
+    const baseProduction = this.workerState.calculateClicksPerSecond(getShopMult);
     const shopStats = this.essenceShopState.getStats();
     const hpMultiplier = (this.isBoss
       ? randomBetween(BOSS_HP_MULT_MIN, BOSS_HP_MULT_MAX)
@@ -215,8 +215,7 @@ export class MonsterStateService {
   usePlannedCombatBait(
     id: string,
     workers: WorkerAutoData[],
-    workersAvailable: WorkerAutoData[]
-  ): boolean {
+    workersAvailable: WorkerAutoData[]): boolean {
     const combat = listPlannedCombat.find((entry) => entry.id === id);
     const trapEncounter = combat?.trapEncounter;
     if (
@@ -242,7 +241,7 @@ export class MonsterStateService {
     return true;
   }
 
-  cancelPlannedCombat(workers: WorkerAutoData[], workersAvailable: WorkerAutoData[]): boolean {
+  cancelPlannedCombat(workers: WorkerAutoData[], workersAvailable: WorkerAutoData[], getShopMult: GetShopMultiplierForWorker): boolean {
     if (this.currentPlannedCombatId == null) return false;
 
     this.currentMonsterId = null;
@@ -253,12 +252,12 @@ export class MonsterStateService {
     this.clearHealthBars();
     this.isBoss = false;
 
-    if (!this.spawnQueuedMonster(workers, workersAvailable)) this.encounterMeter = 0;
+    if (!this.spawnQueuedMonster(workers, workersAvailable, getShopMult)) this.encounterMeter = 0;
     return true;
   }
 
   /** Abandonne une prime en cours sans retirer de respect. Le contrat reste au panneau. */
-  cancelPrime(workers: WorkerAutoData[], workersAvailable: WorkerAutoData[]): boolean {
+  cancelPrime(workers: WorkerAutoData[], workersAvailable: WorkerAutoData[], getShopMult: GetShopMultiplierForWorker): boolean {
     if (!this.currentPrimeActive) return false;
 
     this.currentPrimeActive = false;
@@ -268,7 +267,7 @@ export class MonsterStateService {
     this.isBoss = false;
     this.clearHealthBars();
 
-    if (!this.spawnQueuedMonster(workers, workersAvailable)) this.encounterMeter = 0;
+    if (!this.spawnQueuedMonster(workers, workersAvailable, getShopMult)) this.encounterMeter = 0;
     return true;
   }
 
@@ -338,6 +337,7 @@ export class MonsterStateService {
     amount: number,
     workers: WorkerAutoData[],
     workersAvailable: WorkerAutoData[],
+    getShopMult: GetShopMultiplierForWorker,
     source: 'click' | 'afk' | 'pet' = 'click'
   ): boolean {
     if (this.currentMonsterId == null) return false;
@@ -363,7 +363,7 @@ export class MonsterStateService {
     }
     if (this.currentHp <= 0) {
       if (this.currentPrimeActive) {
-        this.finishPrime(true, workers, workersAvailable);
+        this.finishPrime(true, workers, workersAvailable, getShopMult);
         return true;
       }
       this.missionState.recordMonsterKill();
@@ -371,12 +371,12 @@ export class MonsterStateService {
 
       const remainingMs = this.spawnTime + this.timeLimitMs - this.now();
       const remainingSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
-      this.onMonsterKill(remainingSeconds, workers, workersAvailable);
+      this.onMonsterKill(remainingSeconds, workers, workersAvailable, getShopMult);
       this.currentMonsterId = null;
       this.currentPlannedCombatId = null;
       this.currentPlannedCombatEnemyIndex = 0;
       this.clearHealthBars();
-      if (!this.spawnQueuedMonster(workers, workersAvailable)) this.encounterMeter = 0;
+      if (!this.spawnQueuedMonster(workers, workersAvailable, getShopMult)) this.encounterMeter = 0;
       return true;
     }
     return false;
@@ -425,7 +425,8 @@ export class MonsterStateService {
   private onMonsterKill(
     remainingSeconds: number,
     workers: WorkerAutoData[],
-    workersAvailable: WorkerAutoData[]
+    workersAvailable: WorkerAutoData[],
+    getShopMult: GetShopMultiplierForWorker
   ): void {
     if (this.currentPlannedCombatId != null) {
       this.onPlannedCombatKill(this.currentPlannedCombatId, workers, workersAvailable);
@@ -437,7 +438,7 @@ export class MonsterStateService {
     }
     const lootMult = Math.max(0.1, monster?.lootMultiplier ?? 1);
 
-    const baseProduction = this.workerState.getBaseProductionPerSecond();
+    const baseProduction = this.workerState.calculateClicksPerSecond(getShopMult);
     const timeLimitSec = this.timeLimitMs / 1000;
     const difficultyTime = 1 + 2 * (1 - remainingSeconds / timeLimitSec);
 
@@ -571,6 +572,7 @@ export class MonsterStateService {
   tick(
     workers: WorkerAutoData[],
     workersAvailable: WorkerAutoData[],
+    getShopMult: GetShopMultiplierForWorker,
     additionalSpawnRateMultiplier = 1
   ): void {
     if (this.currentMonsterId != null) {
@@ -587,7 +589,7 @@ export class MonsterStateService {
         this.clearHealthBars();
         if (prime) this.primeState?.onPrimeResolved(false);
         else if (wild) this.primeState?.onWildDefeat(monsterId);
-        if (!this.spawnQueuedMonster(workers, workersAvailable)) this.encounterMeter = 0;
+        if (!this.spawnQueuedMonster(workers, workersAvailable, getShopMult)) this.encounterMeter = 0;
       }
       return;
     }
@@ -598,19 +600,19 @@ export class MonsterStateService {
     this.encounterMeter = Math.min(100, this.encounterMeter + (100 * spawnRate) / (ENCOUNTER_FILL_SECONDS * TICKS_PER_SECOND));
     if (this.encounterMeter >= 100) {
       this.encounterMeter = 0;
-      this.spawnMonsterInternal(workers, workersAvailable);
+      this.spawnMonsterInternal(workers, workersAvailable, getShopMult);
     }
   }
 
   /** Met un mob en attente si un combat est en cours, sinon le fait apparaître immédiatement. */
-  forceSpawnNext(workers: WorkerAutoData[], workersAvailable: WorkerAutoData[], seconds = 0): void {
+  forceSpawnNext(workers: WorkerAutoData[], workersAvailable: WorkerAutoData[], getShopMult: GetShopMultiplierForWorker, seconds = 0): void {
     if (this.currentMonsterId != null) {
       this.queuedMonsterCount += 1;
       this.addTimeToCurrentMonster(seconds);
       return;
     }
     this.encounterMeter = 100;
-    this.tick(workers, workersAvailable);
+    this.tick(workers, workersAvailable, getShopMult);
   }
 
   /** Ajoute des secondes au temps imparti du combat en cours. */
@@ -678,7 +680,8 @@ export class MonsterStateService {
   private finishPrime(
     success: boolean,
     workers: WorkerAutoData[],
-    workersAvailable: WorkerAutoData[]
+    workersAvailable: WorkerAutoData[],
+    getShopMult: GetShopMultiplierForWorker
   ): void {
     this.currentPrimeActive = false;
     this.currentMonsterId = null;
@@ -688,17 +691,19 @@ export class MonsterStateService {
     this.clearHealthBars();
     if (success) this.missionState.recordMonsterKill();
     this.primeState?.onPrimeResolved(success);
-    if (!this.spawnQueuedMonster(workers, workersAvailable)) this.encounterMeter = 0;
+    if (!this.spawnQueuedMonster(workers, workersAvailable, getShopMult)) this.encounterMeter = 0;
   }
 
   private spawnQueuedMonster(
     workers: WorkerAutoData[],
-    workersAvailable: WorkerAutoData[]
+    workersAvailable: WorkerAutoData[],
+    getShopMult: GetShopMultiplierForWorker
   ): boolean {
     if (this.queuedMonsterCount <= 0 || !this.isMonsterUnlocked(workers, workersAvailable)) return false;
-    this.spawnMonsterInternal(workers, workersAvailable);
+    this.spawnMonsterInternal(workers, workersAvailable, getShopMult);
     if (this.currentMonsterId == null) return false;
     this.queuedMonsterCount -= 1;
     return true;
   }
 }
+

@@ -4,7 +4,7 @@ import { Vessel } from './vessels/vessel.model';
 import { listVessel } from './vessels/list-vessel';
 import { isVesselUnlocked, getVesselUpgradeStats } from '../unlocks/vessel';
 import { ResourcesService } from './resources.service';
-import { WorkerStateService } from './worker-state.service';
+import { GetShopMultiplierForWorker, WorkerStateService } from './worker-state.service';
 import { PowerStateService } from './power-state.service';
 import { MonsterStateService } from './monster-state.service';
 import { VesselRewardNotificationService } from './vessel-reward-notification.service';
@@ -145,7 +145,8 @@ export class VesselService {
   clickVessel(
     instanceId: string,
     workers: WorkerAutoData[],
-    workersAvailable: WorkerAutoData[]
+    workersAvailable: WorkerAutoData[],
+    getShopMult: GetShopMultiplierForWorker
   ): boolean {
     const index = this.activeVessels.findIndex((a) => a.instanceId === instanceId);
     if (index === -1) return false;
@@ -183,7 +184,7 @@ export class VesselService {
         if (this.monsterState.isMonsterUnlocked(workers, workersAvailable)) {
           const chance = v.probabilityToSpawnMonster ?? 1;
           if (Math.random() < chance) {
-            this.monsterState.forceSpawnNext(workers, workersAvailable);
+            this.monsterState.forceSpawnNext(workers, workersAvailable, getShopMult);
             notification.message = 'Un monstre apparaît !';
           }
         }

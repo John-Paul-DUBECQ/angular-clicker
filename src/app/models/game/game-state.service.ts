@@ -745,10 +745,9 @@ export class GameStateService {
   }
 
   setHouseTagColor(tag: string, color: string): void {
-    if (!/^#[0-9a-fA-F]{6}$/.test(color) || !(tag in this.featureColors.houseTags)) return;
+    if (!/^#[0-9a-fA-F]{6}$/.test(color)) return;
     this.featureColors = {
       ...this.featureColors,
-      houseTags: { ...this.featureColors.houseTags, [tag]: color },
     };
     this.saveToLocalStorage();
   }

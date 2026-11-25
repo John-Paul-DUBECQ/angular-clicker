@@ -59,7 +59,7 @@
     >
     <span class="worker-unlock-popup__tag">Prochains paliers (par niveau)</span>
     <ul class="worker-unlock-popup__list">
-      @for (u of nextWorkerUnlocks; track u) {
+      @for (u of nextWorkerUnlocks; track u.name) {
         <li class="worker-unlock-popup__item">
           <div class="worker-unlock-popup__item-header">
             @if (u.imageUrl) {
@@ -108,7 +108,7 @@
     }
     @if (workerInfoStats.lines.length) {
       <dl class="worker-info-popup__stats">
-        @for (line of workerInfoStats.lines; track line) {
+        @for (line of workerInfoStats.lines; track line.label) {
           <dt class="worker-info-popup__label">{{ line.label }}</dt>
           <dd class="worker-info-popup__value">{{ line.value }}</dd>
         }

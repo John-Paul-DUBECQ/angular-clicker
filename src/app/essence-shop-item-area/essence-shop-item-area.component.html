@@ -21,8 +21,8 @@
       <span>Niv. {{ item.level }}</span>
     </div>
     <p>{{ item.description }}</p>
-    @for (effect of effects; track effect; let last = $last) {
-      <small>
+    @for (effect of effects; track effect.label; let last = $last) {
+    <small>
         {{ effect.label }} {{ effect.percent }}@if (!last) {
         <span>, </span>
       }

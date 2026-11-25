@@ -77,13 +77,6 @@ export class EssenceShopStateService {
     }
     const price = this.getPrice(item);
     const essence = this.resources.getMonsterEssence();
-    console.log('[EssenceShop] tentative achat service', {
-      index,
-      id: item.id,
-      level: item.level,
-      price,
-      essence,
-    });
     if (essence < price) {
       console.warn('[EssenceShop] essence insuffisante', { index, price, essence });
       return false;
@@ -91,7 +84,6 @@ export class EssenceShopStateService {
     this.resources.addMonsterEssence(-price);
     item.level += 1;
     item.bought = true;
-    console.log('[EssenceShop] achat validé', { index, id: item.id, level: item.level, price });
     return true;
   }
 

@@ -140,6 +140,8 @@
 }
 
 .desktop-section-rail button[data-feature="mobs"] { color: var(--feature-mobs, #c44536); }
+.desktop-section-rail button[data-feature="essences"] { color: var(--feature-essences, #e6c28a); }
+.desktop-section-rail button[data-feature="houses"] { color: var(--feature-houses, #47e88f); }
 .desktop-section-rail button[data-feature="kitchen"] { color: var(--feature-kitchen, #8a5a2b); }
 .desktop-section-rail button[data-feature="garden"] { color: var(--feature-garden, #2f8f4e); }
 .desktop-section-rail button[data-feature="breeding"] { color: var(--feature-breeding, #8fd18a); }
@@ -315,14 +317,14 @@
   overflow-y: auto;
   border-right: 1px solid #343434;
   background: #171717;
-  --scollbar-track-color: rgb(0 0 0 / 30%);
-  --scrollbar-track-thickness: 18px;
-  --scrollbar-track-hover-thickness: 24px;
-  --scrollbar-track-offset: 5px;
-  
-  --scrollbar-thumb-color: rgba(0, 0, 0, 0.781);
-  --scrollbar-thumb-hover-color: rgba(0, 0, 0, 0.575);
-}
+  --scrollbar-track-thickness: 8px;
+  --scrollbar-hoverOpacityTransitionLeaveDelay: 800ms;
+  --scrollbar-hoverOpacityTransitionLeaveDuration: 400ms;
+
+  --scrollbar-thumb-color: #ffb74d;
+  --scrollbar-thumbActive-color: #2b1f0e;
+
+} 
 
 .desktop-side-resources {
   position: sticky;
@@ -1047,8 +1049,7 @@
   position: relative;
   z-index: 1;
   padding: 12px;
-  background: #211d16;
-  border-bottom: 1px solid #80652a;
+  background: #242424;
 }
 
 .essence-shop-panel__header {
@@ -1056,7 +1057,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
-  color: #e8c547;
+  color: var(--feature-essences, #e6c28a);
 }
 
 .essence-shop-panel__header h2,
@@ -1070,7 +1071,7 @@
 
 .essence-shop-panel__header p {
   margin-top: 3px;
-  color: #bdb6a4;
+  color: #bebebe;
   font-size: 0.72rem;
 }
 
@@ -1083,8 +1084,8 @@
 
 .essence-shop-summary span {
   padding: 6px 4px;
-  background: #30291b;
-  color: #bdb6a4;
+  background: #353535;
+  color: #c2c2c2;
   font-size: 0.68rem;
   text-align: center;
 }
@@ -1092,7 +1093,7 @@
 .essence-shop-summary b {
   display: block;
   margin-top: 2px;
-  color: #fff3b0;
+  color: #ffffff;
   font-size: 0.78rem;
 }
 
@@ -1487,7 +1488,7 @@
 }
 
 .planned-combat__heading strong {
-  color: #fff1ee;
+  color: #ffffff;
   font-size: 0.82rem;
 }
 
@@ -1539,7 +1540,7 @@
 
 .planned-combat button:disabled {
   border-color: var(--feature-mobs, #c44536);
-  background: color-mix(in srgb, var(--feature-mobs, #c44536) 20%, transparent);
+  background: color-mix(in srgb, var(--feature-mobs, #c44536) 15%, transparent);
   color: #f0f0f0;
   cursor: not-allowed;
 }
@@ -1823,29 +1824,30 @@
 }
 
 .houses-area__header h2 {
-  color: #47e88f;
+  color: #fff;
   font-size: 0.95rem;
 }
 
 .houses-area__max-toggle,
 .houses-area__filters button {
-  border: 1px solid #35513d;
+  border: 1px solid #555555;
   padding: 0.3rem 0.5rem;
-  background: #171d19;
-  color: #a9b5ac;
+  background: color-mix(in srgb, var(--feature-houses, #47e88f) 30%, transparent);
+  color: #ffffff;
   cursor: pointer;
-  font-size: 0.68rem;
+  font-size: 0.88rem;
 }
 
 .houses-area__max-toggle--active,
 .houses-area__filters .houses-area__filter--active {
-  border-color: #47e88f;
-  color: #8df2a8;
+  border-color: var(--feature-houses, #47e88f);
+  background: color-mix(in srgb, var(--feature-houses, #47e88f) 75%, transparent);
+  color: #ffffff;
 }
 
 .houses-area__filters {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
   gap: 0.35rem;
   padding: 0.5rem 1rem 0;
 }
@@ -2770,16 +2772,17 @@
   width: calc(100% - 2rem);
   margin: 0 1rem 1rem;
   padding: 0.45rem;
-  border: 1px solid #26492f;
-  background: transparent;
-  color: #7ad987;
+  border: 1px solid var(--feature-houses, #47e88f);
+  background: #292929;
+  color: #ffffff;
   cursor: pointer;
   font-size: 0.7rem;
 }
 
 .houses-area__resources-button:hover {
-  border-color: #47e85c;
-  color: #b0ffb4;
+  border-color: var(--feature-houses, #47e88f);
+  background: #252525;
+  color: #ffffff;
 }
 
 .resources-overlay {
@@ -2797,7 +2800,7 @@
   width: min(430px, 100%);
   max-height: min(600px, 90vh);
   overflow-y: auto;
-  border: 1px solid #80652a;
+  border: 1px solid #757575;
   background: #1b1b1b;
   color: #eee;
 }

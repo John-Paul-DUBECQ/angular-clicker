@@ -26,7 +26,7 @@ import {
   ResourceTradeView,
 } from './models/resource-trade';
 import { PrimeOfferView, PrimeTradeView, PrimeTraderView } from './models/primes/prime.model';
-import { FEATURE_COLOR_OPTIONS, HOUSE_TAG_COLOR_OPTIONS } from './models/feature-colors';
+import { FEATURE_COLOR_OPTIONS } from './models/feature-colors';
 import Swal from 'sweetalert2';
 // Source - https://stackoverflow.com/a/40576301
 // Posted by codef0rmer, modified by community. See post 'Timeline' for change history
@@ -52,7 +52,6 @@ export class AppComponent implements OnInit, OnDestroy {
   tradeQuantity: ResourceTradeQuantity = 1;
   traderQuantity: ResourceTradeQuantity = 1;
   readonly featureColorOptions = FEATURE_COLOR_OPTIONS;
-  readonly houseTagColorOptions = HOUSE_TAG_COLOR_OPTIONS;
   traderPopup: { trade: PrimeTradeView; left: string; top: string } | null = null;
   readonly monsterBiomes = MONSTER_BIOMES;
   readonly lotteryChests = LIST_CHEST;
@@ -403,9 +402,6 @@ export class AppComponent implements OnInit, OnDestroy {
     const root = document.documentElement;
     Object.entries(colors.features).forEach(([id, color]) => {
       root.style.setProperty(`--feature-${id}`, color);
-    });
-    Object.entries(colors.houseTags).forEach(([tag, color]) => {
-      root.style.setProperty(`--house-${this.houseTagSlug(tag)}`, color);
     });
   }
 
@@ -776,24 +772,13 @@ export class AppComponent implements OnInit, OnDestroy {
       ?? '#ffffff';
   }
 
-  houseTagColor(tag: string): string {
-    return this.game.featureColors?.houseTags[tag]
-      ?? this.houseTagColorOptions.find((option) => option.id === tag)?.color
-      ?? '#47e88f';
-  }
-
   houseAccent(house: House): string | null {
     const tag = house.tags?.[0];
-    return tag ? this.houseTagColor(tag) : null;
+    return tag ? this.featureColor(tag) : null;
   }
 
   setFeatureColor(id: string, color: string): void {
     this.gameState.setFeatureColor(id, color);
-    this.refreshGameState();
-  }
-
-  setHouseTagColor(tag: string, color: string): void {
-    this.gameState.setHouseTagColor(tag, color);
     this.refreshGameState();
   }
 

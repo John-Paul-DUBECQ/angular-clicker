@@ -29,12 +29,12 @@
         }
       </nav>
     }
+
     @if (game.essenceShopUnlocked && workerView === 'essenceShop') {
       <section class="essence-shop-panel">
         <div class="essence-shop-panel__header">
           <div>
             <h2>Shop d’essences</h2>
-            <p>Modifie les monstres, sans limite de niveau.</p>
           </div>
           <strong>{{ formatResourceValue(game.monsterEssence != null ? game.monsterEssence : 0) }}</strong>
         </div>
@@ -55,6 +55,7 @@
         </div>
       </section>
     }
+
     @if (game.explorerUnlocked && workerView === 'quests') {
       <section class="planned-combat-panel">
         <div class="planned-combat-panel__header">
@@ -272,12 +273,6 @@
             <input type="color" [value]="featureColor(option.id)" (change)="setFeatureColor(option.id, $any($event.target).value)" />
           </label>
         }
-        @for (option of houseTagColorOptions; track option) {
-          <label>
-            <span>{{ option.label }}</span>
-            <input type="color" [value]="houseTagColor(option.id)" (change)="setHouseTagColor(option.id, $any($event.target).value)" />
-          </label>
-        }
       </div>
     </ng-template>
     <ng-template #devTools>
@@ -437,6 +432,7 @@
           @if (game.housesUnlocked && game.houses && game.houses.length > 0) {
             <button
               type="button"
+              data-feature="houses"
               [class.desktop-section-rail__item--active]="desktopView === 'houses'"
               [attr.aria-pressed]="desktopView === 'houses'"
               title="Maisons"
@@ -466,6 +462,7 @@
           @if (game.essenceShopUnlocked) {
             <button
               type="button"
+              data-feature="essences"
               [class.desktop-section-rail__item--active]="desktopView === 'essenceShop'"
               [attr.aria-pressed]="desktopView === 'essenceShop'"
               title="Shop d'essence"
@@ -497,12 +494,12 @@
               }
             </button>
           }
-          <button type="button" data-feature="garden" [class.desktop-section-rail__item--active]="desktopView === 'garden'" title="Jardin" (click)="setDesktopView('garden')">
+          <!-- <button type="button" data-feature="garden" [class.desktop-section-rail__item--active]="desktopView === 'garden'" title="Jardin" (click)="setDesktopView('garden')">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21V9M12 12c-4 0-7-2.5-7-6 4 0 7 2.5 7 6ZM12 15c4 0 7-2.5 7-6-4 0-7 2.5-7 6Z"/></svg><span>Jardin</span>
           </button>
           <button type="button" data-feature="breeding" [class.desktop-section-rail__item--active]="desktopView === 'breeding'" title="Élevage" (click)="setDesktopView('breeding')">
             <svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="13" rx="6" ry="7.5"/><path d="M12 5.5c.8-2 2.6-2.8 3.6-1.6 1 1.2-.2 2.6-1.6 3"/></svg><span>Élevage</span>
-          </button>
+          </button> -->
 
           @if (game.missionsUnlocked) {
             <button type="button" data-feature="missions" [class.desktop-section-rail__item--active]="desktopView === 'missions'" title="Missions" (click)="setDesktopView('missions')">
@@ -598,8 +595,6 @@
                     type="button"
                     [class.houses-area__filter--active]="selectedHouseTag === tag"
                     [attr.aria-pressed]="selectedHouseTag === tag"
-                    [style.color]="houseTagColor(tag)"
-                    [style.border-color]="houseTagColor(tag)"
                     (click)="selectedHouseTag = tag">
                     {{ tag }}
                   </button>
@@ -607,7 +602,6 @@
               </div>
               @for (house of visibleHouses; track trackByHouse(i, house); let i = $index) {
                 <app-house-area
-                  [style.--house-accent]="houseAccent(house)"
                   [house]="house"
                   [essence]="game.monsterEssence || 0"
                   [respect]="game.primeBoard?.respect || 0"
